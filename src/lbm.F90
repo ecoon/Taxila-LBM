@@ -91,8 +91,6 @@
       allocate(lbm%da_sb)
       allocate(lbm%da_flow)
 
-      lbm%dim = 3
-
       lbm%da_one = 0
       lbm%da_s = 0
       lbm%da_sb = 0
@@ -150,6 +148,7 @@
       call mpi_comm_rank(lbm%comm,lbm%info%id,ierr)
       call mpi_comm_size(lbm%comm,lbm%info%nproc, ierr)
 
+      lbm%info%dim = 3
       lbm%info%s = s_
       lbm%info%b = b_
       lbm%dm_index_to_ndof(ONEDOF) = 1
