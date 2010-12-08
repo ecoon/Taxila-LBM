@@ -6,15 +6,15 @@
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
 !!!     last modified:   08 December 2010
-!!!       at:            11:49:21 MST
+!!!       at:            12:25:38 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
 !!! ====================================================================
-  #define PETSC_USE_FORTRAN_MODULES 1
-  #include "finclude/petscsysdef.h"
-  #include "finclude/petscvecdef.h"
-  #include "finclude/petscdmdef.h"
+#define PETSC_USE_FORTRAN_MODULES 1
+#include "finclude/petscsysdef.h"
+#include "finclude/petscvecdef.h"
+#include "finclude/petscdmdef.h"
   program main
     use LBM_module
     use constants
