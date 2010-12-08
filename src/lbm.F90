@@ -30,7 +30,6 @@
        MPI_Comm comm
        type(info_type),pointer:: info
        type(bc_type),pointer:: bc
-       PetscInt :: dim
 
        DM,pointer:: da_one ! pressure, rhot, etc
        DM,pointer:: da_s   ! rho -- #dofs = s = # of components
@@ -154,7 +153,7 @@
       lbm%dm_index_to_ndof(ONEDOF) = 1
       lbm%dm_index_to_ndof(NPHASEDOF) = s_
       lbm%dm_index_to_ndof(NPHASEXBDOF) = s_*(b_+1)
-      lbm%dm_index_to_ndof(NFLOWDOF) = lbm%dim
+      lbm%dm_index_to_ndof(NFLOWDOF) = lbm%info%dim
 
       lbm%info%NX = NX_
       lbm%info%NY = NY_
@@ -176,7 +175,7 @@
 
       call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, NX_, NY_, NZ_, &
            PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, lbm%dm_index_to_ndof(NFLOWDOF), 1, &
-           PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_one, ierr)
+           PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_flow, ierr)
 
       call DMDAGetCorners(lbm%da_one, xs, ys, zs, lbm%info%xl, lbm%info%yl, lbm%info%zl, ierr)
       call DMDAGetGhostCorners(lbm%da_one, gxs, gys, gzs, lbm%info%gxl, lbm%info%gyl, lbm%info%gzl, ierr)
@@ -365,14 +364,14 @@
             if (.not.bcs_done(lbm%bc%flags(lcv_sides))) then
                select case (lbm%bc%flags(lcv_sides))
                case (1)         ! pseudo-periodic
-                  call BCPseudoperiodic(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%bc%dim, &
+                  call BCPseudoperiodic(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%info%dim, &
                        lbm%bc%xm_a, lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, lbm%bc%zm_a, &
                        lbm%bc%zp_a, lbm%info)
                case (2)         ! flux
-                  call BCFlux(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%bc%dim, lbm%bc%xm_a, &
+                  call BCFlux(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%info%dim, lbm%bc%xm_a, &
                        lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, lbm%bc%zm_a, lbm%bc%zp_a, lbm%info)
                   !               case (3)         ! pressure
-                  !                  call lbm_bc_pressure(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%bc%dim, lbm%bc%xm_a, &
+                  !                  call lbm_bc_pressure(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%info%dim, lbm%bc%xm_a, &
                   !                       lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, lbm%bc%zm_a, lbm%bc%zp_a)
                end select
                bcs_done(lbm%bc%flags(lcv_sides)) = .TRUE. ! only do each bc type once
@@ -401,7 +400,7 @@
          endif
          call LBMAddBodyForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info)
          call LBMAddFluidSolidForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info)
-         call LBMZeroBoundaryForces(lbm%bc%flags, lbm%Fx, lbm%Fy, lbm%Fz, lbm%bc%dim, lbm%info)
+         call LBMZeroBoundaryForces(lbm%bc%flags, lbm%Fx, lbm%Fy, lbm%Fz, lbm%info%dim, lbm%info)
 
          call system_clock ( time4, timerate, timemax )
          write(*,*) 'Forces Took', real(time4-time3)/real(timerate), 'seconds from process', lbm%info%id
@@ -428,7 +427,7 @@
          ! check for output?
          if(mod(lcv_step,kwrite).eq.0) then
             ! --  --  update diagnostics
-            call update_diagnostics(lbm%rho_a, lbm%ux, lbm%uy, lbm%uz, lbm%walls_a, lbm%ut_a, &
+            call LBMUpdateDiagnostics(lbm%rho_a, lbm%ux, lbm%uy, lbm%uz, lbm%walls_a, lbm%ut_a, &
                  lbm%rhot_a, lbm%prs_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%info)
 
             ! --  --  restore arrays
