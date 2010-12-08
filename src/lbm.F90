@@ -25,12 +25,12 @@
 
     private
 
-#include "hybrid_definitions.h"    
+#include "lbm_definitions.h"    
     type, public:: lbm_type
        MPI_Comm comm
        type(info_type),pointer:: info
        type(bc_type),pointer:: bc
-       PetscInt,parameter:: dim=3
+       PetscInt :: dim
 
        DM,pointer:: da_one ! pressure, rhot, etc
        DM,pointer:: da_s   ! rho -- #dofs = s = # of components
@@ -90,6 +90,8 @@
       allocate(lbm%da_s)
       allocate(lbm%da_sb)
       allocate(lbm%da_flow)
+
+      lbm%dim = 3
 
       lbm%da_one = 0
       lbm%da_s = 0
@@ -351,10 +353,10 @@
       call system_clock ( time1, timerate, timemax )
       do lcv_step = istep,kstep
          call system_clock ( time3, timerate, timemax )
-         call lbm_streaming(lbm%fi_a, lbm%info)
+         call LBMStreaming(lbm%fi_a, lbm%info)
          call system_clock ( time4, timerate, timemax )
          write(*,*) 'stream Took', real(time4-time3)/real(timerate), 'seconds from process', lbm%info%id
-         call lbm_bounceback(lbm%fi_a, lbm%walls_a, lbm%info)
+         call LBMBounceback(lbm%fi_a, lbm%walls_a, lbm%info)
          call system_clock ( time3, timerate, timemax )
          write(*,*) 'stream bb Took', real(time3-time4)/real(timerate), 'seconds from process', lbm%info%id
          
@@ -364,11 +366,11 @@
             if (.not.bcs_done(lbm%bc%flags(lcv_sides))) then
                select case (lbm%bc%flags(lcv_sides))
                case (1)         ! pseudo-periodic
-                  call lbm_bc_pseudoperiodic(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%bc%dim, &
+                  call BCPseudoperiodic(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%bc%dim, &
                        lbm%bc%xm_a, lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, lbm%bc%zm_a, &
                        lbm%bc%zp_a, lbm%info)
                case (2)         ! flux
-                  call lbm_bc_flux(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%bc%dim, lbm%bc%xm_a, &
+                  call BCFlux(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%bc%dim, lbm%bc%xm_a, &
                        lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, lbm%bc%zm_a, lbm%bc%zp_a, lbm%info)
 !               case (3)         ! pressure
 !                  call lbm_bc_pressure(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%bc%dim, lbm%bc%xm_a, &
@@ -378,7 +380,7 @@
             endif
          enddo
 
-         call lbm_update_moments(lbm%fi_a,lbm%rho_a, lbm%ux,lbm%uy,lbm%uz,lbm%walls_a, lbm%info)
+         call LBMUpdateMoments(lbm%fi_a,lbm%rho_a, lbm%ux,lbm%uy,lbm%uz,lbm%walls_a, lbm%info)
          call system_clock ( time4, timerate, timemax )
          write(*,*) 'bcs/moments Took', real(time4-time3)/real(timerate), 'seconds from process', lbm%info%id
       
@@ -396,24 +398,24 @@
          lbm%Fz=0.
 
          if (lbm%info%s .eq. 2) then
-            call lbm_add_fluid_fluid_forces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info)
+            call LBMAddFluidFluidForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info)
          endif
-         call lbm_add_body_forces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info)
-         call lbm_add_fluid_solid_forces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info)
-         call lbm_zero_boundary_forces(lbm%bc%flags, lbm%Fx, lbm%Fy, lbm%Fz, lbm%bc%dim, lbm%info)
+         call LBMAddBodyForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info)
+         call LBMAddFluidSolidForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info)
+         call LBMZeroBoundaryForces(lbm%bc%flags, lbm%Fx, lbm%Fy, lbm%Fz, lbm%bc%dim, lbm%info)
 
          call system_clock ( time4, timerate, timemax )
          write(*,*) 'Forces Took', real(time4-time3)/real(timerate), 'seconds from process', lbm%info%id
 
          ! calculate u_equilibrium
-         call lbm_update_uequilibrium(lbm%fi_a, lbm%rho_a, lbm%ux, lbm%uy, lbm%uz, lbm%walls_a, &
+         call LBMUpdateUEquilibrium(lbm%fi_a, lbm%rho_a, lbm%ux, lbm%uy, lbm%uz, lbm%walls_a, &
               lbm%uxe, lbm%uye, lbm%uze, lbm%rhot_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%info)
 
          call system_clock ( time3, timerate, timemax )
          write(*,*) 'calc ue Took', real(time3-time4)/real(timerate), 'seconds from process', lbm%info%id
 
          ! collision
-         call lbm_collision(lbm%fi_a, lbm%rho_a, lbm%uxe, lbm%uye, lbm%uze, lbm%walls_a, lbm%info)
+         call LBMCollision(lbm%fi_a, lbm%rho_a, lbm%uxe, lbm%uye, lbm%uze, lbm%walls_a, lbm%info)
 
          call system_clock ( time4, timerate, timemax )
          write(*,*) 'collision Took', real(time4-time3)/real(timerate), 'seconds from process', lbm%info%id
@@ -439,7 +441,7 @@
             
 ! --  --  output
             call LBMLocalToGlobal(lbm)
-            call lbm_output(lbm, lcv_step, kwrite)
+            call LBMOutput(lbm, lcv_step, kwrite)
 
 ! --  --  reopen arrays
             call DMDAVecGetArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
