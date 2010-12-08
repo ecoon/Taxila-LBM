@@ -1,22 +1,22 @@
-!====>==================================================================
-!====> Fortran-file
-!====>    author:        Ethan T. Coon
-!====>    filename:      lbregion.f
-!====>    version:       
-!====>    created:       17 November 2010
-!====>      on:          12:29:33 MST
-!====>    last modified:  17 November 2010
-!====>      at:          12:29:33 MST
-!====>    URL:           http://www.ldeo.columbia.edu/~ecoon/
-!====>    email:         ecoon _at_ ldeo.columbia.edu
-!====> 
-!====>==================================================================
-! module for region on which LBM will be used
-#define PETSC_USE_FORTRAN_MODULES 1
-#include "finclude/petscsysdef.h"
-#include "finclude/petscvecdef.h"
-#include "finclude/petscdmdef.h"
-
+!!!==================================================================
+!!! Fortran-file
+!!!    author:        Ethan T. Coon
+!!!    filename:      lbregion.f
+!!!    version:
+!!!    created:       17 November 2010
+!!!      on:          12:29:33 MST
+!!!    last modified:  17 November 2010
+!!!      at:          12:29:33 MST
+!!!    URL:           http://www.ldeo.columbia.edu/~ecoon/
+!!!    email:         ecoon _at_ ldeo.columbia.edu
+!!!
+!!!==================================================================
+  ! module for region on which LBM will be used
+  #define PETSC_USE_FORTRAN_MODULES 1
+  #include "finclude/petscsysdef.h"
+  #include "finclude/petscvecdef.h"
+  #include "finclude/petscdmdef.h"
+  
   module LBM_module
     use petsc
     use Info_module
@@ -25,7 +25,7 @@
 
     private
 
-#include "lbm_definitions.h"    
+#include "lbm_definitions.h"
     type, public:: lbm_type
        MPI_Comm comm
        type(info_type),pointer:: info
@@ -44,7 +44,7 @@
        Vec prs
        Vec rhot
        Vec walls
-       
+
        Vec fi_g
        Vec rho_g
        Vec ut_g
@@ -53,14 +53,14 @@
        Vec prs_g
        Vec rhot_g
        Vec walls_g
-       
+
        PetscScalar,pointer:: ut_a(:)
        PetscScalar,pointer:: prs_a(:)
        PetscScalar,pointer:: walls_a(:)
        PetscScalar,pointer:: rho_a(:)
        PetscScalar,pointer:: fi_a(:)
        PetscScalar,pointer:: rhot_a(:)
-       
+
        PetscScalar,pointer,dimension(:,:,:,:):: ux,uy,uz
        PetscScalar,pointer,dimension(:,:,:,:):: uxe,uye,uze
        PetscScalar,pointer,dimension(:,:,:,:):: Fx,Fy,Fz
@@ -107,7 +107,7 @@
       lbm%prs = 0
       lbm%rhot = 0
       lbm%walls = 0
-      
+
       lbm%fi_g = 0
       lbm%rho_g = 0
       lbm%ut_g = 0
@@ -134,11 +134,11 @@
       nullify(lbm%Fy)
       nullify(lbm%Fz)
     end function LBMCreate
-    
-! --- set up LB method
+
+    ! --- set up LB method
     subroutine LBMSetSizes(lbm, NX_, NY_, NZ_, s_, b_)
       implicit none
-      
+
       ! input
       integer,intent(in):: NX_,NY_,NZ_,s_,b_
       type(lbm_type) lbm
@@ -170,7 +170,7 @@
       call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, NX_, NY_, NZ_, &
            PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, lbm%dm_index_to_ndof(NPHASEDOF), 1, &
            PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_s, ierr)
-      
+
       call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, NX_, NY_, NZ_, &
            PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, lbm%dm_index_to_ndof(NPHASEXBDOF), 1,&
            PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_sb, ierr)
@@ -178,18 +178,18 @@
       call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, NX_, NY_, NZ_, &
            PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, lbm%dm_index_to_ndof(NFLOWDOF), 1, &
            PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_one, ierr)
-      
+
       call DMDAGetCorners(lbm%da_one, xs, ys, zs, lbm%info%xl, lbm%info%yl, lbm%info%zl, ierr)
       call DMDAGetGhostCorners(lbm%da_one, gxs, gys, gzs, lbm%info%gxl, lbm%info%gyl, lbm%info%gzl, ierr)
 
-      ! set lbm%info including corners      
+      ! set lbm%info including corners
       lbm%info%xs = xs+1
       lbm%info%ys = ys+1
       lbm%info%zs = zs+1
       lbm%info%gxs = gxs+1
       lbm%info%gys = gys+1
       lbm%info%gzs = gzs+1
-      
+
       lbm%info%xe = lbm%info%xs+lbm%info%xl-1
       lbm%info%ye = lbm%info%ys+lbm%info%yl-1
       lbm%info%ze = lbm%info%zs+lbm%info%zl-1
@@ -258,7 +258,7 @@
       CHKMEMQ
       return
     end subroutine LBMSetSizes
- 
+
     ! --- destroy things
     subroutine LBMDestroy(lbm, ierr)
       implicit none
@@ -297,7 +297,7 @@
       return
     end subroutine LBMDestroy
 
-! --- do things
+    ! --- do things
     subroutine LBMSetDomain(lbm, corners)
       implicit none
       type(lbm_type) lbm
@@ -327,7 +327,7 @@
       integer kstep
       integer kwrite
 
-      ! local 
+      ! local
       PetscErrorCode ierr
       logical,dimension(0:10):: bcs_done        ! flag for whether boundary condition
       integer lcv_sides, lcv_step
@@ -359,7 +359,7 @@
          call LBMBounceback(lbm%fi_a, lbm%walls_a, lbm%info)
          call system_clock ( time3, timerate, timemax )
          write(*,*) 'stream bb Took', real(time3-time4)/real(timerate), 'seconds from process', lbm%info%id
-         
+
          bcs_done=.FALSE.
          bcs_done(0) = .TRUE.   ! periodic done by default
          do lcv_sides = 1,6
@@ -372,9 +372,9 @@
                case (2)         ! flux
                   call BCFlux(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%bc%dim, lbm%bc%xm_a, &
                        lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, lbm%bc%zm_a, lbm%bc%zp_a, lbm%info)
-!               case (3)         ! pressure
-!                  call lbm_bc_pressure(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%bc%dim, lbm%bc%xm_a, &
-!                       lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, lbm%bc%zm_a, lbm%bc%zp_a)
+                  !               case (3)         ! pressure
+                  !                  call lbm_bc_pressure(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%bc%dim, lbm%bc%xm_a, &
+                  !                       lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, lbm%bc%zm_a, lbm%bc%zp_a)
                end select
                bcs_done(lbm%bc%flags(lcv_sides)) = .TRUE. ! only do each bc type once
             endif
@@ -383,7 +383,7 @@
          call LBMUpdateMoments(lbm%fi_a,lbm%rho_a, lbm%ux,lbm%uy,lbm%uz,lbm%walls_a, lbm%info)
          call system_clock ( time4, timerate, timemax )
          write(*,*) 'bcs/moments Took', real(time4-time3)/real(timerate), 'seconds from process', lbm%info%id
-      
+
          ! update rho ghosts values
          call DMDAVecRestoreArrayF90(lbm%da_s,lbm%rho, lbm%rho_a, ierr)
          call DMDALocalToLocalBegin(lbm%da_s, lbm%rho, INSERT_VALUES, lbm%rho, ierr)
@@ -428,28 +428,28 @@
 
          ! check for output?
          if(mod(lcv_step,kwrite).eq.0) then
-! --  --  update diagnostics
+            ! --  --  update diagnostics
             call update_diagnostics(lbm%rho_a, lbm%ux, lbm%uy, lbm%uz, lbm%walls_a, lbm%ut_a, &
                  lbm%rhot_a, lbm%prs_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%info)
 
-! --  --  restore arrays
+            ! --  --  restore arrays
             call DMDAVecRestoreArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
             call DMDAVecRestoreArrayF90(lbm%da_one, lbm%prs, lbm%prs_a, ierr)
             call DMDAVecRestoreArrayF90(lbm%da_one, lbm%rhot, lbm%rhot_a, ierr)
             call DMDAVecRestoreArrayF90(lbm%da_s, lbm%rho, lbm%rho_a, ierr)
             call DMDAVecRestoreArrayF90(lbm%da_flow, lbm%ut, lbm%ut_a, ierr)
-            
-! --  --  output
+
+            ! --  --  output
             call LBMLocalToGlobal(lbm)
             call LBMOutput(lbm, lcv_step, kwrite)
 
-! --  --  reopen arrays
+            ! --  --  reopen arrays
             call DMDAVecGetArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
             call DMDAVecGetArrayF90(lbm%da_one, lbm%prs, lbm%prs_a, ierr)
             call DMDAVecGetArrayF90(lbm%da_one, lbm%rhot, lbm%rhot_a, ierr)
             call DMDAVecGetArrayF90(lbm%da_s, lbm%rho, lbm%rho_a, ierr)
             call DMDAVecGetArrayF90(lbm%da_flow, lbm%ut, lbm%ut_a, ierr)
-         endif 
+         endif
 
          call DMDAVecGetArrayF90(lbm%da_sb, lbm%fi, lbm%fi_a, ierr)
       end do
@@ -470,7 +470,7 @@
       call LBMLocalToGlobal(lbm)
       return
     end subroutine LBMRun
-    
+
     subroutine LBMLocalToGlobal(lbm)
       implicit none
       type(lbm_type) lbm
@@ -499,14 +499,14 @@
     subroutine LBMInitializeWalls(lbm, init_subroutine)
       implicit none
       type(lbm_type) lbm
-!      interface
-!         subroutine init_subroutine(walls, info)
-!           use Info_module
-!           type(info_type) info
-!           PetscScalar walls(:) ! problem is that this does not work, as we want
-!                                  to specify an explicit shape within the subroutine
-!         end subroutine init_subroutine
-!      end interface
+      !      interface
+      !         subroutine init_subroutine(walls, info)
+      !           use Info_module
+      !           type(info_type) info
+      !           PetscScalar walls(:) ! problem is that this does not work, as we want
+      !                                  to specify an explicit shape within the subroutine
+      !         end subroutine init_subroutine
+      !      end interface
       external :: init_subroutine
       PetscErrorCode ierr
       PetscInt vsize
@@ -530,22 +530,22 @@
       CHKMEMQ
       return
     end subroutine LBMInitializeWalls
-       
+
     subroutine LBMInitializeState(lbm, init_subroutine)
       implicit none
       type(lbm_type) lbm
-!      interface
-!         subroutine init_subroutine(fi, rho, ux, uy, uz, walls, info)
-!           use Info_module
-!           type(info_type) info
-!           PetscScalar fi(:)
-!           PetscScalar rho(:)
-!           PetscScalar ux(:,:,:,:)
-!           PetscScalar uy(:,:,:,:)
-!           PetscScalar uz(:,:,:,:)
-!           PetscScalar walls(:)
-!         end subroutine init_subroutine
-!      end interface
+      !      interface
+      !         subroutine init_subroutine(fi, rho, ux, uy, uz, walls, info)
+      !           use Info_module
+      !           type(info_type) info
+      !           PetscScalar fi(:)
+      !           PetscScalar rho(:)
+      !           PetscScalar ux(:,:,:,:)
+      !           PetscScalar uy(:,:,:,:)
+      !           PetscScalar uz(:,:,:,:)
+      !           PetscScalar walls(:)
+      !         end subroutine init_subroutine
+      !      end interface
       external :: init_subroutine
       PetscErrorCode ierr
       call DMDAVecGetArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
@@ -579,7 +579,7 @@
 
     subroutine LBMPrintAFew(rho, fi, walls, uxe, uye, uze, info)
       implicit none
-       
+
       type(info_type) info
       PetscScalar,dimension(1:info%s,info%gxs:info%gxe,info%gys:info%gye,info%gzs:info%gze)::rho
       PetscScalar,dimension(1:info%s,0:info%b,info%gxs:info%gxe,info%gys:info%gye, info%gzs:info%gze)::fi
@@ -623,7 +623,7 @@
          write(*,*) 'output: fi(0,1,0,8,90):', fi(1,1,1,9,91)
          write(*,*) '========================================'
       endif
-      return 
+      return
     end subroutine LBMPrintAFew
   end module LBM_module
-      
+
