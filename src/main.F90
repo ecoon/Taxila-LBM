@@ -6,7 +6,7 @@
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
 !!!     last modified:   08 December 2010
-!!!       at:            12:37:59 MST
+!!!       at:            16:34:13 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -50,7 +50,8 @@
     read(90,*) tau(1),tau(2)
     read(90,*) gvt(1),gvt(2)
     read(90,*) mm(1),mm(2)
-    read(90,*) rhol,rhor
+    read(90,*) rho1(1),rho1(2)
+    read(90,*) rho2(1),rho2(2)
     read(90,*) ntimes
     read(90,*) npasses
     read(90,*) new
@@ -77,8 +78,10 @@
        write(*,*)  gvt(1),gvt(2)
        write(*,*) 'mm(1),mm(2)'
        write(*,*)  mm(1),mm(2)
-       write(*,*) 'rhol,rhor'
-       write(*,*)  rhol,rhor
+       write(*,*) 'rho1(1),rho1(2)'
+       write(*,*)  rho1(1),rho1(2)
+       write(*,*) 'rho2(1),rho2(2)'
+       write(*,*)  rho2(1),rho2(2)
        write(*,*) 'new,kprint,kwrite'
        write(*,*)  new,kprint,kwrite
        write(*,*) 'bc flags: 0=periodic, 1=pseudo-periodic, 2=flux, 3=pressure'
@@ -108,7 +111,6 @@
 
     call LBMRun(user, istep, ntimes*npasses, kwrite) ! for the moment, this is crap
     call LBMDestroy(user, ierr)
-    call constants_finalize()
     call PetscFinalize(ierr)
     stop
   end program main
