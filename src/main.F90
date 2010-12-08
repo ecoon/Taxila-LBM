@@ -6,7 +6,7 @@
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
 !!!     last modified:   08 December 2010
-!!!       at:            12:25:38 MST
+!!!       at:            12:37:59 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -16,8 +16,10 @@
 #include "finclude/petscvecdef.h"
 #include "finclude/petscdmdef.h"
   program main
+    use BC_module
     use LBM_module
     use constants
+    use petsc
     implicit none
 
     logical new
@@ -30,8 +32,11 @@
     integer,parameter:: b=18
 
     integer,dimension(1:6):: bc_flags
-
+    external initialize_bcs
+    external initialize_state
+    external initialize_walls
     type(lbm_type),pointer:: user
+
 
     ! --- setup environment
     call PetscInitialize(PETSC_NULL_CHARACTER, ierr)
@@ -84,25 +89,14 @@
     ! --- initialize state
     ! walls
     if(user%info%id.eq.0) print*,'initialization of walls'
-    call DMDAVecGetArrayF90(user%da_one, user%walls, user%walls_a, ierr)
-    call initialize_walls(user%walls_a, user%info)
-    CHKMEMQ
-    call DMDAVecRestoreArrayF90(user%da_one, user%walls, user%walls_a, ierr)
+    call LBMInitializeWalls(user, initialize_walls)
 
     ! bcs
-    call initialize_bcs(user%bc%xm_vals, user%bc%xp_vals, user%bc%ym_vals, &
-         user%bc%yp_vals, user%bc%zm_vals, user%bc%zp_vals, user%bc%dim, user%info)
+    call BCSetValues(user%bc, user%info, initialize_bcs)
 
     ! fi/state
     if (new) then
-       call DMDAVecGetArrayF90(user%da_one, user%walls, user%walls_a, ierr)
-       call DMDAVecGetArrayF90(user%da_sb, user%fi, user%fi_a, ierr)
-       call DMDAVecGetArrayF90(user%da_s, user%rho, user%rho_a, ierr)
-       call initialize_state(user%fi_a, user%rho_a, user%ux, user%uy, user%uz, &
-            user%walls_a, user%info)
-       call DMDAVecRestoreArrayF90(user%da_one, user%walls, user%walls_a, ierr)
-       call DMDAVecRestoreArrayF90(user%da_sb, user%fi, user%fi_a, ierr)
-       call DMDAVecRestoreArrayF90(user%da_s, user%rho, user%rho_a, ierr)
+       call LBMInitializeState(user, initialize_state)
        istep=1
     else
        call initialize_state_restarted(user%fi, user%rho, user%walls, &
