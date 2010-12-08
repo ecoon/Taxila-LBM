@@ -21,6 +21,7 @@
     use petsc
     use Info_module
     use BC_module
+    use Timing_module
     implicit none
 
     private
@@ -329,7 +330,8 @@
       PetscErrorCode ierr
       logical,dimension(0:10):: bcs_done        ! flag for whether boundary condition
       integer lcv_sides, lcv_step
-      integer time1, time2, time3,time4,timerate, timemax
+      type(timing_type),pointer:: timer1, timer2, timer3
+      character(60) timername
 
       ! communicate to initialize
       call DMDALocalToLocalBegin(lbm%da_one, lbm%walls, INSERT_VALUES, lbm%walls, ierr)
@@ -337,6 +339,10 @@
 
       call DMDALocalToLocalBegin(lbm%da_sb, lbm%fi, INSERT_VALUES, lbm%fi, ierr)
       call DMDALocalToLocalEnd(lbm%da_sb, lbm%fi, INSERT_VALUES, lbm%fi, ierr)
+
+      ! output at zero time
+      call LBMLocalToGlobal(lbm)
+      call LBMOutput(lbm, istep-1, kwrite)
 
       ! get arrays
       call DMDAVecGetArrayF90(lbm%da_one, lbm%rhot, lbm%rhot_a, ierr)
@@ -348,15 +354,18 @@
 
       call BCGetArrays(lbm%bc, ierr)
 
-      call system_clock ( time1, timerate, timemax )
+      timername = 'Simulation'
+      timer1 => TimingCreate(lbm%comm, timername)
       do lcv_step = istep,kstep
-         call system_clock ( time3, timerate, timemax )
+!         timername = 'Streaming'
+!         timer2 => TimingCreate(lbm%comm, timername)
          call LBMStreaming(lbm%fi_a, lbm%info)
-         call system_clock ( time4, timerate, timemax )
-         write(*,*) 'stream Took', real(time4-time3)/real(timerate), 'seconds from process', lbm%info%id
+!         call TimingEnd(timer2)
+!         timer2%name = 'Streaming + Bounceback'
          call LBMBounceback(lbm%fi_a, lbm%walls_a, lbm%info)
-         call system_clock ( time3, timerate, timemax )
-         write(*,*) 'stream bb Took', real(time3-time4)/real(timerate), 'seconds from process', lbm%info%id
+!         call TimingEnd(timer2)
+!         timername = 'BCs + moments'
+!         timer2 => TimingCreate(lbm%comm, timername)
 
          bcs_done=.FALSE.
          bcs_done(0) = .TRUE.   ! periodic done by default
@@ -379,16 +388,20 @@
          enddo
 
          call LBMUpdateMoments(lbm%fi_a,lbm%rho_a, lbm%ux,lbm%uy,lbm%uz,lbm%walls_a, lbm%info)
-         call system_clock ( time4, timerate, timemax )
-         write(*,*) 'bcs/moments Took', real(time4-time3)/real(timerate), 'seconds from process', lbm%info%id
+!         call TimingEnd(timer2)
+!         timername = 'communication'
+!         timer2 => TimingCreate(lbm%comm, timername)
 
          ! update rho ghosts values
          call DMDAVecRestoreArrayF90(lbm%da_s,lbm%rho, lbm%rho_a, ierr)
          call DMDALocalToLocalBegin(lbm%da_s, lbm%rho, INSERT_VALUES, lbm%rho, ierr)
          call DMDALocalToLocalEnd(lbm%da_s, lbm%rho, INSERT_VALUES, lbm%rho, ierr)
          call DMDAVecGetArrayF90(lbm%da_s, lbm%rho, lbm%rho_a, ierr)
-         call system_clock ( time3, timerate, timemax )
-         write(*,*) 'Communication Took', real(time3-time4)/real(timerate), 'seconds from process', lbm%info%id
+!         call TimingEnd(timer2)
+!         timer2%name = 'communication + forces'
+!         timername = 'forces'
+!         timer3 => TimingCreate(lbm%comm, timername)
+
 
          !calculate forces
          lbm%Fx=0.
@@ -402,22 +415,21 @@
          call LBMAddFluidSolidForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info)
          call LBMZeroBoundaryForces(lbm%bc%flags, lbm%Fx, lbm%Fy, lbm%Fz, lbm%info%dim, lbm%info)
 
-         call system_clock ( time4, timerate, timemax )
-         write(*,*) 'Forces Took', real(time4-time3)/real(timerate), 'seconds from process', lbm%info%id
+!         call TimingEnd(timer2)
+!         call TimingEnd(timer3)
+!         timername = 'equilibrium'
+!         timer2 => TimingCreate(lbm%comm, timername)
 
          ! calculate u_equilibrium
          call LBMUpdateUEquilibrium(lbm%fi_a, lbm%rho_a, lbm%ux, lbm%uy, lbm%uz, lbm%walls_a, &
               lbm%uxe, lbm%uye, lbm%uze, lbm%rhot_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%info)
-
-         call system_clock ( time3, timerate, timemax )
-         write(*,*) 'calc ue Took', real(time3-time4)/real(timerate), 'seconds from process', lbm%info%id
+!         call TimingEnd(timer2)
+!         timername = 'collision'
+!         timer2 => TimingCreate(lbm%comm, timername)
 
          ! collision
          call LBMCollision(lbm%fi_a, lbm%rho_a, lbm%uxe, lbm%uye, lbm%uze, lbm%walls_a, lbm%info)
-
-         call system_clock ( time4, timerate, timemax )
-         write(*,*) 'collision Took', real(time4-time3)/real(timerate), 'seconds from process', lbm%info%id
-
+!         call TimingEnd(timer2)
 
          ! communicate, update fi
          call DMDAVecRestoreArrayF90(lbm%da_sb, lbm%fi, lbm%fi_a, ierr)
@@ -452,8 +464,7 @@
          call DMDAVecGetArrayF90(lbm%da_sb, lbm%fi, lbm%fi_a, ierr)
       end do
 
-      call system_clock ( time2, timerate, timemax )
-      write(*,*) 'simulation Took', real(time2-time1)/real(timerate), 'seconds from process', lbm%info%id
+      call TimingEnd(timer1)
 
       ! restore arrays in prep for communication
       call BCRestoreArrays(lbm%bc, ierr)
