@@ -379,9 +379,9 @@
                case (2)         ! flux
                   call BCFlux(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%info%dim, lbm%bc%xm_a, &
                        lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, lbm%bc%zm_a, lbm%bc%zp_a, lbm%info)
-                  !               case (3)         ! pressure
-                  !                  call lbm_bc_pressure(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%info%dim, lbm%bc%xm_a, &
-                  !                       lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, lbm%bc%zm_a, lbm%bc%zp_a)
+               case (3)         ! pressure
+                  call BCPressure(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%info%dim, lbm%bc%xm_a, &
+                       lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, lbm%bc%zm_a, lbm%bc%zp_a)
                end select
                bcs_done(lbm%bc%flags(lcv_sides)) = .TRUE. ! only do each bc type once
             endif
