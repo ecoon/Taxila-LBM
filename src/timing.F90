@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         08 December 2010
 !!!       on:            14:35:16 MST
-!!!     last modified:   08 December 2010
-!!!       at:            15:11:08 MST
+!!!     last modified:   09 December 2010
+!!!       at:            13:51:18 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -56,9 +56,9 @@
       timing%time = real(timing%time_end - timing%time_start)/real(timing%rate)
       call MPI_Comm_Rank(timing%comm, id, ierr)
       
+      call MPI_Reduce(timing%time, mean_time, 1, MPI_REAL, MPI_SUM, 0, timing%comm, ierr)
       if (id.eq.0) then
          call MPI_Comm_Size(timing%comm, nprocs, ierr)
-         call MPI_Reduce(timing%time, mean_time, 1, MPI_REAL, MPI_SUM, id, timing%comm, ierr)
          write(*,*) 'Timing:', timing%name
          write(*,*) '  took (s):', mean_time/real(nprocs)
       end if
