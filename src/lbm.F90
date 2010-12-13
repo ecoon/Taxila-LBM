@@ -354,6 +354,7 @@
 
       call BCGetArrays(lbm%bc, ierr)
 
+
       timername = 'Simulation'
       timer1 => TimingCreate(lbm%comm, timername)
       do lcv_step = istep,kstep
@@ -388,6 +389,7 @@
          enddo
 
          call LBMUpdateMoments(lbm%fi_a,lbm%rho_a, lbm%ux,lbm%uy,lbm%uz,lbm%walls_a, lbm%info)
+
 !         call TimingEnd(timer2)
 !         timername = 'communication'
 !         timer2 => TimingCreate(lbm%comm, timername)
@@ -519,24 +521,10 @@
       external :: init_subroutine
       PetscErrorCode ierr
       PetscInt vsize
-      vsize = 0
-      call VecGetLocalSize(lbm%walls, vsize, ierr)
-      print *, "wallsa:"
-      print *, "  vec local size:", vsize
-      vsize = 0
-      call VecGetSize(lbm%walls, vsize, ierr)
-      print *, '  vec global size:', vsize
+
       call DMDAVecGetArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
-      print *, '  size:', SIZE(lbm%walls_a)
-      print *, '  shape:', SHAPE(lbm%walls_a)
-      CHKERRQ(ierr)
-      CHKMEMQ
       call init_subroutine(lbm%walls_a, lbm%info)
-      CHKERRQ(ierr)
-      CHKMEMQ
       call DMDAVecRestoreArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
-      CHKERRQ(ierr)
-      CHKMEMQ
       return
     end subroutine LBMInitializeWalls
 
@@ -595,41 +583,53 @@
       PetscScalar,dimension(info%gxs:info%gxe,info%gys:info%gye,info%gzs:info%gze)::walls
       PetscScalar,dimension(1:info%s,info%gxs:info%gxe,info%gys:info%gye,info%gzs:info%gze)::uxe,uye,uze
 
-      if (info%id.eq.0) then
-         write(*,*) 'walls check:'
-         write(*,*) 'walls(1,0,13):', walls(2,1,14)
-         write(*,*) 'walls(1,NY,13):', walls(2,16,14)
-         write(*,*) 'walls(1,7,0):', walls(2,7,1)
-      else
-         write(*,*) 'walls(1,7,NZ):', walls(2,7,100)
-      endif
+      ! write(*,*) 'walls check:'
+      ! write(*,*) 'walls(1,0,13):', walls(2,1,14)
+      ! write(*,*) 'walls(1,1,13):', walls(2,2,14)
+      ! write(*,*) 'walls(1,NY,13):', walls(2,16,14)
+      ! write(*,*) 'walls(1,NY-1,13):', walls(2,15,14)
+
+      ! write(*,*) 'walls(1,0,13):', walls(1,1,14)
+      ! write(*,*) 'walls(1,1,13):', walls(1,2,14)
+      ! write(*,*) 'walls(1,NY,13):', walls(1,16,14)
+      ! write(*,*) 'walls(1,NY-1,13):', walls(1,15,14)
+
+      ! write(*,*) 'walls(1,0,13):', walls(3,1,14)
+      ! write(*,*) 'walls(1,1,13):', walls(3,2,14)
+      ! write(*,*) 'walls(1,NY,13):', walls(3,16,14)
+      ! write(*,*) 'walls(1,NY-1,13):', walls(3,15,14)
 
       if (info%id.eq.0) then
          write(*,*) '---------------------------------------'
-         write(*,*) 'output: rho(0,0,8,10):', rho(1,1,9,11)
-         write(*,*) 'output: uxe(0,1,8,10):', uxe(1,2,9,11)
-         write(*,*) 'output: uye(0,1,8,10):', uye(1,2,9,11)
-         write(*,*) 'output: uze(0,1,8,10):', uze(1,2,9,11)
-         write(*,*) 'output: fi(0,0,0,8,10):', fi(1,0,1,9,11)
-         write(*,*) 'output: fi(0,1,0,8,10):', fi(1,1,1,9,11)
+         write(*,*) 'output: rho(0,0,8,10):', rho(1,1,2,11)
+         write(*,*) 'output: uxe(0,1,8,10):', uxe(1,1,2,11)
+         write(*,*) 'output: uye(0,1,8,10):', uye(1,1,2,11)
+         write(*,*) 'output: uze(0,1,8,10):', uze(1,1,2,11)
+         write(*,*) 'output: fi(0,0,0,8,10):', fi(1,0,1,2,11)
+         write(*,*) 'output: fi(0,1,0,8,10):', fi(1,2,1,2,11)
+         write(*,*) 'output: fi(0,5,0,8,10):', fi(1,4,1,2,11)
       endif
-      write(*,*) 'id,nproc:', info%id, info%nproc
       if (info%id.eq.info%nproc-1) then
          write(*,*) '---------------------------------------'
-         write(*,*) 'output: rho(0,0,8,72):', rho(1,1,9,73)
-         write(*,*) 'output: uxe(0,1,8,72):', uxe(1,2,9,73)
-         write(*,*) 'output: uye(0,1,8,72):', uye(1,2,9,73)
-         write(*,*) 'output: uze(0,1,8,72):', uze(1,2,9,73)
-         write(*,*) 'output: fi(0,0,0,8,72):', fi(1,0,1,9,73)
-         write(*,*) 'output: fi(0,1,0,8,72):', fi(1,1,1,9,73)
+         write(*,*) 'output: rho(0,0,8,72):', rho(1,1,2,74)
+         write(*,*) 'output: rho(0,0,8,72):', rho(2,1,2,74)
+         write(*,*) 'output: rho(0,0,8,72):', rho(1,1,1,74)
+         write(*,*) 'output: rho(0,0,8,72):', rho(1,1,3,74)
+         write(*,*) 'output: uxe(0,1,8,72):', uxe(1,1,2,74)
+         write(*,*) 'output: uye(0,1,8,72):', uye(1,1,2,74)
+         write(*,*) 'output: uze(0,1,8,72):', uze(1,1,2,74)
+         write(*,*) 'output: fi(0,0,0,8,72):', fi(1,0,1,2,74)
+         write(*,*) 'output: fi(0,1,0,8,72):', fi(1,2,1,2,74)
+         write(*,*) 'output: fi(0,5,0,8,72):', fi(1,4,1,2,74)
          write(*,*) '---------------------------------------'
-         write(*,*) 'output: rho(0,0,8,90):', rho(1,1,9,91)
-         write(*,*) 'output: rho(1,0,8,90):', rho(2,1,9,91)
-         write(*,*) 'output: uxe(0,1,8,90):', uxe(1,2,9,91)
-         write(*,*) 'output: uye(0,1,8,90):', uye(1,2,9,91)
-         write(*,*) 'output: uze(0,1,8,90):', uze(1,2,9,91)
-         write(*,*) 'output: fi(0,0,0,8,90):', fi(1,0,1,9,91)
-         write(*,*) 'output: fi(0,1,0,8,90):', fi(1,1,1,9,91)
+         write(*,*) 'output: rho(0,0,8,90):', rho(1,1,2,91)
+         write(*,*) 'output: rho(1,0,8,90):', rho(2,1,2,91)
+         write(*,*) 'output: uxe(0,1,8,90):', uxe(1,1,2,91)
+         write(*,*) 'output: uye(0,1,8,90):', uye(1,1,2,91)
+         write(*,*) 'output: uze(0,1,8,90):', uze(1,1,2,91)
+         write(*,*) 'output: fi(0,0,0,8,90):', fi(1,0,1,2,91)
+         write(*,*) 'output: fi(0,1,0,8,90):', fi(1,2,1,2,91)
+         write(*,*) 'output: fi(0,5,0,8,90):', fi(1,4,1,2,91)
          write(*,*) '========================================'
       endif
       return
