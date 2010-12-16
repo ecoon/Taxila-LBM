@@ -22,6 +22,7 @@
     use Info_module
     use BC_module
     use Timing_module
+    use Options_module
     implicit none
 
     private
@@ -31,6 +32,7 @@
        MPI_Comm comm
        type(info_type),pointer:: info
        type(bc_type),pointer:: bc
+       type(options_type),pointer:: options
 
        DM,pointer:: da_one ! pressure, rhot, etc
        DM,pointer:: da_s   ! rho -- #dofs = s = # of components
@@ -97,6 +99,7 @@
       lbm%da_flow = 0
       lbm%info => InfoCreate()
       lbm%bc => BCCreate()
+      lbm%options => OptionsCreate()
       lbm%comm = comm
 
       lbm%fi = 0
@@ -302,16 +305,43 @@
       type(lbm_type) lbm
       PetscScalar,dimension(3,2):: corners
       PetscErrorCode ierr
+      PetscScalar deltacoord
+      PetscScalar newcoord_x
+      PetscScalar newcoord_y
+      PetscScalar newcoord_z
 
       lbm%corners = corners
-      call DMDASetUniformCoordinates(lbm%da_one, corners(1,1), corners(1,2), corners(2,1), &
-           corners(2,2), corners(3,1), corners(3,2), ierr)
-      call DMDASetUniformCoordinates(lbm%da_s, corners(1,1), corners(1,2), corners(2,1), &
-           corners(2,2), corners(3,1), corners(3,2), ierr)
-      call DMDASetUniformCoordinates(lbm%da_sb, corners(1,1), corners(1,2), corners(2,1), &
-           corners(2,2), corners(3,1), corners(3,2), ierr)
-      call DMDASetUniformCoordinates(lbm%da_flow, corners(1,1), corners(1,2), corners(2,1), &
-           corners(2,2), corners(3,1), corners(3,2), ierr)
+      ! note, because DAs are all periodic, it really screws up the corners in a 
+      ! uniform coordinates DA.  We must adjust these in the nonperiodic cases.
+      if (lbm%bc%flags(1) /= 0) then
+         deltacoord = (corners(1,2) - corners(1,1))/(lbm%info%NX-1)
+         newcoord_x = corners(1,2) + deltacoord
+      else
+         newcoord_x = corners(1,2)
+      endif
+
+      if (lbm%bc%flags(3) /= 0) then
+         deltacoord = (corners(2,2) - corners(2,1))/(lbm%info%NY-1)
+         newcoord_y = corners(2,2) + deltacoord
+      else
+         newcoord_y = corners(2,2)
+      endif
+
+      if (lbm%bc%flags(5) /= 0) then
+         deltacoord = (corners(3,2) - corners(3,1))/(lbm%info%NZ-1)
+         newcoord_z = corners(3,2) + deltacoord
+      else
+         newcoord_z = corners(3,2)
+      endif
+
+      call DMDASetUniformCoordinates(lbm%da_one, corners(1,1), newcoord_x, corners(2,1), &
+           newcoord_y, corners(3,1), newcoord_z, ierr)
+      call DMDASetUniformCoordinates(lbm%da_s, corners(1,1), newcoord_x, corners(2,1), &
+           newcoord_y, corners(3,1), newcoord_z, ierr)
+      call DMDASetUniformCoordinates(lbm%da_sb, corners(1,1), newcoord_x, corners(2,1), &
+           newcoord_y, corners(3,1), newcoord_z, ierr)
+      call DMDASetUniformCoordinates(lbm%da_flow, corners(1,1), newcoord_x, corners(2,1), &
+           newcoord_y, corners(3,1), newcoord_z, ierr)
       CHKERRQ(ierr)
       CHKMEMQ
       return
@@ -611,16 +641,21 @@
       endif
       if (info%id.eq.info%nproc-1) then
          write(*,*) '---------------------------------------'
-         write(*,*) 'output: rho(0,0,8,72):', rho(1,1,2,74)
-         write(*,*) 'output: rho(0,0,8,72):', rho(2,1,2,74)
-         write(*,*) 'output: rho(0,0,8,72):', rho(1,1,1,74)
-         write(*,*) 'output: rho(0,0,8,72):', rho(1,1,3,74)
-         write(*,*) 'output: uxe(0,1,8,72):', uxe(1,1,2,74)
-         write(*,*) 'output: uye(0,1,8,72):', uye(1,1,2,74)
-         write(*,*) 'output: uze(0,1,8,72):', uze(1,1,2,74)
-         write(*,*) 'output: fi(0,0,0,8,72):', fi(1,0,1,2,74)
-         write(*,*) 'output: fi(0,1,0,8,72):', fi(1,2,1,2,74)
-         write(*,*) 'output: fi(0,5,0,8,72):', fi(1,4,1,2,74)
+         print *, 'walls:', walls(1,25,99)
+         print *, 'walls:', walls(2,25,99)
+         print *, 'walls:', walls(3,25,99)
+         write(*,*) 'output: walls(0,8,72):', walls(1,26,99)
+         write(*,*) 'output: walls(0,8,72):', walls(1,25,99)
+         write(*,*) 'output: rho(0,0,8,72):', rho(1,1,25,99)
+         write(*,*) 'output: rho(0,0,8,72):', rho(2,1,25,99)
+         write(*,*) 'output: rho(0,0,8,72):', rho(1,1,23,99)
+         write(*,*) 'output: rho(0,0,8,72):', rho(1,1,25,99)
+         write(*,*) 'output: uxe(0,1,8,72):', uxe(1,1,25,99)
+         write(*,*) 'output: uye(0,1,8,72):', uye(1,1,25,99)
+         write(*,*) 'output: uze(0,1,8,72):', uze(1,1,25,99)
+         write(*,*) 'output: fi(0,0,0,8,72):', fi(1,0,1,25,99)
+         write(*,*) 'output: fi(0,1,0,8,72):', fi(1,2,1,25,99)
+         write(*,*) 'output: fi(0,5,0,8,72):', fi(1,4,1,25,99)
          write(*,*) '---------------------------------------'
          write(*,*) 'output: rho(0,0,8,90):', rho(1,1,2,91)
          write(*,*) 'output: rho(1,0,8,90):', rho(2,1,2,91)
