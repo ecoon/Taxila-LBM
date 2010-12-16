@@ -77,6 +77,7 @@
          LBMRun, &
          LBMLocalToGlobal, &
          LBMInitializeWalls, &
+         LBMInitializeWallsPetsc, &
          LBMInitializeState, &
          LBMGetDMByIndex
 
@@ -440,7 +441,7 @@
          lbm%Fy=0.
          lbm%Fz=0.
 
-         if (lbm%info%s .eq. 2) then
+         if (lbm%info%s.eq.2) then
             call LBMAddFluidFluidForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info)
          endif
          call LBMAddBodyForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info)
@@ -553,10 +554,25 @@
       PetscInt vsize
 
       call DMDAVecGetArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
-      call init_subroutine(lbm%walls_a, lbm%info)
+      call init_subroutine(lbm%walls_a, lbm%options%walls_file, lbm%info)
       call DMDAVecRestoreArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
       return
     end subroutine LBMInitializeWalls
+
+    subroutine LBMInitializeWallsPetsc(lbm, filename)
+      implicit none
+      type(lbm_type) lbm
+      character* 60 filename
+      
+      PetscViewer viewer
+      PetscErrorCode ierr
+      call PetscViewerBinaryOpen(lbm%comm, filename, FILE_MODE_READ, viewer, ierr)
+      call VecLoad(lbm%walls_g, viewer, ierr)
+      call PetscViewerDestroy(viewer, ierr)
+      call DMDAGlobalToLocalBegin(lbm%da_one, lbm%walls_g, lbm%walls, ierr)
+      call DMDAGlobalToLocalEnd(lbm%da_one, lbm%walls_g, lbm%walls, ierr)
+      return
+    end subroutine LBMInitializeWallsPetsc
 
     subroutine LBMInitializeState(lbm, init_subroutine)
       implicit none
