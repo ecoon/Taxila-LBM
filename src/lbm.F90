@@ -569,8 +569,8 @@
       call PetscViewerBinaryOpen(lbm%comm, filename, FILE_MODE_READ, viewer, ierr)
       call VecLoad(lbm%walls_g, viewer, ierr)
       call PetscViewerDestroy(viewer, ierr)
-      call DMDAGlobalToLocalBegin(lbm%da_one, lbm%walls_g, lbm%walls, ierr)
-      call DMDAGlobalToLocalEnd(lbm%da_one, lbm%walls_g, lbm%walls, ierr)
+      call DMGlobalToLocalBegin(lbm%da_one, lbm%walls_g, lbm%walls, ierr)
+      call DMGlobalToLocalEnd(lbm%da_one, lbm%walls_g, lbm%walls, ierr)
       return
     end subroutine LBMInitializeWallsPetsc
 

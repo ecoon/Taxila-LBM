@@ -6,7 +6,7 @@
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
 !!!     last modified:   16 December 2010
-!!!       at:            16:09:51 MST
+!!!       at:            16:21:02 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -29,6 +29,7 @@
     PetscInt kwrite, kprint
     PetscErrorCode ierr
     character(60) infile
+    character*20 prefix
 
     external initialize_bcs
     external initialize_state
@@ -45,7 +46,8 @@
     options => user%options
 
     ! initialize options and constants
-    call OptionsInitialize(options, ierr)
+    prefix = ''
+    call OptionsInitialize(options, prefix, ierr)
     call constants_initialize(options%s)
     call constants_set_from_options(user%options)
 
