@@ -1,6 +1,8 @@
-Geom: CreateGeom3DParallel.o
-	mpif90 -o Geom CreateGeom3DParallel.o
-CreateGeom3DParallel.o: CreateGeom3DParallel.f90
-	mpif90 -c CreateGeom3DParallel.f90
-clean:
-	rm CreateGeom3DParallel.o Geom *~
+COMP = ${PETSC_DIR}/${PETSC_ARCH}/bin/mpif90
+
+petsc: CreateGeom3DPetsc.o
+	-${FLINKER} -o createGeom3DPetsc CreateGeom3DPetsc.o  ${PETSC_DM_LIB}
+
+
+include ${PETSC_DIR}/conf/variables
+include ${PETSC_DIR}/conf/rules
