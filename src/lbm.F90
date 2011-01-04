@@ -362,6 +362,7 @@
       logical,dimension(0:10):: bcs_done        ! flag for whether boundary condition
       integer lcv_sides, lcv_step
       type(timing_type),pointer:: timer1, timer2, timer3
+      character(60) timerunits
       character(60) timername
 
       ! communicate to initialize
@@ -497,7 +498,8 @@
          call DMDAVecGetArrayF90(lbm%da_sb, lbm%fi, lbm%fi_a, ierr)
       end do
 
-      call TimingEnd(timer1)
+      timerunits = 'timestep'
+      call TimingEndPerUnit(timer1, (kstep-istep+1), timerunits)
 
       ! restore arrays in prep for communication
       call BCRestoreArrays(lbm%bc, ierr)

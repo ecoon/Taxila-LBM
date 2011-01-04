@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         08 December 2010
 !!!       on:            14:35:16 MST
-!!!     last modified:   09 December 2010
-!!!       at:            13:51:18 MST
+!!!     last modified:   04 January 2011
+!!!       at:            13:04:13 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -63,4 +63,30 @@
          write(*,*) '  took (s):', mean_time/real(nprocs)
       end if
     end subroutine TimingEnd
+
+    subroutine TimingEndPerUnit(timing, numunits, unitname)
+      ! same as TimingEnd, this just divides by a factor of the
+      ! number of units, for instance the number of timesteps
+      implicit none
+      type(timing_type) timing
+      integer id, nprocs
+      integer ierr
+      real mean_time
+      integer numunits
+      integer charlen
+      character* 60 unitname
+
+      call system_clock (timing%time_end, timing%rate, timing%max)
+      timing%time = real(timing%time_end - timing%time_start)/real(timing%rate)
+      call MPI_Comm_Rank(timing%comm, id, ierr)
+      
+      call MPI_Reduce(timing%time, mean_time, 1, MPI_REAL, MPI_SUM, 0, timing%comm, ierr)
+      if (id.eq.0) then
+         call MPI_Comm_Size(timing%comm, nprocs, ierr)
+         write(*,*) 'Timing:', timing%name
+         charlen = LEN_TRIM(unitname)
+         write(*,*) '  took (per unit', unitname(1:charlen), ') (s):', mean_time/real(nprocs)/real(numunits)
+      end if
+    end subroutine TimingEndPerUnit
+
   end module Timing_module
