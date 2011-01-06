@@ -25,7 +25,7 @@
        integer rate
        integer max
        real time
-       character name(60)
+       character(60) name
     end type timing_type
 
   contains
@@ -34,7 +34,7 @@
       implicit none
       MPI_Comm comm
       type(timing_type),pointer:: timing
-      character name(60)
+      character(60) name
 
       allocate(timing)
       timing%comm = comm
@@ -74,7 +74,7 @@
       real mean_time
       integer numunits
       integer charlen
-      character* 60 unitname
+      character(60) unitname
 
       call system_clock (timing%time_end, timing%rate, timing%max)
       timing%time = real(timing%time_end - timing%time_start)/real(timing%rate)
