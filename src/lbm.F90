@@ -79,7 +79,8 @@
          LBMInitializeWalls, &
          LBMInitializeWallsPetsc, &
          LBMInitializeState, &
-         LBMGetDMByIndex
+         LBMGetDMByIndex, &
+         LBMGetCorners
 
   contains
     function LBMCreate(comm) result(lbm)
@@ -621,6 +622,14 @@
          dm => lbm%da_flow
       end select
     end function LBMGetDMByIndex
+
+    ! get the corner coordinates of the domain
+    subroutine LBMGetCorners(lbm, corners)
+      type(lbm_type) lbm
+      PetscScalar,dimension(3,2):: corners
+      
+      corners = lbm%corners
+    end subroutine LBMGetCorners
 
     subroutine LBMPrintAFew(rho, fi, walls, uxe, uye, uze, info)
       implicit none
