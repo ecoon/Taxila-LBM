@@ -71,7 +71,7 @@
     end type lbm_type
 
     public :: LBMCreate, &
-         LBMSetSizes, &
+         LBMSetFromOptions, &
          LBMDestroy, &
          LBMSetDomain, &
          LBMRun, &
