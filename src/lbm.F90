@@ -139,12 +139,12 @@
     end function LBMCreate
 
     ! --- set up LB method
-    subroutine LBMSetSizes(lbm, NX_, NY_, NZ_, s_, b_)
+    subroutine LBMSetFromOptions(lbm, options)
       implicit none
 
       ! input
-      integer,intent(in):: NX_,NY_,NZ_,s_,b_
       type(lbm_type) lbm
+      type(options_type) options
 
       ! local
       integer xs,ys,zs,gxs,gys,gzs
@@ -154,32 +154,39 @@
       call mpi_comm_size(lbm%comm,lbm%info%nproc, ierr)
 
       lbm%info%dim = 3
-      lbm%info%s = s_
-      lbm%info%b = b_
+      lbm%info%s = options%s
+      lbm%info%b = options%b
       lbm%dm_index_to_ndof(ONEDOF) = 1
-      lbm%dm_index_to_ndof(NPHASEDOF) = s_
-      lbm%dm_index_to_ndof(NPHASEXBDOF) = s_*(b_+1)
+      lbm%dm_index_to_ndof(NPHASEDOF) = options%s
+      lbm%dm_index_to_ndof(NPHASEXBDOF) = options%s*(options%b+1)
       lbm%dm_index_to_ndof(NFLOWDOF) = lbm%info%dim
 
-      lbm%info%NX = NX_
-      lbm%info%NY = NY_
-      lbm%info%NZ = NZ_
+      lbm%info%NX = options%NX
+      lbm%info%NY = options%NY
+      lbm%info%NZ = options%NZ
+
+      lbm%info%options_prefix = options%my_prefix
+      lbm%bc%flags(:) = options%bc_flags(:)
 
       ! create DAs
-      call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, NX_, NY_, NZ_, &
+      call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
+           options%NX, options%NY, options%NZ, &
            PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, lbm%dm_index_to_ndof(ONEDOF), 1, &
            PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_one, ierr)
       CHKERRQ(ierr)
 
-      call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, NX_, NY_, NZ_, &
+      call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
+           options%NX, options%NY, options%NZ, &
            PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, lbm%dm_index_to_ndof(NPHASEDOF), 1, &
            PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_s, ierr)
 
-      call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, NX_, NY_, NZ_, &
+      call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
+           options%NX, options%NY, options%NZ, &
            PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, lbm%dm_index_to_ndof(NPHASEXBDOF), 1,&
            PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_sb, ierr)
 
-      call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, NX_, NY_, NZ_, &
+      call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
+           options%NX, options%NY, options%NZ, &
            PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, lbm%dm_index_to_ndof(NFLOWDOF), 1, &
            PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_flow, ierr)
 
@@ -261,7 +268,7 @@
       CHKERRQ(ierr)
       CHKMEMQ
       return
-    end subroutine LBMSetSizes
+    end subroutine LBMSetFromOptions
 
     ! --- destroy things
     subroutine LBMDestroy(lbm, ierr)

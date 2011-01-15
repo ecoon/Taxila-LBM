@@ -6,7 +6,7 @@
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
 !!!     last modified:   14 January 2011
-!!!       at:            17:05:21 MST
+!!!       at:            17:43:03 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -52,8 +52,7 @@
     call constants_set_from_options(user%options)
 
     ! --- initialize memory
-    call LBMSetSizes(user, options%NX, options%NY, options%NZ, options%s, options%b)
-    user%bc%flags(:) = options%bc_flags(:)
+    call LBMSetFromOptions(user, options)
 
     if (user%info%id.eq.0) call OptionsPrint(options)
     ! --- initialize state
