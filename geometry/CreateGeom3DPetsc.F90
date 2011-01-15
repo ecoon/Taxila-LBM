@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         16 December 2010
 !!!       on:            14:14:04 MST
-!!!     last modified:   16 December 2010
-!!!       at:            15:14:02 MST
+!!!     last modified:   14 January 2011
+!!!       at:            16:59:16 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -24,8 +24,8 @@ program geometry
   PetscInt NX, NY, NZ
   PetscScalar,pointer,dimension(:,:,:):: walls
   PetscInt, allocatable, dimension(:,:,:)::pores
-  character*60 flnm1, flnm2
-  character*60 optionsfile
+  character(len=MAXSTRINGLENGTH) flnm1, flnm2
+  character(len=MAXSTRINGLENGTH) optionsfile
   PetscBool flag
   PetscInt i,j,k
 

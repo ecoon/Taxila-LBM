@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         08 December 2010
 !!!       on:            14:35:16 MST
-!!!     last modified:   04 January 2011
-!!!       at:            13:04:13 MST
+!!!     last modified:   14 January 2011
+!!!       at:            17:07:09 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -18,15 +18,22 @@
     use petsc
     implicit none
 
-    type timing_type
+    private
+#include "lbm_definitions.h"
+
+    type,public:: timing_type
        MPI_Comm comm
        integer time_start
        integer time_end
        integer rate
        integer max
        real time
-       character(60) name
+       character(len=MAXWORDLENGTH) name
     end type timing_type
+    
+    public :: TimingCreate, &
+         TimingEnd, &
+         TimingEndPerUnit
 
   contains
 
@@ -34,7 +41,7 @@
       implicit none
       MPI_Comm comm
       type(timing_type),pointer:: timing
-      character(60) name
+      character(len=MAXWORDLENGTH) name
 
       allocate(timing)
       timing%comm = comm
@@ -74,7 +81,7 @@
       real mean_time
       integer numunits
       integer charlen
-      character(60) unitname
+      character(len=MAXWORDLENGTH) unitname
 
       call system_clock (timing%time_end, timing%rate, timing%max)
       timing%time = real(timing%time_end - timing%time_start)/real(timing%rate)

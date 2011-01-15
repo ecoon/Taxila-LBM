@@ -363,8 +363,8 @@
       logical,dimension(0:10):: bcs_done        ! flag for whether boundary condition
       integer lcv_sides, lcv_step
       type(timing_type),pointer:: timer1, timer2, timer3
-      character(60) timerunits
-      character(60) timername
+      character(len=MAXWORDLENGTH) timerunits
+      character(len=MAXWORDLENGTH) timername
 
       ! communicate to initialize
       call DMDALocalToLocalBegin(lbm%da_one, lbm%walls, INSERT_VALUES, lbm%walls, ierr)
@@ -565,7 +565,7 @@
     subroutine LBMInitializeWallsPetsc(lbm, filename)
       implicit none
       type(lbm_type) lbm
-      character* 60 filename
+      character(len=MAXSTRINGLENGTH) filename
       
       PetscViewer viewer
       PetscErrorCode ierr
