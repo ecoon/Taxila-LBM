@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
-!!!     last modified:   16 December 2010
-!!!       at:            16:21:02 MST
+!!!     last modified:   14 January 2011
+!!!       at:            17:05:21 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -23,13 +23,14 @@
     use constants
     use petsc
     implicit none
+#include "lbm_definitions.h"
 
     PetscInt istep
     PetscInt ntimes, npasses
     PetscInt kwrite, kprint
     PetscErrorCode ierr
-    character(60) infile
-    character*20 prefix
+    character(len=MAXSTRINGLENGTH) infile
+    character(len=MAXWORDLENGTH) prefix
 
     external initialize_bcs
     external initialize_state
@@ -37,7 +38,6 @@
     type(lbm_type),pointer:: user
     type(options_type),pointer:: options
 
-#include "lbm_definitions.h"
 
     ! --- setup environment
     call getarg(1, infile)
