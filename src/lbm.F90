@@ -382,7 +382,9 @@
 
       ! output at zero time
       call LBMLocalToGlobal(lbm)
-      call LBMOutput(lbm, istep-1, kwrite)
+      if (istep.eq.0) then
+         call LBMOutput(lbm, istep, kwrite)
+      endif
 
       ! get arrays
       call DMDAVecGetArrayF90(lbm%da_one, lbm%rhot, lbm%rhot_a, ierr)
@@ -397,7 +399,7 @@
 
       timername = 'Simulation'
       timer1 => TimingCreate(lbm%comm, timername)
-      do lcv_step = istep,kstep
+      do lcv_step = istep+1,kstep
 !         timername = 'Streaming'
 !         timer2 => TimingCreate(lbm%comm, timername)
          call LBMStreaming(lbm%fi_a, lbm%info)
