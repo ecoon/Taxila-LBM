@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
-!!!     last modified:   14 January 2011
-!!!       at:            17:43:03 MST
+!!!     last modified:   18 January 2011
+!!!       at:            09:55:28 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -70,7 +70,7 @@
     ! fi/state
     if (options%new_simulation) then
        call LBMInitializeState(user, initialize_state)
-       istep=1
+       istep=0
     else
        call initialize_state_restarted(user%fi, user%rho, user%walls, &
             options%istep, options%kwrite, user)
@@ -78,7 +78,7 @@
     endif
 
     ! start lbm
-    if(user%info%id.eq.0) print*,'calling lbm'
+    if(user%info%id.eq.0) print*,'calling lbm from inital step', istep, 'to final step', options%ntimes*options%npasses
 
     call LBMRun(user, istep, options%ntimes*options%npasses, options%kwrite) ! for the moment, this is crap
     call LBMDestroy(user, ierr)
