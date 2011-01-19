@@ -581,8 +581,8 @@
       call PetscViewerBinaryOpen(lbm%comm, filename, FILE_MODE_READ, viewer, ierr)
       call VecLoad(lbm%walls_g, viewer, ierr)
       call PetscViewerDestroy(viewer, ierr)
-      call DMGlobalToLocalBegin(lbm%da_one, lbm%walls_g, lbm%walls, ierr)
-      call DMGlobalToLocalEnd(lbm%da_one, lbm%walls_g, lbm%walls, ierr)
+      call DMGlobalToLocalBegin(lbm%da_one, lbm%walls_g, INSERT_VALUES, lbm%walls, ierr)
+      call DMGlobalToLocalEnd(lbm%da_one, lbm%walls_g, INSERT_VALUES, lbm%walls, ierr)
       return
     end subroutine LBMInitializeWallsPetsc
 
