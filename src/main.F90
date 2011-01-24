@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
-!!!     last modified:   18 January 2011
-!!!       at:            09:55:28 MST
+!!!     last modified:   24 January 2011
+!!!       at:            14:13:09 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -72,8 +72,7 @@
        call LBMInitializeState(user, initialize_state)
        istep=0
     else
-       call initialize_state_restarted(user%fi, user%rho, user%walls, &
-            options%istep, options%kwrite, user)
+       call LBMInitializeStateRestarted(user, options%istep, options%kwrite)
        istep = options%istep
     endif
 
