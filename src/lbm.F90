@@ -23,6 +23,7 @@
     use BC_module
     use Timing_module
     use Options_module
+    use LBMStreaming_module
     implicit none
 
     private
