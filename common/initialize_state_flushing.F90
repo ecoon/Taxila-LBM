@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
-!!!     last modified:   14 January 2011
-!!!       at:            18:24:45 MST
+!!!     last modified:   31 January 2011
+!!!       at:            11:27:20 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -20,6 +20,7 @@
     use petsc
     use Info_module
     use constants
+    use LBM_Equilibrium_module
     implicit none
 
     ! input variables
