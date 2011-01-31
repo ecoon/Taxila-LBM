@@ -12,7 +12,7 @@ contains
 
   
   subroutine LBMEquilf(feq,rho,uxe,uye,uze,alf,b)
-    use c_constants
+    use LBM_Directions_D3Q19_module
     
     integer b
     PetscScalar,dimension(0:b)::feq
