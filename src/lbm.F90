@@ -22,7 +22,7 @@
     use Info_module
     use LBM_BC_module
     use Timing_module
-    use Options_module
+    use LBM_Options_module
     use LBM_Streaming_module
     use LBM_Collision_module
     implicit none

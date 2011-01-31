@@ -19,7 +19,7 @@
   program main
     use LBM_BC_module
     use LBM_module
-    use Options_module
+    use LBM_Options_module
     use constants
     use petsc
     implicit none
