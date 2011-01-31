@@ -23,7 +23,8 @@
     use LBM_BC_module
     use Timing_module
     use Options_module
-    use LBMStreaming_module
+    use LBM_Streaming_module
+    use LBM_Collision_module
     implicit none
 
     private
