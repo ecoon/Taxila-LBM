@@ -20,7 +20,7 @@
   module LBM_module
     use petsc
     use Info_module
-    use BC_module
+    use LBM_BC_module
     use Timing_module
     use Options_module
     use LBMStreaming_module
