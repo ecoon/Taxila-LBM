@@ -17,7 +17,7 @@
 #include "finclude/petscdmdef.h"
 
   program main
-    use BC_module
+    use LBM_BC_module
     use LBM_module
     use Options_module
     use constants
