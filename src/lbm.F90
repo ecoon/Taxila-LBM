@@ -156,10 +156,17 @@
 
       lbm%info%dim = 3
       lbm%info%s = options%s
-      lbm%info%b = options%b
+      lbm%info%discretization = options%discretization
+      select case(options%discretization)
+      case (D3Q19)
+         lbm%info%b = 19
+      case (D2Q9)
+         lbm%info%b = 9
+      end select
+
       lbm%dm_index_to_ndof(ONEDOF) = 1
-      lbm%dm_index_to_ndof(NPHASEDOF) = options%s
-      lbm%dm_index_to_ndof(NPHASEXBDOF) = options%s*(options%b+1)
+      lbm%dm_index_to_ndof(NPHASEDOF) = lbm%info%s
+      lbm%dm_index_to_ndof(NPHASEXBDOF) = lbm%info%s*(lbm%info%b+1)
       lbm%dm_index_to_ndof(NFLOWDOF) = lbm%info%dim
 
       lbm%info%NX = options%NX
