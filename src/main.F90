@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
-!!!     last modified:   24 January 2011
-!!!       at:            14:13:09 MST
+!!!     last modified:   31 January 2011
+!!!       at:            15:03:49 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -17,11 +17,10 @@
 #include "finclude/petscdmdef.h"
 
   program main
+    use petsc
+    use LBM_Options_module
     use LBM_BC_module
     use LBM_module
-    use LBM_Options_module
-    use constants
-    use petsc
     implicit none
 #include "lbm_definitions.h"
 
@@ -48,13 +47,10 @@
     ! initialize options and constants
     prefix = ''
     call OptionsInitialize(options, prefix, ierr)
-    call constants_initialize(options%s)
-    call constants_set_from_options(user%options)
-
-    ! --- initialize memory
     call LBMSetFromOptions(user, options)
 
-    if (user%info%id.eq.0) call OptionsPrint(options)
+    if (user%info%id.eq.0) call LBMView(user)
+
     ! --- initialize state
     ! walls
     if(user%info%id.eq.0) print*,'initialization of walls'

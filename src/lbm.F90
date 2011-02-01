@@ -19,9 +19,10 @@
   
   module LBM_module
     use petsc
-    use Info_module
-    use LBM_BC_module
     use Timing_module
+    use LBM_Info_module
+    use LBM_Constants_module
+    use LBM_BC_module
     use LBM_Options_module
     use LBM_Streaming_module
     use LBM_Collision_module
@@ -35,6 +36,7 @@
        type(info_type),pointer:: info
        type(bc_type),pointer:: bc
        type(options_type),pointer:: options
+       type(constants_type),pointer:: constants
 
        DM,pointer:: da_one ! pressure, rhot, etc
        DM,pointer:: da_s   ! rho -- #dofs = s = # of components
@@ -82,7 +84,8 @@
          LBMInitializeWallsPetsc, &
          LBMInitializeState, &
          LBMGetDMByIndex, &
-         LBMGetCorners
+         LBMGetCorners, &
+         LBMView
 
   contains
     function LBMCreate(comm) result(lbm)
@@ -104,6 +107,7 @@
       lbm%info => InfoCreate()
       lbm%bc => BCCreate()
       lbm%options => OptionsCreate()
+      lbm%constants => ConstantsCreate()
       lbm%comm = comm
 
       lbm%fi = 0
@@ -149,53 +153,44 @@
       type(options_type) options
 
       ! local
-      integer xs,ys,zs,gxs,gys,gzs
       PetscErrorCode ierr
+      PetscInt xs,gxs
+      PetscInt ys,gys
+      PetscInt zs,gzs
 
       call mpi_comm_rank(lbm%comm,lbm%info%id,ierr)
       call mpi_comm_size(lbm%comm,lbm%info%nproc, ierr)
 
-      lbm%info%dim = 3
-      lbm%info%s = options%s
-      lbm%info%discretization = options%discretization
-      select case(options%discretization)
-      case (D3Q19)
-         lbm%info%b = 19
-      case (D2Q9)
-         lbm%info%b = 9
-      end select
+      call InfoSetFromOptions(lbm%info, options, ierr)
+      call ConstantsSetSizes(lbm%constants, lbm%info%s)
+      call ConstantsSetFromOptions(lbm%constants, options, ierr)
 
       lbm%dm_index_to_ndof(ONEDOF) = 1
       lbm%dm_index_to_ndof(NPHASEDOF) = lbm%info%s
       lbm%dm_index_to_ndof(NPHASEXBDOF) = lbm%info%s*(lbm%info%b+1)
       lbm%dm_index_to_ndof(NFLOWDOF) = lbm%info%dim
 
-      lbm%info%NX = options%NX
-      lbm%info%NY = options%NY
-      lbm%info%NZ = options%NZ
-
-      lbm%info%options_prefix = options%my_prefix
       lbm%bc%flags(:) = options%bc_flags(:)
 
       ! create DAs
       call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
-           options%NX, options%NY, options%NZ, &
+           lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
            PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, lbm%dm_index_to_ndof(ONEDOF), 1, &
            PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_one, ierr)
       CHKERRQ(ierr)
 
       call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
-           options%NX, options%NY, options%NZ, &
+           lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
            PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, lbm%dm_index_to_ndof(NPHASEDOF), 1, &
            PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_s, ierr)
 
       call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
-           options%NX, options%NY, options%NZ, &
+           lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
            PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, lbm%dm_index_to_ndof(NPHASEXBDOF), 1,&
            PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_sb, ierr)
 
       call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
-           options%NX, options%NY, options%NZ, &
+           lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
            PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, lbm%dm_index_to_ndof(NFLOWDOF), 1, &
            PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_flow, ierr)
 
@@ -279,6 +274,14 @@
       return
     end subroutine LBMSetFromOptions
 
+    subroutine LBMView(lbm)
+      type(lbm_type) lbm
+      
+      call OptionsView(lbm%options)
+      call InfoView(lbm%info)
+      call ConstantsView(lbm%constants)
+    end subroutine LBMView
+
     ! --- destroy things
     subroutine LBMDestroy(lbm, ierr)
       implicit none
@@ -314,6 +317,7 @@
 
       call BCDestroy(lbm%bc, ierr)
       call InfoDestroy(lbm%info, ierr)
+      call ConstantsDestroy(lbm%constants, ierr)
       return
     end subroutine LBMDestroy
 
@@ -462,11 +466,11 @@
          lbm%Fz=0.
 
          if (lbm%info%s.eq.2) then
-            call LBMAddFluidFluidForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info)
+            call LBMAddFluidFluidForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info, lbm%constants)
          endif
-         call LBMAddBodyForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info)
-         call LBMAddFluidSolidForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info)
-         call LBMZeroBoundaryForces(lbm%bc%flags, lbm%Fx, lbm%Fy, lbm%Fz, lbm%info%dim, lbm%info)
+         call LBMAddBodyForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info, lbm%constants)
+         call LBMAddFluidSolidForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info, lbm%constants)
+         call LBMZeroBoundaryForces(lbm%bc%flags, lbm%Fx, lbm%Fy, lbm%Fz, lbm%info%dim, lbm%info, lbm%constants)
 
 !         call TimingEnd(timer2)
 !         call TimingEnd(timer3)
@@ -475,13 +479,14 @@
 
          ! calculate u_equilibrium
          call LBMUpdateUEquilibrium(lbm%fi_a, lbm%rho_a, lbm%ux, lbm%uy, lbm%uz, lbm%walls_a, &
-              lbm%uxe, lbm%uye, lbm%uze, lbm%rhot_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%info)
+              lbm%uxe, lbm%uye, lbm%uze, lbm%rhot_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%info, lbm%constants)
 !         call TimingEnd(timer2)
 !         timername = 'collision'
 !         timer2 => TimingCreate(lbm%comm, timername)
 
          ! collision
-         call LBMCollision(lbm%fi_a, lbm%rho_a, lbm%uxe, lbm%uye, lbm%uze, lbm%walls_a, lbm%info)
+         call LBMCollision(lbm%fi_a, lbm%rho_a, lbm%uxe, lbm%uye, lbm%uze, lbm%walls_a, &
+              lbm%info, lbm%constants)
 !         call TimingEnd(timer2)
 
          ! communicate, update fi
@@ -493,7 +498,7 @@
          if(mod(lcv_step,kwrite).eq.0) then
             ! --  --  update diagnostics
             call LBMUpdateDiagnostics(lbm%rho_a, lbm%ux, lbm%uy, lbm%uz, lbm%walls_a, lbm%ut_a, &
-                 lbm%rhot_a, lbm%prs_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%info)
+                 lbm%rhot_a, lbm%prs_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%info, lbm%constants)
 
             ! --  --  restore arrays
             call DMDAVecRestoreArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
@@ -564,7 +569,7 @@
       type(lbm_type) lbm
       !      interface
       !         subroutine init_subroutine(walls, info)
-      !           use Info_module
+      !           use LBM_Info_module
       !           type(info_type) info
       !           PetscScalar walls(:) ! problem is that this does not work, as we want
       !                                  to specify an explicit shape within the subroutine
@@ -600,7 +605,7 @@
       type(lbm_type) lbm
       !      interface
       !         subroutine init_subroutine(fi, rho, ux, uy, uz, walls, info)
-      !           use Info_module
+      !           use LBM_Info_module
       !           type(info_type) info
       !           PetscScalar fi(:)
       !           PetscScalar rho(:)
@@ -615,7 +620,7 @@
       call DMDAVecGetArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
       call DMDAVecGetArrayF90(lbm%da_sb, lbm%fi, lbm%fi_a, ierr)
       call DMDAVecGetArrayF90(lbm%da_s, lbm%rho, lbm%rho_a, ierr)
-      call init_subroutine(lbm%fi_a, lbm%rho_a, lbm%ux, lbm%uy, lbm%uz, lbm%walls_a, lbm%info)
+      call init_subroutine(lbm%fi_a, lbm%rho_a, lbm%ux, lbm%uy, lbm%uz, lbm%walls_a, lbm%info, lbm%constants)
       call DMDAVecRestoreArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
       call DMDAVecRestoreArrayF90(lbm%da_sb, lbm%fi, lbm%fi_a, ierr)
       call DMDAVecRestoreArrayF90(lbm%da_s, lbm%rho, lbm%rho_a, ierr)

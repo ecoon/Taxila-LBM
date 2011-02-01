@@ -19,7 +19,7 @@
 
   subroutine initialize_walls(walls, filename, info)
     use petsc
-    use Info_module
+    use LBM_Info_module
     implicit none
 
 #include "lbm_definitions.h"
