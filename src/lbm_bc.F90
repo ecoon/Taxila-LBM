@@ -6,7 +6,7 @@
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
 !!!     last modified:   31 January 2011
-!!!       at:            11:12:18 MST
+!!!       at:            17:36:05 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -21,6 +21,7 @@ module LBM_BC_module
 use petsc
 implicit none
   private
+#include "lbm_definitions.h"
 
   type, public:: bc_type
      integer, dimension(6):: flags ! enum for boundary conditions
@@ -654,6 +655,8 @@ end subroutine BCRestoreArrays
 
     return
   end subroutine BCPressure
+
+!#include "bc_pressure_dev.F90"
 
   subroutine BCPseudoperiodic(fi, walls, bc_flags, bc_dim, &
        xm_vals, xp_vals, ym_vals, yp_vals, zm_vals, zp_vals, info)

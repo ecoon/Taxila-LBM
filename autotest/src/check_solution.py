@@ -6,8 +6,8 @@
 ###     version:         
 ###     created:         28 January 2011
 ###       on:            10:57:45 MST
-###     last modified:   28 January 2011
-###       at:            12:44:58 MST
+###     last modified:   31 January 2011
+###       at:            17:56:19 MST
 ###     URL:             http://www.ldeo.columbia.edu/~ecoon/
 ###     email:           ecoon _at_ lanl.gov
 ###  
@@ -40,7 +40,7 @@ if __name__ == '__main__':
     solution_reader.generate_commandline(infile)
     directory = infile.split('/')[:-1]
     if directory:
-        if len(directory > 0):
+        if len(directory) > 0:
             directory = os.path.join(*directory)
             os.chdir(directory)
 
