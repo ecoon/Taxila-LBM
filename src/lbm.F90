@@ -428,14 +428,14 @@
          do lcv_sides = 1,6
             if (.not.bcs_done(lbm%bc%flags(lcv_sides))) then
                select case (lbm%bc%flags(lcv_sides))
-               case (1)         ! pseudo-periodic
+               case (BC_PSEUDOPERIODIC)         ! pseudo-periodic
                   call BCPseudoperiodic(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%info%dim, &
                        lbm%bc%xm_a, lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, lbm%bc%zm_a, &
                        lbm%bc%zp_a, lbm%info)
-               case (2)         ! flux
+               case (BC_FLUX)         ! flux
                   call BCFlux(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%info%dim, lbm%bc%xm_a, &
                        lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, lbm%bc%zm_a, lbm%bc%zp_a, lbm%info)
-               case (3)         ! pressure
+               case (BC_PRESSURE)         ! pressure
                   call BCPressure(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%info%dim, lbm%bc%xm_a, &
                        lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, lbm%bc%zm_a, lbm%bc%zp_a, lbm%info)
                end select
