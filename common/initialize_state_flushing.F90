@@ -6,7 +6,7 @@
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
 !!!     last modified:   31 January 2011
-!!!       at:            11:27:20 MST
+!!!       at:            14:58:46 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -16,15 +16,16 @@
 #include "finclude/petscvecdef.h"
 #include "finclude/petscdmdef.h"
 
-  subroutine initialize_state(fi, rho, ux, uy, uz, walls, info)
+  subroutine initialize_state(fi, rho, ux, uy, uz, walls, info, constants)
     use petsc
-    use Info_module
-    use constants
+    use LBM_Info_module
+    use LBM_Constants_module
     use LBM_Equilibrium_module
     implicit none
 
     ! input variables
     type(info_type) info
+    type(constants_type) constants
     PetscScalar,dimension(1:info%s,0:info%b, &
          info%gxs:info%gxe, &
          info%gys:info%gye, &
@@ -67,11 +68,11 @@
     
     ! set density
     where(bound)
-       rho(1,:,:,:)=rho1(2)
-       rho(2,:,:,:)=rho2(1)
+       rho(1,:,:,:)=constants%rho1(2)
+       rho(2,:,:,:)=constants%rho2(1)
     else where
-       rho(1,:,:,:)=rho1(1)
-       rho(2,:,:,:)=rho2(2)
+       rho(1,:,:,:)=constants%rho1(1)
+       rho(2,:,:,:)=constants%rho2(2)
     end where
     
     where(walls.eq.1)
@@ -85,7 +86,7 @@
           do k=info%zs,info%ze
              do m=1,info%s
                 call LBMEquilf(fi(m,:,i,j,k),rho(m,i,j,k),ux(m,i,j,k), &
-                     uy(m,i,j,k), uz(m,i,j,k), alf(m), info%b)
+                     uy(m,i,j,k), uz(m,i,j,k), constants%alf(m), info%b)
              enddo
           enddo
        enddo

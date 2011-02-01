@@ -82,7 +82,7 @@ end subroutine BCDestroy
 
 ! set up the vectors for holding boundary data
 subroutine BCSetSizes(bc, comm, info)
-  use Info_module
+  use LBM_Info_module
   implicit none
   type(bc_type) bc
   MPI_Comm comm
@@ -138,14 +138,14 @@ end subroutine BCSetSizes
 
 ! call initialize
 subroutine BCSetValues(bc, info, bc_subroutine)
-  use Info_module
+  use LBM_Info_module
   implicit none
   type(bc_type) bc
   type(info_type) info
 
 !  interface 
 !     subroutine bc_subroutine(xm, xp, ym, yp, zm, zp, dim, info)
-!       use Info_module
+!       use LBM_Info_module
 !       PetscScalar xm(:)
 !       PetscScalar xp(:)
 !       PetscScalar ym(:)
@@ -191,7 +191,7 @@ end subroutine BCRestoreArrays
   
   subroutine BCFlux(fi, walls, bc_flags, bc_dim, &
        xm_vals, xp_vals, ym_vals, yp_vals, zm_vals, zp_vals, info)
-    use Info_module
+    use LBM_Info_module
     implicit none
     type(info_type) info
     integer bc_dim
@@ -427,7 +427,7 @@ end subroutine BCRestoreArrays
 
   subroutine BCPressure(fi, walls, bc_flags, bc_dim, &
        xm_vals, xp_vals, ym_vals, yp_vals, zm_vals, zp_vals, info)
-    use Info_module
+    use LBM_Info_module
     implicit none
     type(info_type) info
     integer bc_dim
@@ -657,7 +657,7 @@ end subroutine BCRestoreArrays
 
   subroutine BCPseudoperiodic(fi, walls, bc_flags, bc_dim, &
        xm_vals, xp_vals, ym_vals, yp_vals, zm_vals, zp_vals, info)
-    use Info_module
+    use LBM_Info_module
     implicit none
 
     type(info_type) info
