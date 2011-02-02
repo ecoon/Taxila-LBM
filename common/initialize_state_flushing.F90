@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
-!!!     last modified:   31 January 2011
-!!!       at:            14:58:46 MST
+!!!     last modified:   02 February 2011
+!!!       at:            11:56:42 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -44,11 +44,20 @@
 
     ! local variables
     PetscErrorCode ierr
+    PetscBool flag
     logical,dimension(info%gxs:info%gxe, &
          info%gys:info%gye, &
          info%gzs:info%gze):: bound
+    PetscScalar,dimension(1:info%s):: rho1, rho2         ! left and right fluid densities?
+    PetscInt nmax
 
     PetscInt i,j,k,m ! local values
+
+    ! input data
+    nmax = constants%s
+    call PetscOptionsGetRealArray(info%options_prefix, '-rho1', rho1, nmax, flag, ierr)
+    nmax = constants%s
+    call PetscOptionsGetRealArray(info%options_prefix, '-rho2', rho2, nmax, flag, ierr)
     
     ! initialize state
     fi=0.0
@@ -68,11 +77,11 @@
     
     ! set density
     where(bound)
-       rho(1,:,:,:)=constants%rho1(2)
-       rho(2,:,:,:)=constants%rho2(1)
+       rho(1,:,:,:)=rho1(2)
+       rho(2,:,:,:)=rho2(1)
     else where
-       rho(1,:,:,:)=constants%rho1(1)
-       rho(2,:,:,:)=constants%rho2(2)
+       rho(1,:,:,:)=rho1(1)
+       rho(2,:,:,:)=rho2(2)
     end where
     
     where(walls.eq.1)
