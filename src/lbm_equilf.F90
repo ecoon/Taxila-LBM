@@ -12,9 +12,9 @@ contains
 
   
   subroutine LBMEquilf(feq,rho,uxe,uye,uze,alf,b)
-    use LBM_Directions_D3Q19_module
+    use LBM_Discretization_D3Q19_module
     
-    integer b
+    PetscInt b
     PetscScalar,dimension(0:b)::feq
     PetscScalar rho, uxe, uye, uze, alf
     
