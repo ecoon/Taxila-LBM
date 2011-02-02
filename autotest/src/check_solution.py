@@ -6,15 +6,14 @@
 ###     version:         
 ###     created:         28 January 2011
 ###       on:            10:57:45 MST
-###     last modified:   31 January 2011
-###       at:            17:56:19 MST
+###     last modified:   02 February 2011
+###       at:            13:05:30 MST
 ###     URL:             http://www.ldeo.columbia.edu/~ecoon/
 ###     email:           ecoon _at_ lanl.gov
 ###  
 ### ====================================================================
 
 import sys, os
-sys.path.append('../../pysrc')
 import solution_reader
 import optparse
 import numpy

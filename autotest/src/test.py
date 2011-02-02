@@ -5,8 +5,8 @@
 ###     version:         
 ###     created:         28 January 2011
 ###       on:            09:52:47 MST
-###     last modified:   01 February 2011
-###       at:            18:11:16 MST
+###     last modified:   02 February 2011
+###       at:            13:05:40 MST
 ###     URL:             http://www.ldeo.columbia.edu/~ecoon/
 ###     email:           ecoon _at_ lanl.gov
 ###  
@@ -29,7 +29,6 @@ import unittest
 import subprocess
 import os
 import sys
-sys.path.append('../../pysrc')
 import solution_reader
 
 _startdir = os.getcwd()
