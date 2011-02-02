@@ -13,8 +13,6 @@
 !!!==================================================================
 #define PETSC_USE_FORTRAN_MODULES 1
 #include "finclude/petscsysdef.h"
-#include "finclude/petscvecdef.h"
-#include "finclude/petscdmdef.h"
   
 module LBM_Constants_module
   implicit none

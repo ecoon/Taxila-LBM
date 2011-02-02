@@ -24,9 +24,6 @@
     use LBM_Constants_module
     use LBM_BC_module
     use LBM_Options_module
-    use LBM_Streaming_module
-    use LBM_Bounceback_module
-    use LBM_Collision_module
     implicit none
 
     private
@@ -397,6 +394,11 @@
     end subroutine LBMSetDomain
 
     subroutine LBMRun(lbm, istep, kstep, kwrite)
+      use LBM_Updates_module
+      use LBM_Streaming_module
+      use LBM_Bounceback_module
+      use LBM_Forcing_module
+      use LBM_Collision_module
       implicit none
 
       ! input
