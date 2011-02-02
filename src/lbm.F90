@@ -204,6 +204,9 @@
       lbm%info%gys = gys+1
       lbm%info%gzs = gzs+1
 
+      lbm%info%xyzl = lbm%info%xl*lbm%info%yl*lbm%info%zl
+      lbm%info%gxyzl = lbm%info%gxl*lbm%info%gyl*lbm%info%gzl
+
       lbm%info%xe = lbm%info%xs+lbm%info%xl-1
       lbm%info%ye = lbm%info%ys+lbm%info%yl-1
       lbm%info%ze = lbm%info%zs+lbm%info%zl-1
