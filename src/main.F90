@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
-!!!     last modified:   31 January 2011
-!!!       at:            15:03:49 MST
+!!!     last modified:   02 February 2011
+!!!       at:            10:50:20 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -75,7 +75,7 @@
     ! start lbm
     if(user%info%id.eq.0) print*,'calling lbm from inital step', istep, 'to final step', options%ntimes*options%npasses
 
-    call LBMRun(user, istep, options%ntimes*options%npasses, options%kwrite) ! for the moment, this is crap
+    call LBMRun(user, istep, options%ntimes*options%npasses, options%kwrite)
     call LBMDestroy(user, ierr)
     call PetscFinalize(ierr)
     stop
