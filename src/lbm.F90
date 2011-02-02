@@ -157,6 +157,7 @@
       PetscInt xs,gxs
       PetscInt ys,gys
       PetscInt zs,gzs
+      PetscInt,allocatable,dimension(:):: ownership_x, ownership_y, ownership_z
 
       call mpi_comm_rank(lbm%comm,lbm%info%id,ierr)
       call mpi_comm_size(lbm%comm,lbm%info%nproc, ierr)
@@ -179,23 +180,20 @@
            PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_one, ierr)
       CHKERRQ(ierr)
 
-      call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
-           lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
-           PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, lbm%dm_index_to_ndof(NPHASEDOF), 1, &
-           PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_s, ierr)
 
-      call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
-           lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
-           PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, lbm%dm_index_to_ndof(NPHASEXBDOF), 1,&
-           PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_sb, ierr)
-
-      call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
-           lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
-           PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, lbm%dm_index_to_ndof(NFLOWDOF), 1, &
-           PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_flow, ierr)
-
+!      call DMView(lbm%da_one, PETSC_VIEWER_STDOUT_WORLD,  ierr)
       call DMDAGetCorners(lbm%da_one, xs, ys, zs, lbm%info%xl, lbm%info%yl, lbm%info%zl, ierr)
       call DMDAGetGhostCorners(lbm%da_one, gxs, gys, gzs, lbm%info%gxl, lbm%info%gyl, lbm%info%gzl, ierr)
+      call DMDAGetInfo(lbm%da_one, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
+           PETSC_NULL_INTEGER, lbm%info%nproc_x, lbm%info%nproc_y, lbm%info%nproc_z, &
+           PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, ierr)
+      allocate(ownership_x(1:lbm%info%nproc_x))
+      allocate(ownership_y(1:lbm%info%nproc_y))
+      allocate(ownership_z(1:lbm%info%nproc_z))
+      ownership_x = 0
+      ownership_y = 0
+      ownership_z = 0
+      call DMDAGetOwnershipRanges(lbm%da_one, ownership_x, ownership_y, ownership_z, ierr)
 
       ! set lbm%info including corners
       lbm%info%xs = xs+1
@@ -211,6 +209,31 @@
       lbm%info%gxe = lbm%info%gxs+lbm%info%gxl-1
       lbm%info%gye = lbm%info%gys+lbm%info%gyl-1
       lbm%info%gze = lbm%info%gzs+lbm%info%gzl-1
+
+      call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
+           lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
+           lbm%info%nproc_x, lbm%info%nproc_y, lbm%info%nproc_z, &
+           lbm%dm_index_to_ndof(NPHASEDOF), 1, &
+           ownership_x, ownership_y, ownership_z, &
+           lbm%da_s, ierr)
+
+      call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
+           lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
+           lbm%info%nproc_x, lbm%info%nproc_y, lbm%info%nproc_z, &
+           lbm%dm_index_to_ndof(NPHASEXBDOF), 1, &
+           ownership_x, ownership_y, ownership_z, &
+           lbm%da_sb, ierr)
+
+      call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
+           lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
+           lbm%info%nproc_x, lbm%info%nproc_y, lbm%info%nproc_z, &
+           lbm%dm_index_to_ndof(NFLOWDOF), 1, &
+           ownership_x, ownership_y, ownership_z, &
+           lbm%da_flow, ierr)
+
+      deallocate(ownership_x)
+      deallocate(ownership_y)
+      deallocate(ownership_z)
 
       ! allocate, associate workspace
       allocate(lbm%ux(1:lbm%info%s,lbm%info%gxs:lbm%info%gxe, &

@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   31 January 2011
-!!!       at:            15:28:07 MST
+!!!     last modified:   01 February 2011
+!!!       at:            17:35:51 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -27,6 +27,7 @@
        PetscInt ys,ye,yl,gys,gye,gyl
        PetscInt zs,ze,zl,gzs,gze,gzl
        PetscInt NX,NY,NZ
+       PetscInt nproc_x, nproc_y, nproc_z
        PetscInt id, nproc
        PetscInt s
        PetscInt b
@@ -109,16 +110,11 @@
 
       test_discretization = 'd3q19'
       if (StringCompareIgnoreCase(discretization, test_discretization, 6)) then
-         info%discretization = D3Q19
-         info%dim = 3
-         info%b = 19
       endif
       
       test_discretization = 'd2q9'
       if (StringCompareIgnoreCase(discretization, test_discretization, 5)) then
-         info%discretization = D2Q9
-         info%dim = 2
-         info%b = 9
+         call InfoSetDiscretizationD2Q9(info)
       end if
 
       ! make sure we have an answer
@@ -130,8 +126,25 @@
 
     end subroutine InfoSetFromOptions
 
+    subroutine InfoSetDiscretizationD3Q19(info)
+      use LBM_Discretization_D3Q19_module
+      type(info_type) info
+      
+      info%discretization = D3Q19_DISCRETIZATION
+      info%dim = discretization_dims
+      info%b = discretization_directions
+    end subroutine InfoSetDiscretizationD3Q19
+
+    subroutine InfoSetDiscretizationD2Q9(info)
+      use LBM_Discretization_D2Q9_module
+      type(info_type) info
+      
+         info%discretization = D2Q9_DISCRETIZATION
+         info%dim = 2
+         info%b = 8
+       end subroutine InfoSetDiscretizationD2Q9
+
     subroutine InfoView(info)
-      implicit none
       type(info_type) info
 
       print*, ' Domain size =', info%NX,info%NY,info%NZ

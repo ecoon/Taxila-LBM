@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   31 January 2011
-!!!       at:            17:36:05 MST
+!!!     last modified:   01 February 2011
+!!!       at:            17:10:24 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -198,7 +198,7 @@ end subroutine BCRestoreArrays
     integer bc_dim
 
 
-    PetscInt,dimension(1:bc_dim)::bc_flags
+    PetscInt,dimension(1:6)::bc_flags
     PetscScalar,dimension(1:info%s, 0:info%b, info%gxs:info%gxe, &
          info%gys:info%gye, info%gzs:info%gze):: fi
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
@@ -434,7 +434,7 @@ end subroutine BCRestoreArrays
     integer bc_dim
 
 
-    PetscInt,dimension(1:bc_dim)::bc_flags
+    PetscInt,dimension(1:6)::bc_flags
     PetscScalar,dimension(1:info%s, 0:info%b, info%gxs:info%gxe, &
          info%gys:info%gye, info%gzs:info%gze):: fi
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
