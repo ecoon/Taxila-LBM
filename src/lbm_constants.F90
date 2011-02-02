@@ -96,8 +96,8 @@ contains
     PetscBool flag
     
     call PetscOptionsGetReal(options%my_prefix, '-g', constants%g, flag, ierr)
-    call PetscOptionsGetReal(options%my_prefix, '-g11', constants%g, flag, ierr)
-    call PetscOptionsGetReal(options%my_prefix, '-g22', constants%g, flag, ierr)
+    call PetscOptionsGetReal(options%my_prefix, '-g11', constants%g11, flag, ierr)
+    call PetscOptionsGetReal(options%my_prefix, '-g22', constants%g22, flag, ierr)
 
     nmax = constants%s
     call PetscOptionsGetRealArray(options%my_prefix, '-tau', constants%tau, nmax, flag, ierr)
