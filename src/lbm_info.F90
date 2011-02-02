@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   01 February 2011
-!!!       at:            18:06:37 MST
+!!!     last modified:   02 February 2011
+!!!       at:            12:21:42 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -26,6 +26,7 @@
        PetscInt xs,xe,xl,gxs,gxe,gxl
        PetscInt ys,ye,yl,gys,gye,gyl
        PetscInt zs,ze,zl,gzs,gze,gzl
+       PetscInt xyzl, gxyzl
        PetscInt NX,NY,NZ
        PetscInt nproc_x, nproc_y, nproc_z
        PetscInt id, nproc
@@ -55,6 +56,9 @@
       info%zs = -1
       info%ze = -1
       info%zl = -1
+
+      info%xyzl = -1
+      info%gxyzl = -1
 
       info%gxs = -1
       info%gxe = -1
