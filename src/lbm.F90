@@ -83,11 +83,12 @@
          LBMInitializeState, &
          LBMGetDMByIndex, &
          LBMGetCorners, &
-         LBMView
+         LBMView, &
+         LBMOutput, &
+         LBMInput
 
   contains
     function LBMCreate(comm) result(lbm)
-      implicit none
       type(lbm_type),pointer:: lbm
       MPI_Comm comm
       PetscErrorCode ierr
@@ -144,7 +145,6 @@
 
     ! --- set up LB method
     subroutine LBMSetFromOptions(lbm, options)
-      implicit none
 
       ! input
       type(lbm_type) lbm
@@ -308,7 +308,6 @@
 
     ! --- destroy things
     subroutine LBMDestroy(lbm, ierr)
-      implicit none
       type(lbm_type) lbm
       PetscErrorCode ierr
 
@@ -347,7 +346,6 @@
 
     ! --- do things
     subroutine LBMSetDomain(lbm, corners)
-      implicit none
       type(lbm_type) lbm
       PetscScalar,dimension(3,2):: corners
       PetscErrorCode ierr
@@ -399,7 +397,6 @@
       use LBM_Bounceback_module
       use LBM_Forcing_module
       use LBM_Collision_module
-      implicit none
 
       ! input
       type(lbm_type) lbm
@@ -569,7 +566,6 @@
     end subroutine LBMRun
 
     subroutine LBMLocalToGlobal(lbm)
-      implicit none
       type(lbm_type) lbm
       PetscErrorCode ierr
 
@@ -594,7 +590,6 @@
     end subroutine LBMLocalToGlobal
 
     subroutine LBMInitializeWalls(lbm, init_subroutine)
-      implicit none
       type(lbm_type) lbm
       !      interface
       !         subroutine init_subroutine(walls, info)
@@ -615,7 +610,6 @@
     end subroutine LBMInitializeWalls
 
     subroutine LBMInitializeWallsPetsc(lbm, filename)
-      implicit none
       type(lbm_type) lbm
       character(len=MAXSTRINGLENGTH) filename
       
@@ -630,7 +624,6 @@
     end subroutine LBMInitializeWallsPetsc
 
     subroutine LBMInitializeState(lbm, init_subroutine)
-      implicit none
       type(lbm_type) lbm
       !      interface
       !         subroutine init_subroutine(fi, rho, ux, uy, uz, walls, info)
@@ -657,7 +650,6 @@
     end subroutine LBMInitializeState
 
     function LBMGetDMByIndex( lbm, dm_index ) result(dm)
-      implicit none
       type(lbm_type) lbm
       PetscInt dm_index
       DM,pointer:: dm
@@ -684,8 +676,6 @@
     end subroutine LBMGetCorners
 
     subroutine LBMPrintAFew(rho, fi, walls, uxe, uye, uze, info)
-      implicit none
-
       type(info_type) info
       PetscScalar,dimension(1:info%s,info%gxs:info%gxe,info%gys:info%gye,info%gzs:info%gze)::rho
       PetscScalar,dimension(1:info%s,0:info%b,info%gxs:info%gxe,info%gys:info%gye, info%gzs:info%gze)::fi
@@ -748,5 +738,119 @@
       endif
       return
     end subroutine LBMPrintAFew
-  end module LBM_module
+
+  subroutine LBMOutput(lbm, istep, kwrite)
+    ! input variables
+    type(lbm_type) lbm
+    PetscInt istep, kwrite
+
+    ! local variables
+    PetscViewer viewer
+    PetscErrorCode ierr
+    character(len=MAXIODIGITS):: outnum
+    character(len=MAXSTRINGLENGTH):: stringformat
+    character(len=MAXSTRINGLENGTH):: flnm1,flnm2,flnm3,flnm4,flnm5,flnm6,flnm7,flnm8
+    integer charlen
+
+    charlen = LEN_TRIM(lbm%options%output_prefix)
+
+    if (lbm%info%id.eq.0) then
+       write(*,*) 'outputing (istep, kwrite)', istep, kwrite
+    endif
+
+    charlen = LEN_TRIM(lbm%options%output_prefix)
+
+    write(stringformat, '("(I0.",I1,")")'), MAXIODIGITS
+    write(outnum, stringformat) istep/kwrite
+    flnm1=lbm%options%output_prefix(1:charlen)//'fi'//outnum//'.dat'
+    flnm2=lbm%options%output_prefix(1:charlen)//'rho'//outnum//'.dat'
+    flnm3=lbm%options%output_prefix(1:charlen)//'u'//outnum//'.dat'
+    flnm6=lbm%options%output_prefix(1:charlen)//'walls'//outnum//'.dat'
+    flnm7=lbm%options%output_prefix(1:charlen)//'rhot'//outnum//'.dat'
+    flnm8=lbm%options%output_prefix(1:charlen)//'prs'//outnum//'.dat'
+
+    call PetscViewerBinaryOpen(lbm%comm, flnm1, FILE_MODE_WRITE, viewer, ierr)
+    call VecView(lbm%fi_g, viewer, ierr)
+    call PetscViewerDestroy(viewer,ierr)
+
+    call PetscViewerBinaryOpen(lbm%comm, flnm2, FILE_MODE_WRITE, viewer, ierr)
+    call VecView(lbm%rho_g, viewer, ierr)
+    call PetscViewerDestroy(viewer,ierr)
+
+    call PetscViewerBinaryOpen(lbm%comm, flnm3, FILE_MODE_WRITE, viewer, ierr)
+    call VecView(lbm%ut_g, viewer, ierr)
+    call PetscViewerDestroy(viewer,ierr)
+
+    call PetscViewerBinaryOpen(lbm%comm, flnm6, FILE_MODE_WRITE, viewer, ierr)
+    call VecView(lbm%walls_g, viewer, ierr)
+    call PetscViewerDestroy(viewer,ierr)
+
+    call PetscViewerBinaryOpen(lbm%comm, flnm7, FILE_MODE_WRITE, viewer, ierr)
+    call VecView(lbm%rhot_g, viewer, ierr)
+    call PetscViewerDestroy(viewer,ierr)
+
+    call PetscViewerBinaryOpen(lbm%comm, flnm8, FILE_MODE_WRITE, viewer, ierr)
+    call VecView(lbm%prs_g, viewer, ierr)
+    call PetscViewerDestroy(viewer,ierr)
+
+    return
+  end subroutine LBMOutput
+
+  subroutine LBMInput(lbm, istep, kwrite)
+
+    ! input variables
+    type(lbm_type) lbm
+    integer istep, kwrite
+
+    ! local variables
+    PetscViewer viewer
+    PetscErrorCode ierr
+    character(len=MAXIODIGITS):: outnum
+    character(len=MAXSTRINGLENGTH):: stringformat
+    character(len=MAXSTRINGLENGTH):: flnm1,flnm2,flnm3,flnm4,flnm5,flnm6,flnm7,flnm8
+    integer charlen
+
+    charlen = LEN_TRIM(lbm%options%output_prefix)
+
+    if (lbm%info%id.eq.0) then
+       write(*,*) 'outputing (istep, kwrite)', istep, kwrite
+    endif
+
+    charlen = LEN_TRIM(lbm%options%output_prefix)
+
+    write(stringformat, '("(I0.",I1)'), MAXIODIGITS
+    write(outnum, stringformat) istep/kwrite
+    flnm1=lbm%options%output_prefix(1:charlen)//'fi'//outnum//'.dat'
+    flnm2=lbm%options%output_prefix(1:charlen)//'rho'//outnum//'.dat'
+    flnm3=lbm%options%output_prefix(1:charlen)//'u'//outnum//'.dat'
+    flnm6=lbm%options%output_prefix(1:charlen)//'walls'//outnum//'.dat'
+    flnm7=lbm%options%output_prefix(1:charlen)//'rhot'//outnum//'.dat'
+    flnm8=lbm%options%output_prefix(1:charlen)//'prs'//outnum//'.dat'
+
+    call PetscViewerBinaryOpen(lbm%comm, flnm1, FILE_MODE_READ, viewer, ierr)
+    call VecLoad(lbm%fi_g, viewer, ierr)
+    call PetscViewerDestroy(viewer,ierr)
+
+    call PetscViewerBinaryOpen(lbm%comm, flnm2, FILE_MODE_READ, viewer, ierr)
+    call VecLoad(lbm%rho_g, viewer, ierr)
+    call PetscViewerDestroy(viewer,ierr)
+
+    call PetscViewerBinaryOpen(lbm%comm, flnm3, FILE_MODE_READ, viewer, ierr)
+    call VecLoad(lbm%ut_g, viewer, ierr)
+    call PetscViewerDestroy(viewer,ierr)
+
+    call PetscViewerBinaryOpen(lbm%comm, flnm6, FILE_MODE_READ, viewer, ierr)
+    call VecLoad(lbm%walls_g, viewer, ierr)
+    call PetscViewerDestroy(viewer,ierr)
+
+    call PetscViewerBinaryOpen(lbm%comm, flnm7, FILE_MODE_READ, viewer, ierr)
+    call VecLoad(lbm%rhot_g, viewer, ierr)
+    call PetscViewerDestroy(viewer,ierr)
+
+    call PetscViewerBinaryOpen(lbm%comm, flnm8, FILE_MODE_READ, viewer, ierr)
+    call VecLoad(lbm%prs_g, viewer, ierr)
+    call PetscViewerDestroy(viewer,ierr)
+  end subroutine LBMInput
+
+end module LBM_module
 
