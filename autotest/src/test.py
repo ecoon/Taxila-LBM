@@ -5,8 +5,8 @@
 ###     version:         
 ###     created:         28 January 2011
 ###       on:            09:52:47 MST
-###     last modified:   28 January 2011
-###       at:            12:42:05 MST
+###     last modified:   01 February 2011
+###       at:            18:11:16 MST
 ###     URL:             http://www.ldeo.columbia.edu/~ecoon/
 ###     email:           ecoon _at_ lanl.gov
 ###  
@@ -53,6 +53,9 @@ class LBMTest(unittest.TestCase):
         # make the executable
         self._stdout.write('make\n\n')
         self._stdout.flush()
+        make = subprocess.Popen(['make', 'allclean'], stdout=self._stdout, stderr=self._stderr)
+        make.wait()
+        self.failUnlessEqual(make.returncode, 0, msg='clean failed')
         make = subprocess.Popen(['make'], stdout=self._stdout, stderr=self._stderr)
         make.wait()
         self.failUnlessEqual(make.returncode, 0, msg='compilation failed')

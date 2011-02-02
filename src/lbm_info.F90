@@ -6,7 +6,7 @@
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
 !!!     last modified:   01 February 2011
-!!!       at:            17:35:51 MST
+!!!       at:            18:06:37 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -110,6 +110,7 @@
 
       test_discretization = 'd3q19'
       if (StringCompareIgnoreCase(discretization, test_discretization, 6)) then
+         call InfoSetDiscretizationD3Q19(info)
       endif
       
       test_discretization = 'd2q9'
@@ -137,12 +138,13 @@
 
     subroutine InfoSetDiscretizationD2Q9(info)
       use LBM_Discretization_D2Q9_module
+      use LBM_Discretization_D2Q9_module
       type(info_type) info
       
-         info%discretization = D2Q9_DISCRETIZATION
-         info%dim = 2
-         info%b = 8
-       end subroutine InfoSetDiscretizationD2Q9
+      info%discretization = D2Q9_DISCRETIZATION
+      info%dim = 2
+      info%b = 8
+    end subroutine InfoSetDiscretizationD2Q9
 
     subroutine InfoView(info)
       type(info_type) info
