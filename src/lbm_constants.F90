@@ -29,7 +29,6 @@ module LBM_Constants_module
      PetscScalar,pointer,dimension(:):: gw   ! fluid-solid interaction forces
      PetscScalar,pointer,dimension(:):: mm   ! mass per number (rho = mm*n)
      PetscScalar,pointer,dimension(:):: alf   ! mass per number (rho = mm*n)
-     PetscScalar,pointer,dimension(:):: rho1, rho2         ! left and right fluid densities?
   end type constants_type
 
   public :: ConstantsCreate, &
@@ -52,8 +51,6 @@ contains
     nullify(constants%gw)
     nullify(constants%mm)
     nullify(constants%alf)
-    nullify(constants%rho1)
-    nullify(constants%rho2)
 
   end function ConstantsCreate
     
@@ -67,8 +64,6 @@ contains
     allocate(constants%gw(1:s))
     allocate(constants%mm(1:s))
     allocate(constants%alf(1:s))
-    allocate(constants%rho1(1:s))
-    allocate(constants%rho2(1:s))
 
     ! defaults
     constants%tau = 1.d0
@@ -76,14 +71,6 @@ contains
     constants%gw = 0.d0
     constants%mm = 1.d0
 
-    constants%rho1 = 0.d0
-    constants%rho2 = 0.d0
-    if (s.gt.0) then
-       constants%rho1(1) = 1.d0
-    endif
-    if (s.gt.1) then
-       constants%rho2(2) = 1.d0
-    endif
   end subroutine ConstantsSetSizes
 
   subroutine ConstantsSetFromOptions(constants, options, ierr)
@@ -94,10 +81,12 @@ contains
 
     PetscInt nmax
     PetscBool flag
-    
-    call PetscOptionsGetReal(options%my_prefix, '-g', constants%g, flag, ierr)
-    call PetscOptionsGetReal(options%my_prefix, '-g11', constants%g11, flag, ierr)
-    call PetscOptionsGetReal(options%my_prefix, '-g22', constants%g22, flag, ierr)
+
+    if (constants%s > 1) then
+       call PetscOptionsGetReal(options%my_prefix, '-g', constants%g, flag, ierr)
+       call PetscOptionsGetReal(options%my_prefix, '-g11', constants%g11, flag, ierr)
+       call PetscOptionsGetReal(options%my_prefix, '-g22', constants%g22, flag, ierr)
+    end if
 
     nmax = constants%s
     call PetscOptionsGetRealArray(options%my_prefix, '-tau', constants%tau, nmax, flag, ierr)
@@ -107,10 +96,6 @@ contains
     call PetscOptionsGetRealArray(options%my_prefix, '-gw', constants%gw, nmax, flag, ierr)
     nmax = constants%s
     call PetscOptionsGetRealArray(options%my_prefix, '-mm', constants%mm, nmax, flag, ierr)
-    nmax = constants%s
-    call PetscOptionsGetRealArray(options%my_prefix, '-rho1', constants%rho1, nmax, flag, ierr)
-    nmax = constants%s
-    call PetscOptionsGetRealArray(options%my_prefix, '-rho2', constants%rho2, nmax, flag, ierr)
 
     constants%alf = 1.-0.555555555/constants%mm
 
@@ -120,14 +105,15 @@ contains
     type(constants_type) constants
     
     print*, ' Physics:'
-    print*, '  g =', constants%g
-    print*, '  g11,g22 =', constants%g11, constants%g22
     print*, '  gw =', constants%gw
     print*, '  tau =', constants%tau
     print*, '  gvt =', constants%gvt
     print*, '  mm =', constants%mm
-    print*, '  rho1 =', constants%rho1
-    print*, '  rho2 =', constants%rho2
+    if (constants%s > 1) then
+       print*, '  g =', constants%g
+       print*, '  g11 =', constants%g11
+       print*, '  g22 =', constants%g22
+    end if
   end subroutine ConstantsView
 
   subroutine ConstantsDestroy(constants, ierr)
@@ -138,8 +124,6 @@ contains
     if (associated(constants%gvt)) deallocate(constants%gvt)
     if (associated(constants%gw)) deallocate(constants%gw)
     if (associated(constants%mm)) deallocate(constants%mm)
-    if (associated(constants%rho1)) deallocate(constants%rho1)
-    if (associated(constants%rho2)) deallocate(constants%rho2)
     
   end subroutine ConstantsDestroy
 end module LBM_Constants_module
