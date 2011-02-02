@@ -25,6 +25,7 @@
     use LBM_BC_module
     use LBM_Options_module
     use LBM_Streaming_module
+    use LBM_Bounceback_module
     use LBM_Collision_module
     implicit none
 
