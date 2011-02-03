@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   03 February 2011
-!!!       at:            10:36:38 MST
+!!!     last modified:   02 February 2011
+!!!       at:            16:40:23 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -15,10 +15,12 @@
 #define PETSC_USE_FORTRAN_MODULES 1
 #include "finclude/petscsysdef.h"
 #include "finclude/petscvecdef.h"
+#include "finclude/petscdmdef.h"
 
 module LBM_BC_module
-use petsc
-implicit none
+  use LBM_Info_module
+  use petsc
+  implicit none
   private
 #include "lbm_definitions.h"
 
@@ -48,7 +50,6 @@ contains
 
 ! constructor
 function BCCreate() result(bc)
-  implicit none
   type(bc_type),pointer :: bc
   allocate(bc)
   nullify(bc%xm_a)
@@ -69,7 +70,6 @@ end function BCCreate
 
 ! destructor
 subroutine BCDestroy(bc, ierr)
-  implicit none
   type(bc_type) bc
   PetscErrorCode ierr
   if (bc%xm /= 0) call VecDestroy(bc%xm, ierr)
@@ -82,8 +82,6 @@ end subroutine BCDestroy
 
 ! set up the vectors for holding boundary data
 subroutine BCSetSizes(bc, comm, info)
-  use LBM_Info_module
-  implicit none
   type(bc_type) bc
   MPI_Comm comm
   type(info_type) info
@@ -138,8 +136,6 @@ end subroutine BCSetSizes
 
 ! call initialize
 subroutine BCSetValues(bc, info, bc_subroutine)
-  use LBM_Info_module
-  implicit none
   type(bc_type) bc
   type(info_type) info
 
@@ -166,7 +162,6 @@ subroutine BCSetValues(bc, info, bc_subroutine)
 end subroutine BCSetValues
 
 subroutine BCGetArrays(bc, ierr)
-  implicit none
   type(bc_type) bc
   PetscErrorCode ierr
   call VecGetArrayF90(bc%xm, bc%xm_a, ierr)
@@ -178,7 +173,6 @@ subroutine BCGetArrays(bc, ierr)
 end subroutine BCGetArrays
 
 subroutine BCRestoreArrays(bc, ierr)
-  implicit none
   type(bc_type) bc
   PetscErrorCode ierr
   call VecRestoreArrayF90(bc%xm, bc%xm_a, ierr)
@@ -191,8 +185,6 @@ end subroutine BCRestoreArrays
   
   subroutine BCFlux(fi, walls, bc_flags, bc_dim, &
        xm_vals, xp_vals, ym_vals, yp_vals, zm_vals, zp_vals, info)
-    use LBM_Info_module
-    implicit none
     type(info_type) info
     integer bc_dim
 
@@ -427,11 +419,9 @@ end subroutine BCRestoreArrays
 
   subroutine BCPressure(fi, walls, bc_flags, bc_dim, &
        xm_vals, xp_vals, ym_vals, yp_vals, zm_vals, zp_vals, info)
-    use LBM_Info_module
-    implicit none
-    type(info_type) info
-    integer bc_dim
 
+    type(info_type) info
+    PetscInt bc_dim
 
     PetscInt,dimension(1:6)::bc_flags
     PetscScalar,dimension(1:info%s, 0:info%b, info%gxs:info%gxe, &
@@ -442,225 +432,320 @@ end subroutine BCRestoreArrays
     PetscScalar,dimension(bc_dim,info%xs:info%xe,info%zs:info%ze):: ym_vals, yp_vals
     PetscScalar,dimension(bc_dim,info%xs:info%xe,info%ys:info%ye):: zm_vals, zp_vals
 
-    PetscScalar utmp, vtmp, wtmp
-    PetscScalar,dimension(0:info%b)::ftmp
-    integer i,j,k,m
+    PetscInt i,j,k
+    PetscInt directions(0:info%b)
 
-    ftmp = 0.0
-
-    ! In the z-direction
-    ! TOP BOUNDARY
-    if (bc_flags(6).eq.3) then
-       if(info%ze.eq.info%NZ) then
-          ! assume x- and y-velocities equal zero
-          utmp = 0.0
-          vtmp = 0.0
-          do m=1,info%s
-             do i=info%xs,info%xe
-                do j=info%ys,info%ye
-                   k = info%NZ
-                   if (walls(i,j,k).eq.0) then
-                      wtmp = fi(m,0,i,j,k) + fi(m,1,i,j,k) &
-                           + fi(m,2,i,j,k) + fi(m,3,i,j,k) &
-                           + fi(m,4,i,j,k) + fi(m,7,i,j,k) &
-                           + fi(m,8,i,j,k) + fi(m,9,i,j,k) &
-                           + fi(m,10,i,j,k) + 2.*(fi(m,5,i,j,k) &
-                           + fi(m,11,i,j,k) + fi(m,12,i,j,k) &
-                           + fi(m,15,i,j,k) + fi(m,16,i,j,k))
-                      wtmp = wtmp/zp_vals(m,i,j)-1.0
-
-                      ! Choice should not affect the momentum significantly
-
-                      ftmp(6) = fi(m,5,i,j,k)
-                      ftmp(13) = fi(m,11,i,j,k)
-                      ftmp(14) = fi(m,12,i,j,k)
-                      ftmp(17) = fi(m,15,i,j,k)
-                      ftmp(18) = fi(m,16,i,j,k)
-
-                      ! This choice does not work for Pressure bc
-                      !ftmp(6) = fi(m,6,i,j,k-1)
-                      !ftmp(13) = fi(m,13,i-1,j,k-1)
-                      !ftmp(14) = fi(m,14,i+1,j,k-1)
-                      !ftmp(17) = fi(m,17,i,j-1,k-1)
-                      !ftmp(18) = fi(m,18,i,j+1,k-1)
-
-                      fi(m,6,i,j,k) = 2./3.*ftmp(6) &
-                           - 1./3.*zp_vals(m,i,j)*wtmp &
-                           + 1./3.*(fi(m,5,i,j,k) &
-                           + fi(m,11,i,j,k) + fi(m,12,i,j,k) &
-                           + fi(m,15,i,j,k) + fi(m,16,i,j,k)) &
-                           - 1./3.*(ftmp(13) + ftmp(14) &
-                           + ftmp(17) + ftmp(18))
-                           
-                      fi(m,13,i,j,k) = 1./3.*ftmp(13) &
-                           - 1./2.*zp_vals(m,i,j)*utmp &
-                           - 1./6.*zp_vals(m,i,j)*wtmp &
-                           + 1./2.*(fi(m,1,i,j,k) &
-                           - fi(m,3,i,j,k) + fi(m,7,i,j,k) &
-                           - fi(m,8,i,j,k) - fi(m,9,i,j,k) &
-                           + fi(m,10,i,j,k)) &
-                           + 1./6.*( fi(m,5,i,j,k) - ftmp(6) &
-                           + fi(m,15,i,j,k) + fi(m,16,i,j,k) &
-                           - ftmp(17) - ftmp(18) ) &
-                           - 1./3.*(fi(m,12,i,j,k) - ftmp(14)) &
-                           + 2./3.*fi(m,11,i,j,k)
-
-                      fi(m,14,i,j,k) = 1./3.*ftmp(14) &
-                           + 1./2.*zp_vals(m,i,j)*utmp &
-                           - 1./6.*zp_vals(m,i,j)*wtmp &
-                           - 1./2.*(fi(m,1,i,j,k) &
-                           - fi(m,3,i,j,k) + fi(m,7,i,j,k) &
-                           - fi(m,8,i,j,k) - fi(m,9,i,j,k) &
-                           + fi(m,10,i,j,k)) &
-                           + 1./6.*(fi(m,5,i,j,k) - ftmp(6) &
-                           + fi(m,15,i,j,k) + fi(m,16,i,j,k) &
-                           - ftmp(17) - ftmp(18)) &
-                           - 1./3.*(fi(m,11,i,j,k) - ftmp(13)) &
-                           + 2./3.*fi(m,12,i,j,k)
-
-                      fi(m,17,i,j,k) = 1./3.*ftmp(17) &
-                           - 1./2.*zp_vals(m,i,j)*vtmp &
-                           - 1./6.*zp_vals(m,i,j)*wtmp &
-                           + 1./2.*(fi(m,2,i,j,k) &
-                           - fi(m,4,i,j,k) + fi(m,7,i,j,k) &
-                           + fi(m,8,i,j,k) - fi(m,9,i,j,k) &
-                           - fi(m,10,i,j,k)) &
-                           + 1./6.*(fi(m,5,i,j,k) - ftmp(6) &
-                           + fi(m,11,i,j,k) + fi(m,12,i,j,k) &
-                           - ftmp(13) - ftmp(14)) &
-                           - 1./3.*(fi(m,16,i,j,k) - ftmp(18)) &
-                           + 2./3.*fi(m,15,i,j,k)
-
-                      fi(m,18,i,j,k) = 1./3.*ftmp(18) &
-                           + 1./2.*zp_vals(m,i,j)*vtmp &
-                           - 1./6.*zp_vals(m,i,j)*wtmp &
-                           - 1./2.*(fi(m,2,i,j,k) &
-                           - fi(m,4,i,j,k) + fi(m,7,i,j,k) &
-                           + fi(m,8,i,j,k) - fi(m,9,i,j,k) &
-                           - fi(m,10,i,j,k)) &
-                           + 1./6.*(fi(m,5,i,j,k) - ftmp(6) &
-                           + fi(m,11,i,j,k) + fi(m,12,i,j,k) &
-                           - ftmp(13) - ftmp(14)) &
-                           - 1./3.*(fi(m,15,i,j,k) - ftmp(17)) &
-                           + 2./3.*fi(m,16,i,j,k)
-                   endif
-                enddo
-             enddo
-          enddo
-       endif
+    directions(:) = 0
+    ! XM BOUNDARY
+    if ((bc_flags(BOUNDARY_XM).eq.BC_PRESSURE).and.(info%xs.eq.1)) then
+       call BCSetLocalDirections(BOUNDARY_XM, directions)
+       do k=info%zs,info%ze
+          do j=info%ys,info%ye
+             i = 1
+             if (walls(i,j,k).eq.0) then
+                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, xm_vals(:,j,k), directions, info)
+             end if
+          end do
+       end do
     endif
 
+    directions(:) = 0
+    ! XP BOUNDARY
+    if ((bc_flags(BOUNDARY_XP).eq.BC_PRESSURE).and.(info%xe.eq.info%NX)) then
+       call BCSetLocalDirections(BOUNDARY_XP, directions)
+       do k=info%zs,info%ze
+          do j=info%ys,info%ye
+             i = info%NX
+             if (walls(i,j,k).eq.0) then
+                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, xp_vals(:,j,k), directions, info)
+             end if
+          end do
+       end do
+    endif
 
-    ! BOTTOM BOUNDARY
-    if (bc_flags(5).eq.3) then
-       if(info%zs.eq.1) then
-          ! assume x- and y-velocities equal zero
-          utmp = 0.0
-          vtmp = 0.0
-          do m=1,info%s
-             do i=info%xs,info%xe
-                do j=info%ys,info%ye
-                   k = 1
-                   if (walls(i,j,k).eq.0) then
-                      wtmp = fi(m,0,i,j,k) + fi(m,1,i,j,k) &
-                           + fi(m,2,i,j,k) + fi(m,3,i,j,k) &
-                           + fi(m,4,i,j,k) + fi(m,7,i,j,k) &
-                           + fi(m,8,i,j,k) + fi(m,9,i,j,k) &
-                           + fi(m,10,i,j,k) + 2.*(fi(m,6,i,j,k) &
-                           + fi(m,13,i,j,k) + fi(m,14,i,j,k) &
-                           + fi(m,17,i,j,k) + fi(m,18,i,j,k))
-                      wtmp = 1.0-wtmp/zm_vals(m,i,j)
+    directions(:) = 0
+    ! YM BOUNDARY
+    if ((bc_flags(BOUNDARY_YM).eq.BC_PRESSURE).and.(info%ys.eq.1)) then
+       call BCSetLocalDirections(BOUNDARY_YM, directions)
+       do k=info%zs,info%ze
+          do i=info%xs,info%xe
+             j = 1
+             if (walls(i,j,k).eq.0) then
+                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, ym_vals(:,i,k), directions, info)
+             end if
+          end do
+       end do
+    endif
 
+    directions(:) = 0
+    ! YP BOUNDARY
+    if ((bc_flags(BOUNDARY_YP).eq.BC_PRESSURE).and.(info%ye.eq.info%NY)) then
+       call BCSetLocalDirections(BOUNDARY_YP, directions)
+       do k=info%zs,info%ze
+          do i=info%xs,info%xe
+             j = info%NY
+             if (walls(i,j,k).eq.0) then
+                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, yp_vals(:,i,k), directions, info)
+             end if
+          end do
+       end do
+    endif
 
-                      ! Choice should not affect the momentum significantly
-                      ftmp(5) = fi(m,6,i,j,k)
-                      ftmp(11) = fi(m,13,i,j,k)
-                      ftmp(12) = fi(m,14,i,j,k)
-                      ftmp(15) = fi(m,17,i,j,k)
-                      ftmp(16) = fi(m,18,i,j,k)
+    directions(:) = 0
+    ! ZM BOUNDARY
+    if ((bc_flags(BOUNDARY_ZM).eq.BC_PRESSURE).and.(info%zs.eq.1)) then
+       call BCSetLocalDirections(BOUNDARY_ZM, directions)
+       do j=info%ys,info%ye
+          do i=info%xs,info%xe
+             k = 1
+             if (walls(i,j,k).eq.0) then
+                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, zm_vals(:,i,j), directions, info)
+             end if
+          end do
+       end do
+    endif
 
-                      ! This choice does not work for Pressure bc
-                      !ftmp(5) = fi(m,5,i,j,2)
-                      !ftmp(11) = fi(m,11,i+1,j,2)
-                      !ftmp(12) = fi(m,12,i-1,j,2)
-                      !ftmp(15) = fi(m,15,i,j+1,2)
-                      !ftmp(16) = fi(m,16,i,j-1,2)
-
-                      fi(m,5,i,j,k) = 2./3.*ftmp(5) &
-                           + 1./3.*zm_vals(m,i,j)*wtmp &
-                           - 1./3.*(ftmp(11)+ ftmp(12) &
-                           + ftmp(15) + ftmp(16)) &
-                           + 1./3.*(fi(m,6,i,j,k) &
-                           + fi(m,13,i,j,k) + fi(m,14,i,j,k) &
-                           + fi(m,17,i,j,k) + fi(m,18,i,j,k))
-                           
-                      fi(m,11,i,j,k) = 1./3.*ftmp(11) &
-                           + 1./2.*zm_vals(m,i,j)*utmp &
-                           + 1./6.*zm_vals(m,i,j)*wtmp &
-                           - 1./2.*(fi(m,1,i,j,k) &
-                           - fi(m,3,i,j,k) + fi(m,7,i,j,k) &
-                           - fi(m,8,i,j,k) - fi(m,9,i,j,k) &
-                           + fi(m,10,i,j,k)) &
-                           - 1./6.*(ftmp(5) - fi(m,6,i,j,k) &
-                           + ftmp(15) + ftmp(16) &
-                           - fi(m,17,i,j,k) - fi(m,18,i,j,k)) &
-                           + 1./3.*(ftmp(12) - fi(m,14,i,j,k)) &
-                           + 2./3.*fi(m,13,i,j,k)
-
-                      fi(m,12,i,j,k) = 1./3.*ftmp(12) &
-                           - 1./2.*zm_vals(m,i,j)*utmp &
-                           + 1./6.*zm_vals(m,i,j)*wtmp &
-                           + 1./2.*(fi(m,1,i,j,k) &
-                           - fi(m,3,i,j,k) + fi(m,7,i,j,k) &
-                           - fi(m,8,i,j,k) - fi(m,9,i,j,k) &
-                           + fi(m,10,i,j,k)) &
-                           - 1./6.*(ftmp(5) - fi(m,6,i,j,k) &
-                           + ftmp(15) + ftmp(16) &
-                           - fi(m,17,i,j,k) - fi(m,18,i,j,k)) &
-                           + 1./3.*(ftmp(11) - fi(m,13,i,j,k)) &
-                           + 2./3.*fi(m,14,i,j,k)
-
-                      fi(m,15,i,j,k) = 1./3.*ftmp(15) &
-                           + 1./2.*zm_vals(m,i,j)*vtmp &
-                           + 1./6.*zm_vals(m,i,j)*wtmp &
-                           - 1./2.*(fi(m,2,i,j,k) &
-                           - fi(m,4,i,j,k) + fi(m,7,i,j,k) &
-                           + fi(m,8,i,j,k) - fi(m,9,i,j,k) &
-                           - fi(m,10,i,j,k)) &
-                           - 1./6.*(ftmp(5) - fi(m,6,i,j,k) &
-                           + ftmp(11) + ftmp(12) &
-                           - fi(m,13,i,j,k) - fi(m,14,i,j,k)) &
-                           + 1./3.*(ftmp(16) - fi(m,18,i,j,k)) &
-                           + 2./3.*fi(m,17,i,j,k)
-
-                      fi(m,16,i,j,k) = 1./3.*ftmp(16) &
-                           - 1./2.*zm_vals(m,i,j)*vtmp &
-                           + 1./6.*zm_vals(m,i,j)*wtmp &
-                           + 1./2.*(fi(m,2,i,j,k) &
-                           - fi(m,4,i,j,k) + fi(m,7,i,j,k) &
-                           + fi(m,8,i,j,k) - fi(m,9,i,j,k) &
-                           - fi(m,10,i,j,k)) &
-                           - 1./6.*(ftmp(5) - fi(m,6,i,j,k) &
-                           + ftmp(11) + ftmp(12) &
-                           - fi(m,13,i,j,k) - fi(m,14,i,j,k)) &
-                           + 1./3.*(ftmp(15) - fi(m,17,i,j,k)) &
-                           + 2./3.*fi(m,18,i,j,k)
-                   end if
-                enddo
-             enddo
-          enddo
-       endif
+    directions(:) = 0
+    ! ZP BOUNDARY
+    if ((bc_flags(BOUNDARY_ZP).eq.BC_PRESSURE).and.(info%ze.eq.info%NZ)) then
+       call BCSetLocalDirections(BOUNDARY_ZP, directions)
+       do j=info%ys,info%ye
+          do i=info%xs,info%xe
+             k = info%NZ
+             if (walls(i,j,k).eq.0) then
+                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, zp_vals(:,i,j), directions, info)
+             end if
+          end do
+       end do
     endif
 
     return
   end subroutine BCPressure
 
-!#include "bc_pressure_dev.F90"
+  subroutine BCPressureApplyBoundary(fi, bc_dim, pvals, directions, info)
+    use LBM_Discretization_D3Q19_module
+          ! assume x- and y-velocities equal zero
+
+    type(info_type) info
+    PetscInt bc_dim
+    PetscInt,intent(in),dimension(0:info%b):: directions
+    PetscScalar,intent(inout),dimension(1:info%s, 0:info%b):: fi
+    PetscScalar,intent(in),dimension(bc_dim):: pvals
+
+!    PetscScalar utmp, vtmp
+    PetscScalar wtmp
+    PetscScalar,dimension(0:info%b)::ftmp
+    integer m
+    
+!    utmp = 0
+!    vtmp = 0
+    wtmp = 0
+
+    do m=1,info%s
+       ftmp = 0.0
+       wtmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) &
+            + fi(m,directions(NORTH)) + fi(m,directions(WEST)) &
+            + fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
+            + fi(m,directions(NORTHWEST)) + fi(m,directions(SOUTHWEST)) &
+            + fi(m,directions(SOUTHEAST)) + 2.*(fi(m,directions(DOWN)) &
+            + fi(m,directions(WESTDOWN)) + fi(m,directions(EASTDOWN)) &
+            + fi(m,directions(SOUTHDOWN)) + fi(m,directions(NORTHDOWN)))
+       wtmp = 1.0-wtmp/pvals(m)
+       
+       
+       ! Choice should not affect the momentum significantly
+       ftmp(directions(UP)) = fi(m,directions(DOWN))
+       ftmp(directions(EASTUP)) = fi(m,directions(WESTDOWN))
+       ftmp(directions(WESTUP)) = fi(m,directions(EASTDOWN))
+       ftmp(directions(NORTHUP)) = fi(m,directions(SOUTHDOWN))
+       ftmp(directions(SOUTHUP)) = fi(m,directions(NORTHDOWN))
+       
+       fi(m,directions(UP)) = 2./3.*ftmp(directions(UP)) &
+            + 1./3.*pvals(m)*wtmp &
+            - 1./3.*(ftmp(directions(EASTUP))+ ftmp(directions(WESTUP)) &
+            + ftmp(directions(NORTHUP)) + ftmp(directions(SOUTHUP))) &
+            + 1./3.*(fi(m,directions(DOWN)) &
+            + fi(m,directions(WESTDOWN)) + fi(m,directions(EASTDOWN)) &
+            + fi(m,directions(SOUTHDOWN)) + fi(m,directions(NORTHDOWN)))
+       
+       fi(m,directions(EASTUP)) = 1./3.*ftmp(directions(EASTUP)) &
+!            + 1./2.*pvals(m)*utmp &
+            + 1./6.*pvals(m)*wtmp &
+            - 1./2.*(fi(m,directions(EAST)) &
+            - fi(m,directions(WEST)) + fi(m,directions(NORTHEAST)) &
+            - fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
+            + fi(m,directions(SOUTHEAST))) &
+            - 1./6.*(ftmp(directions(UP)) - fi(m,directions(DOWN)) &
+            + ftmp(directions(NORTHUP)) + ftmp(directions(SOUTHUP)) &
+            - fi(m,directions(SOUTHDOWN)) - fi(m,directions(NORTHDOWN))) &
+            + 1./3.*(ftmp(directions(WESTUP)) - fi(m,directions(EASTDOWN))) &
+            + 2./3.*fi(m,directions(WESTDOWN))
+       
+       fi(m,directions(WESTUP)) = 1./3.*ftmp(directions(WESTUP)) &
+!            - 1./2.*pvals(m)*utmp &
+            + 1./6.*pvals(m)*wtmp &
+            + 1./2.*(fi(m,directions(EAST)) &
+            - fi(m,directions(WEST)) + fi(m,directions(NORTHEAST)) &
+            - fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
+            + fi(m,directions(SOUTHEAST))) &
+            - 1./6.*(ftmp(directions(UP)) - fi(m,directions(DOWN)) &
+            + ftmp(directions(NORTHUP)) + ftmp(directions(SOUTHUP)) &
+            - fi(m,directions(SOUTHDOWN)) - fi(m,directions(NORTHDOWN))) &
+            + 1./3.*(ftmp(directions(EASTUP)) - fi(m,directions(WESTDOWN))) &
+            + 2./3.*fi(m,directions(EASTDOWN))
+       
+       fi(m,directions(NORTHUP)) = 1./3.*ftmp(directions(NORTHUP)) &
+!            + 1./2.*pvals(m)*vtmp &
+            + 1./6.*pvals(m)*wtmp &
+            - 1./2.*(fi(m,directions(NORTH)) &
+            - fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
+            + fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
+            - fi(m,directions(SOUTHEAST))) &
+            - 1./6.*(ftmp(directions(UP)) - fi(m,directions(DOWN)) &
+            + ftmp(directions(EASTUP)) + ftmp(directions(WESTUP)) &
+            - fi(m,directions(WESTDOWN)) - fi(m,directions(EASTDOWN))) &
+            + 1./3.*(ftmp(directions(SOUTHUP)) - fi(m,directions(NORTHDOWN))) &
+            + 2./3.*fi(m,directions(SOUTHDOWN))
+       
+       fi(m,directions(SOUTHUP)) = 1./3.*ftmp(directions(SOUTHUP)) &
+!            - 1./2.*pvals(m)*vtmp &
+            + 1./6.*pvals(m)*wtmp &
+            + 1./2.*(fi(m,directions(NORTH)) &
+            - fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
+            + fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
+            - fi(m,directions(SOUTHEAST))) &
+            - 1./6.*(ftmp(directions(UP)) - fi(m,directions(DOWN)) &
+            + ftmp(directions(EASTUP)) + ftmp(directions(WESTUP)) &
+            - fi(m,directions(WESTDOWN)) - fi(m,directions(EASTDOWN))) &
+            + 1./3.*(ftmp(directions(NORTHUP)) - fi(m,directions(SOUTHDOWN))) &
+            + 2./3.*fi(m,directions(NORTHDOWN))
+    enddo
+    return
+  end subroutine BCPressureApplyBoundary
+
+  subroutine BCSetLocalDirections(boundary, directions)
+    use LBM_Discretization_D3Q19_module
+    PetscInt,intent(in):: boundary
+    PetscInt,intent(out),dimension(0:discretization_directions) :: directions
+
+    PetscInt i
+    
+    select case(boundary)
+    case (BOUNDARY_ZM)
+       ! identity mapping
+       do i=0,discretization_directions
+          directions(i) = i
+       end do
+    case (BOUNDARY_ZP)
+       ! inverted mapping around the origin
+       directions(ORIGIN) = ORIGIN
+       directions(EAST) = WEST
+       directions(WEST) = EAST
+       directions(NORTH) = SOUTH
+       directions(SOUTH) = NORTH
+       directions(UP) = DOWN
+       directions(DOWN) = UP
+       directions(NORTHEAST) = SOUTHWEST
+       directions(SOUTHWEST) = NORTHEAST
+       directions(NORTHWEST) = SOUTHEAST
+       directions(SOUTHEAST) = NORTHWEST
+       directions(NORTHUP) = SOUTHDOWN
+       directions(SOUTHDOWN) = NORTHUP
+       directions(NORTHDOWN) = SOUTHUP
+       directions(SOUTHUP) = NORTHDOWN
+       directions(EASTUP) = WESTDOWN
+       directions(WESTDOWN) = EASTUP
+       directions(EASTDOWN) = WESTUP
+       directions(WESTUP) = EASTDOWN
+    case (BOUNDARY_XM)
+       ! map z -> x -> y
+       directions(ORIGIN) = ORIGIN
+       directions(EAST) = NORTH
+       directions(WEST) = SOUTH
+       directions(NORTH) = UP
+       directions(SOUTH) = DOWN
+       directions(UP) = EAST
+       directions(DOWN) = WEST
+       directions(NORTHEAST) = NORTHUP
+       directions(SOUTHWEST) = SOUTHDOWN
+       directions(NORTHWEST) = SOUTHUP
+       directions(SOUTHEAST) = NORTHDOWN
+       directions(NORTHUP) = EASTUP
+       directions(SOUTHDOWN) = WESTDOWN
+       directions(NORTHDOWN) = WESTUP
+       directions(SOUTHUP) = EASTDOWN
+       directions(EASTUP) = NORTHEAST
+       directions(WESTDOWN) = SOUTHWEST
+       directions(EASTDOWN) = NORTHWEST
+       directions(WESTUP) = SOUTHEAST
+    case (BOUNDARY_XP)
+       ! map z -> x -> y and invert
+       directions(ORIGIN) = ORIGIN
+       directions(EAST) = SOUTH
+       directions(WEST) = NORTH
+       directions(NORTH) = DOWN
+       directions(SOUTH) = UP
+       directions(UP) = WEST
+       directions(DOWN) = EAST
+       directions(NORTHEAST) = SOUTHDOWN
+       directions(SOUTHWEST) = NORTHUP
+       directions(NORTHWEST) = NORTHDOWN
+       directions(SOUTHEAST) = SOUTHUP
+       directions(NORTHUP) = WESTDOWN
+       directions(SOUTHDOWN) = EASTUP
+       directions(NORTHDOWN) = EASTDOWN
+       directions(SOUTHUP) = WESTUP
+       directions(EASTUP) = SOUTHWEST
+       directions(WESTDOWN) = NORTHEAST
+       directions(EASTDOWN) = SOUTHEAST
+       directions(WESTUP) = NORTHWEST
+    case (BOUNDARY_YM)       
+       ! cycle x <-- y <-- z
+       directions(ORIGIN) = ORIGIN
+       directions(EAST) = UP
+       directions(WEST) = DOWN
+       directions(NORTH) = EAST
+       directions(SOUTH) = WEST
+       directions(UP) = NORTH
+       directions(DOWN) = SOUTH
+       directions(NORTHEAST) = EASTUP
+       directions(SOUTHWEST) = WESTDOWN
+       directions(NORTHWEST) = EASTDOWN
+       directions(SOUTHEAST) = WESTUP
+       directions(NORTHUP) = NORTHEAST
+       directions(SOUTHDOWN) = SOUTHWEST
+       directions(NORTHDOWN) = SOUTHEAST
+       directions(SOUTHUP) = NORTHWEST
+       directions(EASTUP) = NORTHUP
+       directions(WESTDOWN) = SOUTHDOWN
+       directions(EASTDOWN) = SOUTHUP
+       directions(WESTUP) = NORTHDOWN
+    case (BOUNDARY_YP)       
+       ! cycle x <-- y <-- z, then invert
+       directions(ORIGIN) = ORIGIN
+       directions(EAST) = DOWN
+       directions(WEST) = UP
+       directions(NORTH) = WEST
+       directions(SOUTH) = EAST
+       directions(UP) = SOUTH
+       directions(DOWN) = NORTH
+       directions(NORTHEAST) = WESTDOWN
+       directions(SOUTHWEST) = EASTUP
+       directions(NORTHWEST) = WESTUP
+       directions(SOUTHEAST) = EASTDOWN
+       directions(NORTHUP) = SOUTHWEST
+       directions(SOUTHDOWN) = NORTHEAST
+       directions(NORTHDOWN) = NORTHWEST
+       directions(SOUTHUP) = SOUTHEAST
+       directions(EASTUP) = SOUTHDOWN
+       directions(WESTDOWN) = NORTHUP
+       directions(EASTDOWN) = NORTHDOWN
+       directions(WESTUP) = SOUTHUP
+    end select
+  end subroutine BCSetLocalDirections
 
   subroutine BCPseudoperiodic(fi, walls, bc_flags, bc_dim, &
        xm_vals, xp_vals, ym_vals, yp_vals, zm_vals, zp_vals, info)
-    use LBM_Info_module
-    implicit none
 
     type(info_type) info
     integer bc_dim

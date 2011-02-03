@@ -5,24 +5,12 @@
 ###     version:         
 ###     created:         28 January 2011
 ###       on:            09:52:47 MST
-###     last modified:   02 February 2011
-###       at:            13:05:40 MST
+###     last modified:   03 February 2011
+###       at:            11:49:08 MST
 ###     URL:             http://www.ldeo.columbia.edu/~ecoon/
 ###     email:           ecoon _at_ lanl.gov
 ###  
 ### ====================================================================
-
-# list of tests to run, in the format:
-#  ( 'directory_name', 'suffix_to_input_data', 'description')
-test_list = [ ('bubble', '3D', '3D bubble test'),
-              ('flushing', '3D_fluxpressure', '3D flux and pressure BC test' ),
-              ('flushing', '3D_pressure', '3D pressure BC test'),
-              ('flushing', '3D_poiseuille', '3D, nonconstant bc test'),
-              ]
-
-test_and_restart_list = [('flushing', '3D_flux', '3D flux, restart test'),
-                         ]
-
 
 
 import unittest
@@ -118,13 +106,73 @@ class LBMRestartTest(LBMTest):
         self.failUnlessEqual(test.returncode, 0, msg='regression failed')
         
 
+class LBMRotatedTest(LBMTest):
+    def test( self ):
+        # make the executable
+        self._stdout.write('make\n\n')
+        self._stdout.flush()
+        make = subprocess.Popen(['make', 'allclean'], stdout=self._stdout, stderr=self._stderr)
+        make.wait()
+        self.failUnlessEqual(make.returncode, 0, msg='clean failed')
+        make = subprocess.Popen(['make'], stdout=self._stdout, stderr=self._stderr)
+        make.wait()
+        self.failUnlessEqual(make.returncode, 0, msg='compilation failed')
+
+        # run the executable
+        self._stdout.write('\n\n-------------------------------------------\n')
+        self._stdout.write('mpiexec -n %s ./runSimulation input_data_%s\n\n'%(_np, self._postfix))
+        self._stdout.flush()
+        run = subprocess.Popen(['mpiexec', '-n', _np, './runSimulation', 'input_data_'+self._postfix], stdout=self._stdout, stderr=self._stderr)
+        run.wait()
+        self.failUnlessEqual(run.returncode, 0, msg='execution failed')
+
+        # test the result
+        self._stdout.write('\n\n-------------------------------------------\n')
+        self._stdout.write('python ../src/check_solution.py --rotate input_data_%s\n\n'%(self._postfix))
+        self._stdout.flush()
+        test = subprocess.Popen(['python', '../src/check_solution.py', '--rotate', 'input_data_'+self._postfix], stdout=self._stdout, stderr=self._stderr)
+        test.wait()
+        self.failUnlessEqual(test.returncode, 0, msg='regression failed')
+
+class LBMDoubleRotatedTest(LBMTest):
+    def test( self ):
+        # make the executable
+        self._stdout.write('make\n\n')
+        self._stdout.flush()
+        make = subprocess.Popen(['make', 'allclean'], stdout=self._stdout, stderr=self._stderr)
+        make.wait()
+        self.failUnlessEqual(make.returncode, 0, msg='clean failed')
+        make = subprocess.Popen(['make'], stdout=self._stdout, stderr=self._stderr)
+        make.wait()
+        self.failUnlessEqual(make.returncode, 0, msg='compilation failed')
+
+        # run the executable
+        self._stdout.write('\n\n-------------------------------------------\n')
+        self._stdout.write('mpiexec -n %s ./runSimulation input_data_%s\n\n'%(_np, self._postfix))
+        self._stdout.flush()
+        run = subprocess.Popen(['mpiexec', '-n', _np, './runSimulation', 'input_data_'+self._postfix], stdout=self._stdout, stderr=self._stderr)
+        run.wait()
+        self.failUnlessEqual(run.returncode, 0, msg='execution failed')
+
+        # test the result
+        self._stdout.write('\n\n-------------------------------------------\n')
+        self._stdout.write('python ../src/check_solution.py --double-rotate input_data_%s\n\n'%(self._postfix))
+        self._stdout.flush()
+        test = subprocess.Popen(['python', '../src/check_solution.py', '--double-rotate', 'input_data_'+self._postfix], stdout=self._stdout, stderr=self._stderr)
+        test.wait()
+        self.failUnlessEqual(test.returncode, 0, msg='regression failed')
+
+
 def suite():
     thesuite = unittest.TestSuite()
 
-    for test in test_list:
-        thesuite.addTest(LBMTest(*test))
-    for test in test_and_restart_list:
-        thesuite.addTest(LBMRestartTest(*test))
+    # thesuite.addTest(LBMTest('bubble', '3D', '3D bubble test'))
+    # thesuite.addTest(LBMTest('flushing', '3D_fluxpressure', '3D flux and pressure BC test'))
+    # thesuite.addTest(LBMTest('flushing', '3D_pressure', '3D pressure BC test'))
+    # thesuite.addTest(LBMTest('flushing', '3D_poiseuille', '3D, nonconstant bc test'))
+    # thesuite.addTest(LBMRestartTest('flushing', '3D_flux', '3D flux, restart test'))
+    # thesuite.addTest(LBMRotatedTest('flushing', '3D_pressure_rot', '3D pressure BC test, rotated to x'))
+    thesuite.addTest(LBMDoubleRotatedTest('flushing', '3D_pressure_rotrot', '3D pressure BC test, rotated to y'))
     return thesuite
 
 
