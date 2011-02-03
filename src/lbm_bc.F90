@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   01 February 2011
-!!!       at:            17:10:24 MST
+!!!     last modified:   03 February 2011
+!!!       at:            10:36:38 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -15,7 +15,6 @@
 #define PETSC_USE_FORTRAN_MODULES 1
 #include "finclude/petscsysdef.h"
 #include "finclude/petscvecdef.h"
-#include "finclude/petscdmdef.h"
 
 module LBM_BC_module
 use petsc
