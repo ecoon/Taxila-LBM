@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   02 February 2011
-!!!       at:            16:40:23 MST
+!!!     last modified:   03 February 2011
+!!!       at:            14:10:41 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -48,374 +48,141 @@ module LBM_BC_module
        BCPseudoperiodic
 contains
 
-! constructor
-function BCCreate() result(bc)
-  type(bc_type),pointer :: bc
-  allocate(bc)
-  nullify(bc%xm_a)
-  nullify(bc%xp_a)
-  nullify(bc%ym_a)
-  nullify(bc%yp_a)
-  nullify(bc%zm_a)
-  nullify(bc%zp_a)
-  bc%flags = 0
-
-  bc%xm = 0
-  bc%xp = 0
-  bc%ym = 0
-  bc%yp = 0
-  bc%zm = 0
-  bc%zp = 0
-end function BCCreate
-
-! destructor
-subroutine BCDestroy(bc, ierr)
-  type(bc_type) bc
-  PetscErrorCode ierr
-  if (bc%xm /= 0) call VecDestroy(bc%xm, ierr)
-  if (bc%xp /= 0) call VecDestroy(bc%xp, ierr)
-  if (bc%ym /= 0) call VecDestroy(bc%ym, ierr)
-  if (bc%yp /= 0) call VecDestroy(bc%yp, ierr)
-  if (bc%zm /= 0) call VecDestroy(bc%zm, ierr)
-  if (bc%zp /= 0) call VecDestroy(bc%zp, ierr)
-end subroutine BCDestroy
-
-! set up the vectors for holding boundary data
-subroutine BCSetSizes(bc, comm, info)
-  type(bc_type) bc
-  MPI_Comm comm
-  type(info_type) info
-  PetscInt locn
-  PetscErrorCode ierr
-
-  ! x boundaries
-  if (info%xs.eq.1) then
-     locn = info%yl*info%zl*info%dim
-  else
-     locn = 0
-  endif
-  call VecCreateMPI(comm, locn, info%NY*info%NZ*info%dim, bc%xm, ierr)
-
-  if (info%xe.eq.info%NX) then
-     locn = info%yl*info%zl*info%dim
-  else
-     locn = 0
-  endif
-  call VecCreateMPI(comm, locn, info%NY*info%NZ*info%dim, bc%xp, ierr)
-
-  ! y boundaries
-  if (info%ys.eq.1) then
-     locn = info%xl*info%zl*info%dim
-  else
-     locn = 0
-  endif
-  call VecCreateMPI(comm, locn, info%NX*info%NZ*info%dim, bc%ym, ierr)
-
-  if (info%ye.eq.info%NY) then
-     locn = info%xl*info%zl*info%dim
-  else
-     locn = 0
-  endif
-  call VecCreateMPI(comm, locn, info%NX*info%NZ*info%dim, bc%yp, ierr)
-
-  ! z boundaries
-  if (info%zs.eq.1) then
-     locn = info%xl*info%yl*info%dim
-  else
-     locn = 0
-  endif
-  call VecCreateMPI(comm, locn, info%NX*info%NY*info%dim, bc%zm, ierr)
-
-  if (info%ze.eq.info%NZ) then
-     locn = info%xl*info%yl*info%dim
-  else
-     locn = 0
-  endif
-  call VecCreateMPI(comm, locn, info%NX*info%NY*info%dim, bc%zp, ierr)
-end subroutine BCSetSizes
-
-! call initialize
-subroutine BCSetValues(bc, info, bc_subroutine)
-  type(bc_type) bc
-  type(info_type) info
-
-!  interface 
-!     subroutine bc_subroutine(xm, xp, ym, yp, zm, zp, dim, info)
-!       use LBM_Info_module
-!       PetscScalar xm(:)
-!       PetscScalar xp(:)
-!       PetscScalar ym(:)
-!       PetscScalar yp(:)
-!       PetscScalar zm(:)
-!       PetscScalar zp(:)
-!       PetscInt dim
-!       type(info_type) info
-!     end subroutine bc_subroutine
-!  end interface
-  external bc_subroutine
-  PetscErrorCode ierr
-  call BCGetArrays(bc, ierr)
-  call bc_subroutine(bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, bc%zm_a, bc%zp_a, info%dim, info)
-  CHKERRQ(ierr)
-  CHKMEMQ
-  call BCRestoreArrays(bc, ierr)
-end subroutine BCSetValues
-
-subroutine BCGetArrays(bc, ierr)
-  type(bc_type) bc
-  PetscErrorCode ierr
-  call VecGetArrayF90(bc%xm, bc%xm_a, ierr)
-  call VecGetArrayF90(bc%xp, bc%xp_a, ierr)
-  call VecGetArrayF90(bc%ym, bc%ym_a, ierr)
-  call VecGetArrayF90(bc%yp, bc%yp_a, ierr)
-  call VecGetArrayF90(bc%zm, bc%zm_a, ierr)
-  call VecGetArrayF90(bc%zp, bc%zp_a, ierr)
-end subroutine BCGetArrays
-
-subroutine BCRestoreArrays(bc, ierr)
-  type(bc_type) bc
-  PetscErrorCode ierr
-  call VecRestoreArrayF90(bc%xm, bc%xm_a, ierr)
-  call VecRestoreArrayF90(bc%xp, bc%xp_a, ierr)
-  call VecRestoreArrayF90(bc%ym, bc%ym_a, ierr)
-  call VecRestoreArrayF90(bc%yp, bc%yp_a, ierr)
-  call VecRestoreArrayF90(bc%zm, bc%zm_a, ierr)
-  call VecRestoreArrayF90(bc%zp, bc%zp_a, ierr)
-end subroutine BCRestoreArrays
+  ! constructor
+  function BCCreate() result(bc)
+    type(bc_type),pointer :: bc
+    allocate(bc)
+    nullify(bc%xm_a)
+    nullify(bc%xp_a)
+    nullify(bc%ym_a)
+    nullify(bc%yp_a)
+    nullify(bc%zm_a)
+    nullify(bc%zp_a)
+    bc%flags = 0
+    
+    bc%xm = 0
+    bc%xp = 0
+    bc%ym = 0
+    bc%yp = 0
+    bc%zm = 0
+    bc%zp = 0
+  end function BCCreate
   
-  subroutine BCFlux(fi, walls, bc_flags, bc_dim, &
-       xm_vals, xp_vals, ym_vals, yp_vals, zm_vals, zp_vals, info)
+  ! destructor
+  subroutine BCDestroy(bc, ierr)
+    type(bc_type) bc
+    PetscErrorCode ierr
+    if (bc%xm /= 0) call VecDestroy(bc%xm, ierr)
+    if (bc%xp /= 0) call VecDestroy(bc%xp, ierr)
+    if (bc%ym /= 0) call VecDestroy(bc%ym, ierr)
+    if (bc%yp /= 0) call VecDestroy(bc%yp, ierr)
+    if (bc%zm /= 0) call VecDestroy(bc%zm, ierr)
+    if (bc%zp /= 0) call VecDestroy(bc%zp, ierr)
+  end subroutine BCDestroy
+  
+  ! set up the vectors for holding boundary data
+  subroutine BCSetSizes(bc, comm, info)
+    type(bc_type) bc
+    MPI_Comm comm
     type(info_type) info
-    integer bc_dim
-
-
-    PetscInt,dimension(1:6)::bc_flags
-    PetscScalar,dimension(1:info%s, 0:info%b, info%gxs:info%gxe, &
-         info%gys:info%gye, info%gzs:info%gze):: fi
-    PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
-         info%gzs:info%gze):: walls
-    PetscScalar,dimension(bc_dim,info%ys:info%ye,info%zs:info%ze):: xm_vals, xp_vals
-    PetscScalar,dimension(bc_dim,info%xs:info%xe,info%zs:info%ze):: ym_vals, yp_vals
-    PetscScalar,dimension(bc_dim,info%xs:info%xe,info%ys:info%ye):: zm_vals, zp_vals
-
-    PetscScalar rhotmp
-    PetscScalar,dimension(0:info%b)::ftmp
-    integer i,j,k,m
-
-    ftmp = 0.0
-
-    ! In the z-direction only for now
-    ! --- zp side
-    if (bc_flags(6).eq.2) then
-       if(info%ze.eq.info%NZ) then
-          do m=1,info%s
-             do i=info%xs,info%xe
-                do j=info%ys,info%ye
-                   k = info%NZ
-                   if (walls(i,j,k).eq.0) then
-                      rhotmp = fi(m,0,i,j,k) + fi(m,1,i,j,k) &
-                           + fi(m,2,i,j,k) + fi(m,3,i,j,k) &
-                           + fi(m,4,i,j,k) + fi(m,7,i,j,k) &
-                           + fi(m,8,i,j,k) + fi(m,9,i,j,k) &
-                           + fi(m,10,i,j,k) + 2.*(fi(m,5,i,j,k) &
-                           + fi(m,11,i,j,k) + fi(m,12,i,j,k) &
-                           + fi(m,15,i,j,k) + fi(m,16,i,j,k)) 
-                      rhotmp = rhotmp/(1. + zp_vals(3,i,j))
-
-                      ! Choice should not affect the momentum significantly
-                      ftmp(6) = fi(m,5,i,j,k)
-                      ftmp(13) = fi(m,11,i,j,k)
-                      ftmp(14) = fi(m,12,i,j,k)
-                      ftmp(17) = fi(m,15,i,j,k)
-                      ftmp(18) = fi(m,16,i,j,k)
-                      
-                      ! This choice does not work for pressure bc
-                      !ftmp(6) = fi(m,6,i,j,k-1)
-                      !ftmp(13) = fi(m,13,i-1,j,k-1)
-                      !ftmp(14) = fi(m,14,i+1,j,k-1)
-                      !ftmp(17) = fi(m,17,i,j-1,k-1)
-                      !ftmp(18) = fi(m,18,i,j+1,k-1)
-                      
-                      fi(m,6,i,j,k) = 2./3.*ftmp(6) &
-                           - 1./3.*rhotmp*zp_vals(3,i,j) &
-                           + 1./3.*(fi(m,5,i,j,k) &
-                           + fi(m,11,i,j,k) + fi(m,12,i,j,k) &
-                           + fi(m,15,i,j,k) + fi(m,16,i,j,k)) &
-                           - 1./3.*(ftmp(13) + ftmp(14) &
-                           + ftmp(17) + ftmp(18))
-
-                      fi(m,13,i,j,k) = 1./3.*ftmp(13) &
-                           - 1./2.*rhotmp*zp_vals(1,i,j) &
-                           - 1./6.*rhotmp*zp_vals(3,i,j) &
-                           + 1./2.*(fi(m,1,i,j,k) & 
-                           - fi(m,3,i,j,k) + fi(m,7,i,j,k) &
-                           - fi(m,8,i,j,k) - fi(m,9,i,j,k) &
-                           + fi(m,10,i,j,k)) &
-                           + 1./6.*( fi(m,5,i,j,k) - ftmp(6) &
-                           + fi(m,15,i,j,k) + fi(m,16,i,j,k) &
-                           - ftmp(17) - ftmp(18) ) &
-                           - 1./3.*(fi(m,12,i,j,k) - ftmp(14)) &
-                           + 2./3.*fi(m,11,i,j,k) 
-                      
-                      fi(m,14,i,j,k) = 1./3.*ftmp(14) &
-                           + 1./2.*rhotmp*zp_vals(1,i,j) &
-                           - 1./6.*rhotmp*zp_vals(3,i,j) &
-                           - 1./2.*(fi(m,1,i,j,k) &
-                           - fi(m,3,i,j,k) + fi(m,7,i,j,k) &
-                           - fi(m,8,i,j,k) - fi(m,9,i,j,k) &
-                           + fi(m,10,i,j,k)) &
-                           + 1./6.*(fi(m,5,i,j,k) - ftmp(6) &
-                           + fi(m,15,i,j,k) + fi(m,16,i,j,k) &
-                           - ftmp(17) - ftmp(18)) &
-                           - 1./3.*(fi(m,11,i,j,k) - ftmp(13)) &
-                           + 2./3.*fi(m,12,i,j,k)
-
-                      fi(m,17,i,j,k) = 1./3.*ftmp(17) &
-                           - 1./2.*rhotmp*zp_vals(2,i,j) &
-                           - 1./6.*rhotmp*zp_vals(3,i,j) &
-                           + 1./2.*(fi(m,2,i,j,k) &
-                           - fi(m,4,i,j,k) + fi(m,7,i,j,k) &
-                           + fi(m,8,i,j,k) - fi(m,9,i,j,k) &
-                           - fi(m,10,i,j,k)) &
-                           + 1./6.*(fi(m,5,i,j,k) - ftmp(6) &
-                           + fi(m,11,i,j,k) + fi(m,12,i,j,k) &
-                           - ftmp(13) - ftmp(14)) &
-                           - 1./3.*(fi(m,16,i,j,k) - ftmp(18)) &
-                           + 2./3.*fi(m,15,i,j,k) 
-
-                      fi(m,18,i,j,k) = 1./3.*ftmp(18) &
-                           + 1./2.*rhotmp*zp_vals(2,i,j) &
-                           - 1./6.*rhotmp*zp_vals(3,i,j) &
-                           - 1./2.*(fi(m,2,i,j,k) &
-                           - fi(m,4,i,j,k) + fi(m,7,i,j,k) &
-                           + fi(m,8,i,j,k) - fi(m,9,i,j,k) &
-                           - fi(m,10,i,j,k)) &
-                           + 1./6.*(fi(m,5,i,j,k) - ftmp(6) &
-                           + fi(m,11,i,j,k) + fi(m,12,i,j,k) &
-                           - ftmp(13) - ftmp(14)) &
-                           - 1./3.*(fi(m,15,i,j,k) - ftmp(17)) &
-                           + 2./3.*fi(m,16,i,j,k)
-                   endif
-                enddo
-             enddo
-          enddo
-       endif
+    PetscInt locn
+    PetscErrorCode ierr
+    
+    ! x boundaries
+    if (info%xs.eq.1) then
+       locn = info%yl*info%zl*info%dim
+    else
+       locn = 0
     endif
-
-    ! --- z minus side
-    if (bc_flags(5).eq.2) then
-       if(info%zs.eq.1) then
-          do m=1,info%s
-             do i=info%xs,info%xe
-                do j=info%ys,info%ye
-                   k = 1
-                   if (walls(i,j,k).eq.0) then
-                      rhotmp = fi(m,0,i,j,k) + fi(m,1,i,j,k) &
-                           + fi(m,2,i,j,k) + fi(m,3,i,j,k) &
-                           + fi(m,4,i,j,k) + fi(m,7,i,j,k) &
-                           + fi(m,8,i,j,k) + fi(m,9,i,j,k) &
-                           + fi(m,10,i,j,k) + 2.*(fi(m,6,i,j,k) &
-                           + fi(m,13,i,j,k) + fi(m,14,i,j,k) &
-                           + fi(m,17,i,j,k) + fi(m,18,i,j,k)) 
-                      rhotmp = rhotmp/(1. - zm_vals(3,i,j))
-                      
-                      ! Choice should not affect the momentum significantly
-                      ftmp(5) = fi(m,6,i,j,k);
-                      ftmp(11) = fi(m,13,i,j,k)
-                      ftmp(12) = fi(m,14,i,j,k)
-                      ftmp(15) = fi(m,17,i,j,k)
-                      ftmp(16) = fi(m,18,i,j,k)
-
-                      ! This choice does not work for pressure bc
-                      !ftmp(5) = fi(m,5,i,j,2)
-                      !ftmp(11) = fi(m,11,i+1,j,2)
-                      !ftmp(12) = fi(m,12,i-1,j,2)
-                      !ftmp(15) = fi(m,15,i,j+1,2)
-                      !ftmp(16) = fi(m,16,i,j-1,2)
-
-                      fi(m,5,i,j,k) = 2./3.*ftmp(5) &
-                           + 1./3.*rhotmp*zm_vals(3,i,j) &
-                           - 1./3.*(ftmp(11)+ ftmp(12) &
-                           + ftmp(15) + ftmp(16)) &
-                           + 1./3.*(fi(m,6,i,j,k) &
-                           + fi(m,13,i,j,k) + fi(m,14,i,j,k) &
-                           + fi(m,17,i,j,k) + fi(m,18,i,j,k))
-                      
-                      fi(m,11,i,j,k) = 1./3.*ftmp(11) &
-                           + 1./2.*rhotmp*zm_vals(1,i,j) &
-                           + 1./6.*rhotmp*zm_vals(3,i,j) &
-                           - 1./2.*(fi(m,1,i,j,k) &
-                           - fi(m,3,i,j,k) + fi(m,7,i,j,k) &
-                           - fi(m,8,i,j,k) - fi(m,9,i,j,k) &
-                           + fi(m,10,i,j,k)) &
-                           - 1./6.*(ftmp(5) - fi(m,6,i,j,k) &
-                           + ftmp(15) + ftmp(16) &
-                           - fi(m,17,i,j,k) - fi(m,18,i,j,k)) &
-                           + 1./3.*(ftmp(12) - fi(m,14,i,j,k)) &
-                           + 2./3.*fi(m,13,i,j,k) 
-
-                      fi(m,12,i,j,k) = 1./3.*ftmp(12) &
-                           - 1./2.*rhotmp*zm_vals(1,i,j) &
-                           + 1./6.*rhotmp*zm_vals(3,i,j) &
-                           + 1./2.*(fi(m,1,i,j,k) &
-                           - fi(m,3,i,j,k) + fi(m,7,i,j,k) &
-                           - fi(m,8,i,j,k) - fi(m,9,i,j,k) &
-                           + fi(m,10,i,j,k)) &
-                           - 1./6.*(ftmp(5) - fi(m,6,i,j,k) &
-                           + ftmp(15) + ftmp(16) &
-                           - fi(m,17,i,j,k) - fi(m,18,i,j,k)) &
-                           + 1./3.*(ftmp(11) - fi(m,13,i,j,k)) &
-                           + 2./3.*fi(m,14,i,j,k)
-
-                      fi(m,15,i,j,k) = 1./3.*ftmp(15) &
-                           + 1./2.*rhotmp*zm_vals(2,i,j) &
-                           + 1./6.*rhotmp*zm_vals(3,i,j) &
-                           - 1./2.*(fi(m,2,i,j,k) &
-                           - fi(m,4,i,j,k) + fi(m,7,i,j,k) &
-                           + fi(m,8,i,j,k) - fi(m,9,i,j,k) &
-                           - fi(m,10,i,j,k)) &
-                           - 1./6.*(ftmp(5) - fi(m,6,i,j,k) &
-                           + ftmp(11) + ftmp(12) &
-                           - fi(m,13,i,j,k) - fi(m,14,i,j,k)) &
-                           + 1./3.*(ftmp(16) - fi(m,18,i,j,k)) &
-                           + 2./3.*fi(m,17,i,j,k)
-                      
-                      fi(m,16,i,j,k) = 1./3.*ftmp(16) &
-                           - 1./2.*rhotmp*zm_vals(2,i,j) &
-                           + 1./6.*rhotmp*zm_vals(3,i,j) &
-                           + 1./2.*(fi(m,2,i,j,k) &
-                           - fi(m,4,i,j,k) + fi(m,7,i,j,k) &
-                           + fi(m,8,i,j,k) - fi(m,9,i,j,k) &
-                           - fi(m,10,i,j,k)) &
-                           - 1./6.*(ftmp(5) - fi(m,6,i,j,k) &
-                           + ftmp(11) + ftmp(12) &
-                           - fi(m,13,i,j,k) - fi(m,14,i,j,k)) &
-                           + 1./3.*(ftmp(15) - fi(m,17,i,j,k)) &
-                           + 2./3.*fi(m,18,i,j,k)
-                   endif
-                enddo
-             enddo
-          enddo
-       endif
+    call VecCreateMPI(comm, locn, info%NY*info%NZ*info%dim, bc%xm, ierr)
+    
+    if (info%xe.eq.info%NX) then
+       locn = info%yl*info%zl*info%dim
+    else
+       locn = 0
     endif
+    call VecCreateMPI(comm, locn, info%NY*info%NZ*info%dim, bc%xp, ierr)
+    
+    ! y boundaries
+    if (info%ys.eq.1) then
+       locn = info%xl*info%zl*info%dim
+    else
+       locn = 0
+    endif
+    call VecCreateMPI(comm, locn, info%NX*info%NZ*info%dim, bc%ym, ierr)
+    
+    if (info%ye.eq.info%NY) then
+       locn = info%xl*info%zl*info%dim
+    else
+       locn = 0
+    endif
+    call VecCreateMPI(comm, locn, info%NX*info%NZ*info%dim, bc%yp, ierr)
+    
+    ! z boundaries
+    if (info%zs.eq.1) then
+       locn = info%xl*info%yl*info%dim
+    else
+       locn = 0
+    endif
+    call VecCreateMPI(comm, locn, info%NX*info%NY*info%dim, bc%zm, ierr)
+    
+    if (info%ze.eq.info%NZ) then
+       locn = info%xl*info%yl*info%dim
+    else
+       locn = 0
+    endif
+    call VecCreateMPI(comm, locn, info%NX*info%NY*info%dim, bc%zp, ierr)
+  end subroutine BCSetSizes
+  
+  ! call initialize
+  subroutine BCSetValues(bc, info, bc_subroutine)
+    type(bc_type) bc
+    type(info_type) info
+    
+    !  interface 
+    !     subroutine bc_subroutine(xm, xp, ym, yp, zm, zp, dim, info)
+    !       use LBM_Info_module
+    !       PetscScalar xm(:)
+    !       PetscScalar xp(:)
+    !       PetscScalar ym(:)
+    !       PetscScalar yp(:)
+    !       PetscScalar zm(:)
+    !       PetscScalar zp(:)
+    !       PetscInt dim
+    !       type(info_type) info
+    !     end subroutine bc_subroutine
+    !  end interface
+    external bc_subroutine
+    PetscErrorCode ierr
+    call BCGetArrays(bc, ierr)
+    call bc_subroutine(bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, bc%zm_a, bc%zp_a, info%dim, info)
+    CHKERRQ(ierr)
+    CHKMEMQ
+    call BCRestoreArrays(bc, ierr)
+  end subroutine BCSetValues
 
+  subroutine BCGetArrays(bc, ierr)
+    type(bc_type) bc
+    PetscErrorCode ierr
+    call VecGetArrayF90(bc%xm, bc%xm_a, ierr)
+    call VecGetArrayF90(bc%xp, bc%xp_a, ierr)
+    call VecGetArrayF90(bc%ym, bc%ym_a, ierr)
+    call VecGetArrayF90(bc%yp, bc%yp_a, ierr)
+    call VecGetArrayF90(bc%zm, bc%zm_a, ierr)
+    call VecGetArrayF90(bc%zp, bc%zp_a, ierr)
+  end subroutine BCGetArrays
 
-    ! --- other sides not implemented
-    if (bc_flags(4).eq.2) then
-       write(*,*) 'FLUX BCS IN THE NON-Z-DIRECTIONS ARE NOT IMPLEMENTED -- you get periodic now!'
-    endif
-    if (bc_flags(3).eq.2) then
-       write(*,*) 'FLUX BCS IN THE NON-Z-DIRECTIONS ARE NOT IMPLEMENTED -- you get periodic now!'
-    endif
-    if (bc_flags(2).eq.2) then
-       write(*,*) 'FLUX BCS IN THE NON-Z-DIRECTIONS ARE NOT IMPLEMENTED -- you get periodic now!'
-    endif
-    if (bc_flags(1).eq.2) then
-       write(*,*) 'FLUX BCS IN THE NON-Z-DIRECTIONS ARE NOT IMPLEMENTED -- you get periodic now!'
-    endif
-
-    return
-  end subroutine BCFlux
+  subroutine BCRestoreArrays(bc, ierr)
+    type(bc_type) bc
+    PetscErrorCode ierr
+    call VecRestoreArrayF90(bc%xm, bc%xm_a, ierr)
+    call VecRestoreArrayF90(bc%xp, bc%xp_a, ierr)
+    call VecRestoreArrayF90(bc%ym, bc%ym_a, ierr)
+    call VecRestoreArrayF90(bc%yp, bc%yp_a, ierr)
+    call VecRestoreArrayF90(bc%zm, bc%zm_a, ierr)
+    call VecRestoreArrayF90(bc%zp, bc%zp_a, ierr)
+  end subroutine BCRestoreArrays
+  
 
   subroutine BCPressure(fi, walls, bc_flags, bc_dim, &
        xm_vals, xp_vals, ym_vals, yp_vals, zm_vals, zp_vals, info)
@@ -434,16 +201,18 @@ end subroutine BCRestoreArrays
 
     PetscInt i,j,k
     PetscInt directions(0:info%b)
+    PetscInt cardinals(1:info%dim)
 
     directions(:) = 0
     ! XM BOUNDARY
     if ((bc_flags(BOUNDARY_XM).eq.BC_PRESSURE).and.(info%xs.eq.1)) then
-       call BCSetLocalDirections(BOUNDARY_XM, directions)
+       call BCSetLocalDirections(BOUNDARY_XM, directions, cardinals)
        do k=info%zs,info%ze
           do j=info%ys,info%ye
              i = 1
              if (walls(i,j,k).eq.0) then
-                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, xm_vals(:,j,k), directions, info)
+                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, xm_vals(:,j,k), &
+                     directions, info)
              end if
           end do
        end do
@@ -452,12 +221,13 @@ end subroutine BCRestoreArrays
     directions(:) = 0
     ! XP BOUNDARY
     if ((bc_flags(BOUNDARY_XP).eq.BC_PRESSURE).and.(info%xe.eq.info%NX)) then
-       call BCSetLocalDirections(BOUNDARY_XP, directions)
+       call BCSetLocalDirections(BOUNDARY_XP, directions, cardinals)
        do k=info%zs,info%ze
           do j=info%ys,info%ye
              i = info%NX
              if (walls(i,j,k).eq.0) then
-                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, xp_vals(:,j,k), directions, info)
+                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, xp_vals(:,j,k), &
+                     directions, info)
              end if
           end do
        end do
@@ -466,12 +236,13 @@ end subroutine BCRestoreArrays
     directions(:) = 0
     ! YM BOUNDARY
     if ((bc_flags(BOUNDARY_YM).eq.BC_PRESSURE).and.(info%ys.eq.1)) then
-       call BCSetLocalDirections(BOUNDARY_YM, directions)
+       call BCSetLocalDirections(BOUNDARY_YM, directions, cardinals)
        do k=info%zs,info%ze
           do i=info%xs,info%xe
              j = 1
              if (walls(i,j,k).eq.0) then
-                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, ym_vals(:,i,k), directions, info)
+                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, ym_vals(:,i,k), &
+                     directions, info)
              end if
           end do
        end do
@@ -480,12 +251,13 @@ end subroutine BCRestoreArrays
     directions(:) = 0
     ! YP BOUNDARY
     if ((bc_flags(BOUNDARY_YP).eq.BC_PRESSURE).and.(info%ye.eq.info%NY)) then
-       call BCSetLocalDirections(BOUNDARY_YP, directions)
+       call BCSetLocalDirections(BOUNDARY_YP, directions, cardinals)
        do k=info%zs,info%ze
           do i=info%xs,info%xe
              j = info%NY
              if (walls(i,j,k).eq.0) then
-                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, yp_vals(:,i,k), directions, info)
+                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, yp_vals(:,i,k), &
+                     directions, info)
              end if
           end do
        end do
@@ -494,12 +266,13 @@ end subroutine BCRestoreArrays
     directions(:) = 0
     ! ZM BOUNDARY
     if ((bc_flags(BOUNDARY_ZM).eq.BC_PRESSURE).and.(info%zs.eq.1)) then
-       call BCSetLocalDirections(BOUNDARY_ZM, directions)
+       call BCSetLocalDirections(BOUNDARY_ZM, directions, cardinals)
        do j=info%ys,info%ye
           do i=info%xs,info%xe
              k = 1
              if (walls(i,j,k).eq.0) then
-                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, zm_vals(:,i,j), directions, info)
+                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, zm_vals(:,i,j), &
+                     directions, info)
              end if
           end do
        end do
@@ -508,12 +281,13 @@ end subroutine BCRestoreArrays
     directions(:) = 0
     ! ZP BOUNDARY
     if ((bc_flags(BOUNDARY_ZP).eq.BC_PRESSURE).and.(info%ze.eq.info%NZ)) then
-       call BCSetLocalDirections(BOUNDARY_ZP, directions)
+       call BCSetLocalDirections(BOUNDARY_ZP, directions, cardinals)
        do j=info%ys,info%ye
           do i=info%xs,info%xe
              k = info%NZ
              if (walls(i,j,k).eq.0) then
-                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, zp_vals(:,i,j), directions, info)
+                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, zp_vals(:,i,j), &
+                     directions, info)
              end if
           end do
        end do
@@ -524,7 +298,6 @@ end subroutine BCRestoreArrays
 
   subroutine BCPressureApplyBoundary(fi, bc_dim, pvals, directions, info)
     use LBM_Discretization_D3Q19_module
-          ! assume x- and y-velocities equal zero
 
     type(info_type) info
     PetscInt bc_dim
@@ -623,10 +396,229 @@ end subroutine BCRestoreArrays
     return
   end subroutine BCPressureApplyBoundary
 
-  subroutine BCSetLocalDirections(boundary, directions)
+  subroutine BCFlux(fi, walls, bc_flags, bc_dim, &
+       xm_vals, xp_vals, ym_vals, yp_vals, zm_vals, zp_vals, info)
+
+    type(info_type) info
+    PetscInt bc_dim
+
+    PetscInt,dimension(1:6)::bc_flags
+    PetscScalar,dimension(1:info%s, 0:info%b, info%gxs:info%gxe, &
+         info%gys:info%gye, info%gzs:info%gze):: fi
+    PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
+         info%gzs:info%gze):: walls
+    PetscScalar,dimension(bc_dim,info%ys:info%ye,info%zs:info%ze):: xm_vals, xp_vals
+    PetscScalar,dimension(bc_dim,info%xs:info%xe,info%zs:info%ze):: ym_vals, yp_vals
+    PetscScalar,dimension(bc_dim,info%xs:info%xe,info%ys:info%ye):: zm_vals, zp_vals
+
+    PetscInt i,j,k
+    PetscInt directions(0:info%b)
+    PetscInt cardinals(1:info%dim)
+
+    directions(:) = 0
+    cardinals(:) = 0
+    ! XM BOUNDARY
+    if ((bc_flags(BOUNDARY_XM).eq.BC_FLUX).and.(info%xs.eq.1)) then
+       call BCSetLocalDirections(BOUNDARY_XM, directions, cardinals)
+       do k=info%zs,info%ze
+          do j=info%ys,info%ye
+             i = 1
+             if (walls(i,j,k).eq.0) then
+                call BCFluxApplyBoundary(fi(:,:,i,j,k), bc_dim, xm_vals(:,j,k), &
+                     directions, cardinals, info)
+             end if
+          end do
+       end do
+    endif
+
+    directions(:) = 0
+    cardinals(:) = 0
+    ! XP BOUNDARY
+    if ((bc_flags(BOUNDARY_XP).eq.BC_FLUX).and.(info%xe.eq.info%NX)) then
+       call BCSetLocalDirections(BOUNDARY_XP, directions, cardinals)
+       do k=info%zs,info%ze
+          do j=info%ys,info%ye
+             i = info%NX
+             if (walls(i,j,k).eq.0) then
+                call BCFluxApplyBoundary(fi(:,:,i,j,k), bc_dim, xp_vals(:,j,k), &
+                     directions, cardinals, info)
+             end if
+          end do
+       end do
+    endif
+
+    directions(:) = 0
+    cardinals(:) = 0
+    ! YM BOUNDARY
+    if ((bc_flags(BOUNDARY_YM).eq.BC_FLUX).and.(info%ys.eq.1)) then
+       call BCSetLocalDirections(BOUNDARY_YM, directions, cardinals)
+       do k=info%zs,info%ze
+          do i=info%xs,info%xe
+             j = 1
+             if (walls(i,j,k).eq.0) then
+                call BCFluxApplyBoundary(fi(:,:,i,j,k), bc_dim, ym_vals(:,i,k), &
+                     directions, cardinals, info)
+             end if
+          end do
+       end do
+    endif
+
+    directions(:) = 0
+    cardinals(:) = 0
+    ! YP BOUNDARY
+    if ((bc_flags(BOUNDARY_YP).eq.BC_FLUX).and.(info%ye.eq.info%NY)) then
+       call BCSetLocalDirections(BOUNDARY_YP, directions, cardinals)
+       do k=info%zs,info%ze
+          do i=info%xs,info%xe
+             j = info%NY
+             if (walls(i,j,k).eq.0) then
+                call BCFluxApplyBoundary(fi(:,:,i,j,k), bc_dim, yp_vals(:,i,k), &
+                     directions, cardinals, info)
+             end if
+          end do
+       end do
+    endif
+
+    directions(:) = 0
+    cardinals(:) = 0
+    ! ZM BOUNDARY
+    if ((bc_flags(BOUNDARY_ZM).eq.BC_FLUX).and.(info%zs.eq.1)) then
+       call BCSetLocalDirections(BOUNDARY_ZM, directions, cardinals)
+       do j=info%ys,info%ye
+          do i=info%xs,info%xe
+             k = 1
+             if (walls(i,j,k).eq.0) then
+                call BCFluxApplyBoundary(fi(:,:,i,j,k), bc_dim, zm_vals(:,i,j), &
+                     directions, cardinals, info)
+             end if
+          end do
+       end do
+    endif
+
+    directions(:) = 0
+    cardinals(:) = 0
+    ! ZP BOUNDARY
+    if ((bc_flags(BOUNDARY_ZP).eq.BC_FLUX).and.(info%ze.eq.info%NZ)) then
+       call BCSetLocalDirections(BOUNDARY_ZP, directions, cardinals)
+       do j=info%ys,info%ye
+          do i=info%xs,info%xe
+             k = info%NZ
+             if (walls(i,j,k).eq.0) then
+                call BCFluxApplyBoundary(fi(:,:,i,j,k), bc_dim, zp_vals(:,i,j), &
+                     directions, cardinals, info)
+             end if
+          end do
+       end do
+    endif
+
+    return
+  end subroutine BCFlux
+  
+  subroutine BCFluxApplyBoundary(fi, bc_dim, fvals, directions, cardinals, info)
+    use LBM_Discretization_D3Q19_module
+
+    type(info_type) info
+    PetscInt bc_dim
+
+    PetscScalar,intent(inout),dimension(1:info%s, 0:info%b):: fi
+    PetscScalar,intent(in),dimension(bc_dim):: fvals
+    PetscInt,intent(in),dimension(0:info%b):: directions
+    PetscInt,intent(in),dimension(1:info%dim):: cardinals
+
+    PetscScalar rhotmp
+    PetscScalar,dimension(0:info%b)::ftmp
+    PetscInt m
+
+    ftmp = 0.0
+    rhotmp = 0.0
+
+    do m=1,info%s
+       rhotmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) &
+            + fi(m,directions(NORTH)) + fi(m,directions(WEST)) &
+            + fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
+            + fi(m,directions(NORTHWEST)) + fi(m,directions(SOUTHWEST)) &
+            + fi(m,directions(SOUTHEAST)) + 2.*(fi(m,directions(DOWN)) &
+            + fi(m,directions(WESTDOWN)) + fi(m,directions(EASTDOWN)) &
+            + fi(m,directions(SOUTHDOWN)) + fi(m,directions(NORTHDOWN))) 
+       rhotmp = rhotmp/(1. - fvals(cardinals(CARDINAL_NORMAL)))
+       
+       ! Choice should not affect the momentum significantly
+       ftmp(directions(UP)) = fi(m,directions(DOWN))
+       ftmp(directions(EASTUP)) = fi(m,directions(WESTDOWN))
+       ftmp(directions(WESTUP)) = fi(m,directions(EASTDOWN))
+       ftmp(directions(NORTHUP)) = fi(m,directions(SOUTHDOWN))
+       ftmp(directions(SOUTHUP)) = fi(m,directions(NORTHDOWN))
+
+       fi(m,directions(UP)) = 2./3.*ftmp(directions(UP)) &
+            + 1./3.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
+            - 1./3.*(ftmp(directions(EASTUP))+ ftmp(directions(WESTUP)) &
+            + ftmp(directions(NORTHUP)) + ftmp(directions(SOUTHUP))) &
+            + 1./3.*(fi(m,directions(DOWN)) &
+            + fi(m,directions(WESTDOWN)) + fi(m,directions(EASTDOWN)) &
+            + fi(m,directions(SOUTHDOWN)) + fi(m,directions(NORTHDOWN)))
+       
+       fi(m,directions(EASTUP)) = 1./3.*ftmp(directions(EASTUP)) &
+            + 1./2.*rhotmp*fvals(cardinals(CARDINAL_CROSS)) &
+            + 1./6.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
+            - 1./2.*(fi(m,directions(EAST)) &
+            - fi(m,directions(WEST)) + fi(m,directions(NORTHEAST)) &
+            - fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
+            + fi(m,directions(SOUTHEAST))) &
+            - 1./6.*(ftmp(directions(UP)) - fi(m,directions(DOWN)) &
+            + ftmp(directions(NORTHUP)) + ftmp(directions(SOUTHUP)) &
+            - fi(m,directions(SOUTHDOWN)) - fi(m,directions(NORTHDOWN))) &
+            + 1./3.*(ftmp(directions(WESTUP)) - fi(m,directions(EASTDOWN))) &
+            + 2./3.*fi(m,directions(WESTDOWN)) 
+
+       fi(m,directions(WESTUP)) = 1./3.*ftmp(directions(WESTUP)) &
+            - 1./2.*rhotmp*fvals(cardinals(CARDINAL_CROSS)) &
+            + 1./6.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
+            + 1./2.*(fi(m,directions(EAST)) &
+            - fi(m,directions(WEST)) + fi(m,directions(NORTHEAST)) &
+            - fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
+            + fi(m,directions(SOUTHEAST))) &
+            - 1./6.*(ftmp(directions(UP)) - fi(m,directions(DOWN)) &
+            + ftmp(directions(NORTHUP)) + ftmp(directions(SOUTHUP)) &
+            - fi(m,directions(SOUTHDOWN)) - fi(m,directions(NORTHDOWN))) &
+            + 1./3.*(ftmp(directions(EASTUP)) - fi(m,directions(WESTDOWN))) &
+            + 2./3.*fi(m,directions(EASTDOWN))
+       
+       fi(m,directions(NORTHUP)) = 1./3.*ftmp(directions(NORTHUP)) &
+            + 1./2.*rhotmp*fvals(cardinals(CARDINAL_RESULTANT)) &
+            + 1./6.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
+            - 1./2.*(fi(m,directions(NORTH)) &
+            - fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
+            + fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
+            - fi(m,directions(SOUTHEAST))) &
+            - 1./6.*(ftmp(directions(UP)) - fi(m,directions(DOWN)) &
+            + ftmp(directions(EASTUP)) + ftmp(directions(WESTUP)) &
+            - fi(m,directions(WESTDOWN)) - fi(m,directions(EASTDOWN))) &
+            + 1./3.*(ftmp(directions(SOUTHUP)) - fi(m,directions(NORTHDOWN))) &
+            + 2./3.*fi(m,directions(SOUTHDOWN))
+       
+       fi(m,directions(SOUTHUP)) = 1./3.*ftmp(directions(SOUTHUP)) &
+            - 1./2.*rhotmp*fvals(cardinals(CARDINAL_RESULTANT)) &
+            + 1./6.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
+            + 1./2.*(fi(m,directions(NORTH)) &
+            - fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
+            + fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
+            - fi(m,directions(SOUTHEAST))) &
+            - 1./6.*(ftmp(directions(UP)) - fi(m,directions(DOWN)) &
+            + ftmp(directions(EASTUP)) + ftmp(directions(WESTUP)) &
+            - fi(m,directions(WESTDOWN)) - fi(m,directions(EASTDOWN))) &
+            + 1./3.*(ftmp(directions(NORTHUP)) - fi(m,directions(SOUTHDOWN))) &
+            + 2./3.*fi(m,directions(NORTHDOWN))
+    enddo
+
+
+    return
+  end subroutine BCFluxApplyBoundary
+
+  subroutine BCSetLocalDirections(boundary, directions, cardinals)
     use LBM_Discretization_D3Q19_module
     PetscInt,intent(in):: boundary
     PetscInt,intent(out),dimension(0:discretization_directions) :: directions
+    PetscInt,intent(out),dimension(1:discretization_dims) :: cardinals
 
     PetscInt i
     
@@ -636,6 +628,10 @@ end subroutine BCRestoreArrays
        do i=0,discretization_directions
           directions(i) = i
        end do
+       cardinals(CARDINAL_NORMAL) = Z_DIRECTION
+       cardinals(CARDINAL_CROSS) = X_DIRECTION
+       cardinals(CARDINAL_RESULTANT) = Y_DIRECTION
+
     case (BOUNDARY_ZP)
        ! inverted mapping around the origin
        directions(ORIGIN) = ORIGIN
@@ -657,6 +653,11 @@ end subroutine BCRestoreArrays
        directions(WESTDOWN) = EASTUP
        directions(EASTDOWN) = WESTUP
        directions(WESTUP) = EASTDOWN
+
+       cardinals(CARDINAL_NORMAL) = Z_DIRECTION
+       cardinals(CARDINAL_CROSS) = X_DIRECTION
+       cardinals(CARDINAL_RESULTANT) = Y_DIRECTION
+
     case (BOUNDARY_XM)
        ! map z -> x -> y
        directions(ORIGIN) = ORIGIN
@@ -678,6 +679,11 @@ end subroutine BCRestoreArrays
        directions(WESTDOWN) = SOUTHWEST
        directions(EASTDOWN) = NORTHWEST
        directions(WESTUP) = SOUTHEAST
+
+       cardinals(CARDINAL_NORMAL) = X_DIRECTION
+       cardinals(CARDINAL_CROSS) = Y_DIRECTION
+       cardinals(CARDINAL_RESULTANT) = Z_DIRECTION
+
     case (BOUNDARY_XP)
        ! map z -> x -> y and invert
        directions(ORIGIN) = ORIGIN
@@ -699,6 +705,11 @@ end subroutine BCRestoreArrays
        directions(WESTDOWN) = NORTHEAST
        directions(EASTDOWN) = SOUTHEAST
        directions(WESTUP) = NORTHWEST
+
+       cardinals(CARDINAL_NORMAL) = X_DIRECTION
+       cardinals(CARDINAL_CROSS) = Y_DIRECTION
+       cardinals(CARDINAL_RESULTANT) = Z_DIRECTION
+
     case (BOUNDARY_YM)       
        ! cycle x <-- y <-- z
        directions(ORIGIN) = ORIGIN
@@ -720,6 +731,11 @@ end subroutine BCRestoreArrays
        directions(WESTDOWN) = SOUTHDOWN
        directions(EASTDOWN) = SOUTHUP
        directions(WESTUP) = NORTHDOWN
+
+       cardinals(CARDINAL_NORMAL) = Y_DIRECTION
+       cardinals(CARDINAL_CROSS) = Z_DIRECTION
+       cardinals(CARDINAL_RESULTANT) = X_DIRECTION
+
     case (BOUNDARY_YP)       
        ! cycle x <-- y <-- z, then invert
        directions(ORIGIN) = ORIGIN
@@ -741,6 +757,11 @@ end subroutine BCRestoreArrays
        directions(WESTDOWN) = NORTHUP
        directions(EASTDOWN) = NORTHDOWN
        directions(WESTUP) = SOUTHUP
+
+       cardinals(CARDINAL_NORMAL) = Y_DIRECTION
+       cardinals(CARDINAL_CROSS) = Z_DIRECTION
+       cardinals(CARDINAL_RESULTANT) = X_DIRECTION
+
     end select
   end subroutine BCSetLocalDirections
 
