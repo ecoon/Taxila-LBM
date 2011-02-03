@@ -6,7 +6,7 @@
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
 !!!     last modified:   02 February 2011
-!!!       at:            11:56:42 MST
+!!!       at:            17:00:58 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -50,6 +50,7 @@
          info%gzs:info%gze):: bound
     PetscScalar,dimension(1:info%s):: rho1, rho2         ! left and right fluid densities?
     PetscInt nmax
+    PetscBool flushx, flushy, flushz
 
     PetscInt i,j,k,m ! local values
 
@@ -59,6 +60,13 @@
     nmax = constants%s
     call PetscOptionsGetRealArray(info%options_prefix, '-rho2', rho2, nmax, flag, ierr)
     
+    flushz = .TRUE.
+    flushy = .FALSE.
+    flushx = .FALSE.
+    call PetscOptionsGetBool(info%options_prefix, '-flush_direction_x', flushx, flag, ierr)
+    call PetscOptionsGetBool(info%options_prefix, '-flush_direction_y', flushy, flag, ierr)
+    call PetscOptionsGetBool(info%options_prefix, '-flush_direction_z', flushz, flag, ierr)
+    
     ! initialize state
     fi=0.0
     ux=0.0
@@ -66,15 +74,35 @@
     uz=0.0
 
     ! flushing experiement 
-    bound=.false.
-    do i=info%xs,info%xe
-       do j=info%ys,info%ye
-          do k=info%zs,info%ze
-             if(k.le.10) bound(i,j,k)=.true.
+    if (flushx) then
+       bound=.false.
+       do i=info%xs,info%xe
+          do j=info%ys,info%ye
+             do k=info%zs,info%ze
+                if(i.le.10) bound(i,j,k)=.true.
+             enddo
           enddo
        enddo
-    enddo
-    
+    else if (flushy) then
+       bound=.false.
+       do i=info%xs,info%xe
+          do j=info%ys,info%ye
+             do k=info%zs,info%ze
+                if(j.le.10) bound(i,j,k)=.true.
+             enddo
+          enddo
+       enddo
+    else if (flushz) then
+       bound=.false.
+       do i=info%xs,info%xe
+          do j=info%ys,info%ye
+             do k=info%zs,info%ze
+                if(k.le.10) bound(i,j,k)=.true.
+             enddo
+          enddo
+       enddo
+    end if
+
     ! set density
     where(bound)
        rho(1,:,:,:)=rho1(2)
