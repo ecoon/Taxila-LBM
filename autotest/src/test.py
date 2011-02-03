@@ -6,7 +6,7 @@
 ###     created:         28 January 2011
 ###       on:            09:52:47 MST
 ###     last modified:   03 February 2011
-###       at:            11:49:08 MST
+###       at:            15:22:16 MST
 ###     URL:             http://www.ldeo.columbia.edu/~ecoon/
 ###     email:           ecoon _at_ lanl.gov
 ###  
@@ -166,13 +166,15 @@ class LBMDoubleRotatedTest(LBMTest):
 def suite():
     thesuite = unittest.TestSuite()
 
-    # thesuite.addTest(LBMTest('bubble', '3D', '3D bubble test'))
-    # thesuite.addTest(LBMTest('flushing', '3D_fluxpressure', '3D flux and pressure BC test'))
-    # thesuite.addTest(LBMTest('flushing', '3D_pressure', '3D pressure BC test'))
-    # thesuite.addTest(LBMTest('flushing', '3D_poiseuille', '3D, nonconstant bc test'))
-    # thesuite.addTest(LBMRestartTest('flushing', '3D_flux', '3D flux, restart test'))
-    # thesuite.addTest(LBMRotatedTest('flushing', '3D_pressure_rot', '3D pressure BC test, rotated to x'))
+    thesuite.addTest(LBMTest('bubble', '3D', '3D bubble test'))
+    thesuite.addTest(LBMTest('flushing', '3D_fluxpressure', '3D flux and pressure BC test'))
+    thesuite.addTest(LBMTest('flushing', '3D_pressure', '3D pressure BC test'))
+    thesuite.addTest(LBMTest('flushing', '3D_poiseuille', '3D, nonconstant bc test'))
+    thesuite.addTest(LBMRestartTest('flushing', '3D_flux', '3D flux, restart test'))
+    thesuite.addTest(LBMRotatedTest('flushing', '3D_pressure_rot', '3D pressure BC test, rotated to x'))
     thesuite.addTest(LBMDoubleRotatedTest('flushing', '3D_pressure_rotrot', '3D pressure BC test, rotated to y'))
+    thesuite.addTest(LBMRotatedTest('flushing', '3D_flux_rot', '3D flux BC test, rotated to x'))
+    thesuite.addTest(LBMDoubleRotatedTest('flushing', '3D_flux_rotrot', '3D flux BC test, rotated to y'))
     return thesuite
 
 

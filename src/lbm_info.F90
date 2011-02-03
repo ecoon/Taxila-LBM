@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   02 February 2011
-!!!       at:            12:21:42 MST
+!!!     last modified:   03 February 2011
+!!!       at:            13:20:43 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -146,8 +146,8 @@
       type(info_type) info
       
       info%discretization = D2Q9_DISCRETIZATION
-      info%dim = 2
-      info%b = 8
+      info%dim = discretization_dims
+      info%b = discretization_directions
     end subroutine InfoSetDiscretizationD2Q9
 
     subroutine InfoView(info)
