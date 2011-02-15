@@ -5,8 +5,8 @@
 ###     version:         
 ###     created:         25 January 2011
 ###       on:            10:53:33 MST
-###     last modified:   28 January 2011
-###       at:            11:10:17 MST
+###     last modified:   14 February 2011
+###       at:            15:29:10 MST
 ###     URL:             http://www.ldeo.columbia.edu/~ecoon/
 ###     email:           ecoon _at_ lanl.gov
 ###  
@@ -40,32 +40,54 @@ class SolutionReader(object):
         lsize = list(self._size)
         lsize.reverse()
         self._size_r = tuple(lsize)
-        self._file_prefix = self._opts.getString('output_file_prefix', default='test_solution/')+self._prefix
+        self._file_prefix = self._opts.getString('output_file_prefix', default='test_solution/')
         self._vecs = dict()
+        self._scalefactor = self._opts.getReal('velocity_scalefactor', default=1.0)
 
     def loadVec( self, name, ndofs=1 ):
         from petsc4py import PETSc
         length = np.array(self._size).prod()
         print 'loading', self._file_prefix+name
         vec = PETSc.Vec().createSeq(length*ndofs)
+        vec.setBlockSize(ndofs)
         viewer = PETSc.Viewer().createBinary(self._file_prefix+name, PETSc.Viewer.Mode.R)
         vec.load(viewer)
         npvec = vec[...].reshape(self._size_r+(ndofs,)).transpose((2,1,0,3))[:]
         viewer.destroy()
-        self._vecs[name] = vec
+        vec.destroy()
+        del viewer
+        del vec
         return npvec
 
     def loadVecToVTK( self, name, ndofs=1 ):
         from petsc4py import PETSc
         length = np.array(self._size).prod()
+        print 'loading', self._file_prefix+name
         vec = PETSc.Vec().createSeq(length*ndofs)
         viewer = PETSc.Viewer().createBinary(self._file_prefix+name, PETSc.Viewer.Mode.R)
         vec.load(viewer)
-        npvec = vec[...].reshape((length,ndofs))
+
+        if self._size[2] == 1:
+            length = 2*length
+            npvec = vec[...].reshape((self._size_r+(ndofs,)))[:]
+            npvec = np.repeat(npvec,2,axis=0)
+            npvec = npvec.reshape((length,ndofs))
+        else:
+            npvec = vec[...].reshape((length,ndofs))[:]
+
+        # scale
+        if name.startswith('u'):
+            npvec = npvec*self._scalefactor
+
+
         if ndofs == 1:
             data = pyvtk.Scalars(npvec, self._prefix.strip('_')+' '+name[:-7], 'default')
         else:
             data = pyvtk.Vectors([tuple(npvec[i,:]) for i in range(length)], self._prefix.strip('_')+' '+name[:-7])
+        viewer.destroy()
+        vec.destroy()
+        del viewer
+        del vec
         return data
 
     def solnToVTK( self ):
@@ -73,15 +95,25 @@ class SolutionReader(object):
         lcv = 0
         
         coords = self.loadVec('coords.dat', 3)
-        dims = coords.shape[:-1]
-        origin = tuple(coords[0,0,0])
+        dims = list(coords.shape[:-1])
         try:
-            dx = tuple(coords[1,1,1]-coords[0,0,0])
+            dx = coords[1,1,1]-coords[0,0,0]
         except IndexError:
-            dx = coords[0,1,1] - coords[0,0,0]
-            dx[0] = 0.1
-            dx = tuple(dx)
-        vtkgrid = pyvtk.StructuredPoints(dims, origin, dx)
+            try:
+                dx = coords[0,1,1] - coords[0,0,0]
+            except IndexError:
+                try:
+                    dx = coords[1,0,1] - coords[0,0,0]
+                except IndexError:
+                    dx = coords[1,1,0] - coords[0,0,0]
+            
+        dx = np.where(dx==0., 0.1, dx)
+        if dims[2] == 1:
+            dims[2] = 2
+        dims = tuple(dims)
+        print dims
+        dx = tuple(dx)
+        vtkgrid = pyvtk.StructuredPoints(dims, coords[0,0,0], dx)
 
         while not done:
             try:
@@ -94,13 +126,10 @@ class SolutionReader(object):
                 prs_data = self.loadVecToVTK('prs%03d.dat'%lcv, 1)
                 vel_data = self.loadVecToVTK('u%03d.dat'%lcv, 3)
                 wall_data = self.loadVecToVTK('walls%03d.dat'%lcv, 1)
+
                 pointdata = pyvtk.PointData(prs_data, vel_data, wall_data)
                 data = pyvtk.VtkData(vtkgrid, self._prefix.strip('_')+' step %d'%lcv, pointdata)
                 data.tofile(self._file_prefix+'soln_%03d.vtk'%lcv)
                 lcv += 1
         return
 
-    def destroy( self ):
-        for vec in self._vecs.itervalues():
-            vec.destroy()
-            
