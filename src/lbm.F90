@@ -105,7 +105,7 @@
       lbm%da_flow = 0
       lbm%info => InfoCreate()
       lbm%bc => BCCreate()
-      lbm%options => OptionsCreate()
+      lbm%options => OptionsCreate(comm)
       lbm%constants => ConstantsCreate()
       lbm%comm = comm
 
@@ -156,20 +156,25 @@
       PetscInt ys,gys
       PetscInt zs,gzs
       PetscInt,allocatable,dimension(:):: ownership_x, ownership_y, ownership_z
-
+      PetscScalar,dimension(3,2):: corners
+      PetscScalar,dimension(3):: tmpcorners
+      PetscInt nmax
+      PetscBool flag, flag2
+      integer charlen
+      Vec coords
+      character(len=MAXSTRINGLENGTH) coordfile
+      PetscViewer viewer
+      PetscScalar zero
+        
       call mpi_comm_rank(lbm%comm,lbm%info%id,ierr)
       call mpi_comm_size(lbm%comm,lbm%info%nproc, ierr)
 
       call InfoSetFromOptions(lbm%info, options, ierr)
-      call ConstantsSetSizes(lbm%constants, lbm%info%s)
-      call ConstantsSetFromOptions(lbm%constants, options, ierr)
 
       lbm%dm_index_to_ndof(ONEDOF) = 1
       lbm%dm_index_to_ndof(NPHASEDOF) = lbm%info%s
       lbm%dm_index_to_ndof(NPHASEXBDOF) = lbm%info%s*(lbm%info%b+1)
       lbm%dm_index_to_ndof(NFLOWDOF) = lbm%info%dim
-
-      lbm%bc%flags(:) = options%bc_flags(:)
 
       ! create DAs
       call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
@@ -236,6 +241,32 @@
       deallocate(ownership_y)
       deallocate(ownership_z)
 
+      ! coordinates
+      tmpcorners = 0.d0
+      corners = 0.d0
+
+      nmax = lbm%info%dim
+      call PetscOptionsGetRealArray(options%my_prefix, '-corner0', tmpcorners, nmax, flag, ierr)
+      if (flag) corners(:,1) = tmpcorners
+
+      tmpcorners = 0.d0
+      nmax = lbm%info%dim
+      call PetscOptionsGetRealArray(options%my_prefix, '-corner1', tmpcorners, nmax, flag2, ierr)
+      if (flag2) corners(:,2) = tmpcorners
+
+      if (flag .and. flag2) then
+         call LBMSetDomain(lbm, corners)
+         call DMDAGetCoordinates(lbm%da_one, coords, ierr)
+         charlen = LEN_TRIM(lbm%options%output_prefix)
+         coordfile = options%output_prefix(1:charlen)//'coords.dat'
+         call PetscViewerBinaryOpen(PETSC_COMM_WORLD, coordfile, FILE_MODE_WRITE, &
+              viewer, ierr)
+         call VecView(coords, viewer, ierr)
+         call PetscViewerDestroy(viewer,ierr)
+      end if
+
+
+
       ! allocate, associate workspace
       allocate(lbm%ux(1:lbm%info%s,lbm%info%gxs:lbm%info%gxe, &
            lbm%info%gys:lbm%info%gye,lbm%info%gzs:lbm%info%gze))
@@ -283,6 +314,21 @@
       call DMCreateGlobalVector(lbm%da_sb, lbm%fi_g, ierr)
       call DMCreateGlobalVector(lbm%da_flow, lbm%ut_g, ierr)
 
+      zero = 0.d0
+      call VecSet(lbm%prs_g, zero, ierr)
+      call VecSet(lbm%walls_g, zero, ierr)
+      call VecSet(lbm%rhot_g, zero, ierr)
+      call VecSet(lbm%rho_g, zero, ierr)
+      call VecSet(lbm%fi_g, zero, ierr)
+      call VecSet(lbm%ut_g, zero, ierr)
+      call VecSet(lbm%prs, zero, ierr)
+      call VecSet(lbm%walls, zero, ierr)
+      call VecSet(lbm%rhot, zero, ierr)
+      call VecSet(lbm%rho, zero, ierr)
+      call VecSet(lbm%fi, zero, ierr)
+      call VecSet(lbm%ut, zero, ierr)
+
+
       call PetscObjectSetName(lbm%prs_g, 'prs', ierr)
       call PetscObjectSetName(lbm%walls_g, 'walls', ierr)
       call PetscObjectSetName(lbm%rhot_g, 'rhot', ierr)
@@ -290,8 +336,10 @@
       call PetscObjectSetName(lbm%fi_g, 'fi', ierr)
       call PetscObjectSetName(lbm%ut_g, 'ut', ierr)
 
-      ! set up BC vectors
-      call BCSetSizes(lbm%bc, lbm%comm, lbm%info)
+      ! set up constants, bcs
+      call ConstantsSetSizes(lbm%constants, lbm%info%s)
+      call ConstantsSetFromOptions(lbm%constants, options, ierr)
+      call BCSetFromOptions(lbm%bc, lbm%info, options, ierr)
 
       CHKERRQ(ierr)
       CHKMEMQ
@@ -347,47 +395,69 @@
     ! --- do things
     subroutine LBMSetDomain(lbm, corners)
       type(lbm_type) lbm
-      PetscScalar,dimension(3,2):: corners
+      PetscScalar,dimension(lbm%info%dim,2):: corners
       PetscErrorCode ierr
       PetscScalar deltacoord
       PetscScalar newcoord_x
       PetscScalar newcoord_y
       PetscScalar newcoord_z
 
-      lbm%corners = corners
       ! note, because DAs are all periodic, it really screws up the corners in a 
       ! uniform coordinates DA.  We must adjust these in the nonperiodic cases.
-      if (lbm%bc%flags(1) /= 0) then
-         deltacoord = (corners(1,2) - corners(1,1))/(lbm%info%NX-1)
-         newcoord_x = corners(1,2) + deltacoord
+      if (lbm%bc%flags(BOUNDARY_XM) /= BC_PERIODIC) then
+         deltacoord = (corners(X_DIRECTION,2) - corners(X_DIRECTION,1))/dble(lbm%info%NX-1)
+         newcoord_x = corners(X_DIRECTION,2) + deltacoord
+         lbm%info%gridsize(X_DIRECTION) = deltacoord
       else
-         newcoord_x = corners(1,2)
+         newcoord_x = corners(X_DIRECTION,2)
+         lbm%info%gridsize(X_DIRECTION) = (corners(X_DIRECTION,2) - &
+              corners(X_DIRECTION,1))/dble(lbm%info%NX)
       endif
 
-      if (lbm%bc%flags(3) /= 0) then
-         deltacoord = (corners(2,2) - corners(2,1))/(lbm%info%NY-1)
-         newcoord_y = corners(2,2) + deltacoord
+      if (lbm%bc%flags(BOUNDARY_YM) /= BC_PERIODIC) then
+         deltacoord = (corners(Y_DIRECTION,2) - corners(Y_DIRECTION,1))/(lbm%info%NY-1)
+         newcoord_y = corners(Y_DIRECTION,2) + deltacoord
+         lbm%info%gridsize(Y_DIRECTION) = deltacoord
       else
-         newcoord_y = corners(2,2)
+         newcoord_y = corners(Y_DIRECTION,2)
+         lbm%info%gridsize(Y_DIRECTION) = (corners(Y_DIRECTION,2) - &
+              corners(Y_DIRECTION,1))/dble(lbm%info%NY)
       endif
 
-      if (lbm%bc%flags(5) /= 0) then
-         deltacoord = (corners(3,2) - corners(3,1))/(lbm%info%NZ-1)
-         newcoord_z = corners(3,2) + deltacoord
-      else
-         newcoord_z = corners(3,2)
-      endif
+      if (lbm%info%dim > 2) then
+         if (lbm%bc%flags(BOUNDARY_ZM) /= 0) then
+            deltacoord = (corners(Z_DIRECTION,2) - corners(Z_DIRECTION,1))/(lbm%info%NZ-1)
+            newcoord_z = corners(Z_DIRECTION,2) + deltacoord
+            lbm%info%gridsize(Z_DIRECTION) = deltacoord
+         else
+            newcoord_z = corners(Z_DIRECTION,2)
+            lbm%info%gridsize(Z_DIRECTION) = (corners(Z_DIRECTION,2) - &
+                 corners(Z_DIRECTION,1))/dble(lbm%info%NZ)
+         endif
 
-      call DMDASetUniformCoordinates(lbm%da_one, corners(1,1), newcoord_x, corners(2,1), &
-           newcoord_y, corners(3,1), newcoord_z, ierr)
-      call DMDASetUniformCoordinates(lbm%da_s, corners(1,1), newcoord_x, corners(2,1), &
-           newcoord_y, corners(3,1), newcoord_z, ierr)
-      call DMDASetUniformCoordinates(lbm%da_sb, corners(1,1), newcoord_x, corners(2,1), &
-           newcoord_y, corners(3,1), newcoord_z, ierr)
-      call DMDASetUniformCoordinates(lbm%da_flow, corners(1,1), newcoord_x, corners(2,1), &
-           newcoord_y, corners(3,1), newcoord_z, ierr)
+         call DMDASetUniformCoordinates(lbm%da_one, corners(X_DIRECTION,1), newcoord_x, &
+              corners(Y_DIRECTION,1), newcoord_y, corners(Z_DIRECTION,1), newcoord_z, ierr)
+         call DMDASetUniformCoordinates(lbm%da_s, corners(X_DIRECTION,1), newcoord_x, &
+              corners(Y_DIRECTION,1), newcoord_y, corners(Z_DIRECTION,1), newcoord_z, ierr)
+         call DMDASetUniformCoordinates(lbm%da_sb, corners(X_DIRECTION,1), newcoord_x, &
+              corners(Y_DIRECTION,1), newcoord_y, corners(Z_DIRECTION,1), newcoord_z, ierr)
+         call DMDASetUniformCoordinates(lbm%da_flow, corners(X_DIRECTION,1), newcoord_x, &
+              corners(Y_DIRECTION,1), newcoord_y, corners(Z_DIRECTION,1), newcoord_z, ierr)
+      else 
+         call DMDASetUniformCoordinates(lbm%da_one, corners(X_DIRECTION,1), newcoord_x, &
+              corners(Y_DIRECTION,1), newcoord_y, PETSC_NULL_SCALAR, PETSC_NULL_SCALAR, ierr)
+         call DMDASetUniformCoordinates(lbm%da_s, corners(X_DIRECTION,1), newcoord_x, &
+              corners(Y_DIRECTION,1), newcoord_y, PETSC_NULL_SCALAR, PETSC_NULL_SCALAR, ierr)
+         call DMDASetUniformCoordinates(lbm%da_sb, corners(X_DIRECTION,1), newcoord_x, &
+              corners(Y_DIRECTION,1), newcoord_y, PETSC_NULL_SCALAR, PETSC_NULL_SCALAR, ierr)
+         call DMDASetUniformCoordinates(lbm%da_flow, corners(X_DIRECTION,1), newcoord_x, &
+              corners(Y_DIRECTION,1), newcoord_y, PETSC_NULL_SCALAR, PETSC_NULL_SCALAR, ierr)
+      end if
+
       CHKERRQ(ierr)
       CHKMEMQ
+
+      lbm%info%corners = corners
       return
     end subroutine LBMSetDomain
 
@@ -419,10 +489,33 @@
       call DMDALocalToLocalBegin(lbm%da_sb, lbm%fi, INSERT_VALUES, lbm%fi, ierr)
       call DMDALocalToLocalEnd(lbm%da_sb, lbm%fi, INSERT_VALUES, lbm%fi, ierr)
 
-      ! output at zero time
-      call LBMLocalToGlobal(lbm)
       if (istep.eq.0) then
+         ! get arrays
+         call DMDAVecGetArrayF90(lbm%da_one, lbm%rhot, lbm%rhot_a, ierr)
+         call DMDAVecGetArrayF90(lbm%da_one, lbm%prs, lbm%prs_a, ierr)
+         call DMDAVecGetArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
+         call DMDAVecGetArrayF90(lbm%da_sb, lbm%fi, lbm%fi_a, ierr)
+         call DMDAVecGetArrayF90(lbm%da_s, lbm%rho, lbm%rho_a, ierr)
+         call DMDAVecGetArrayF90(lbm%da_flow, lbm%ut, lbm%ut_a, ierr)
+         
+         ! update values for zero time i/o
+         call LBMUpdateMoments(lbm%fi_a,lbm%rho_a, lbm%ux,lbm%uy,lbm%uz,lbm%walls_a, lbm%info)
+         call LBMUpdateDiagnostics(lbm%rho_a, lbm%ux, lbm%uy, lbm%uz, lbm%walls_a, lbm%ut_a, &
+              lbm%rhot_a, lbm%prs_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%info, lbm%constants)
+         
+         ! --  --  restore arrays
+         call DMDAVecRestoreArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
+         call DMDAVecRestoreArrayF90(lbm%da_one, lbm%prs, lbm%prs_a, ierr)
+         call DMDAVecRestoreArrayF90(lbm%da_one, lbm%rhot, lbm%rhot_a, ierr)
+         call DMDAVecRestoreArrayF90(lbm%da_s, lbm%rho, lbm%rho_a, ierr)
+         call DMDAVecRestoreArrayF90(lbm%da_flow, lbm%ut, lbm%ut_a, ierr)
+         call DMDAVecRestoreArrayF90(lbm%da_sb, lbm%fi, lbm%fi_a, ierr)
+
+         call LBMLocalToGlobal(lbm, ierr)
+         ! output at zero time
          call LBMOutput(lbm, istep, kwrite)
+      else
+         call LBMLocalToGlobal(lbm, ierr)
       endif
 
       ! get arrays
@@ -455,15 +548,19 @@
             if (.not.bcs_done(lbm%bc%flags(lcv_sides))) then
                select case (lbm%bc%flags(lcv_sides))
                case (BC_PSEUDOPERIODIC)         ! pseudo-periodic
-                  call BCPseudoperiodic(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%info%dim, &
-                       lbm%bc%xm_a, lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, lbm%bc%zm_a, &
-                       lbm%bc%zp_a, lbm%info)
+                  call BCPseudoperiodic(lbm%bc, lbm%fi_a, lbm%walls_a, &
+                       lbm%bc%xm_a, lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, &
+                       lbm%bc%zm_a, lbm%bc%zp_a, lbm%info)
+
                case (BC_FLUX)         ! flux
-                  call BCFlux(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%info%dim, lbm%bc%xm_a, &
-                       lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, lbm%bc%zm_a, lbm%bc%zp_a, lbm%info)
+                  call BCFlux(lbm%bc, lbm%fi_a, lbm%walls_a, &
+                       lbm%bc%xm_a, lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, &
+                       lbm%bc%zm_a, lbm%bc%zp_a, lbm%info)
+
                case (BC_PRESSURE)         ! pressure
-                  call BCPressure(lbm%fi_a, lbm%walls_a, lbm%bc%flags, lbm%info%dim, lbm%bc%xm_a, &
-                       lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, lbm%bc%zm_a, lbm%bc%zp_a, lbm%info)
+                  call BCPressure(lbm%bc, lbm%fi_a, lbm%walls_a, &
+                       lbm%bc%xm_a, lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, &
+                       lbm%bc%zm_a, lbm%bc%zp_a, lbm%info)
                end select
                bcs_done(lbm%bc%flags(lcv_sides)) = .TRUE. ! only do each bc type once
             endif
@@ -534,7 +631,7 @@
             call DMDAVecRestoreArrayF90(lbm%da_flow, lbm%ut, lbm%ut_a, ierr)
 
             ! --  --  output
-            call LBMLocalToGlobal(lbm)
+            call LBMLocalToGlobal(lbm, ierr)
             call LBMOutput(lbm, lcv_step, kwrite)
 
             ! --  --  reopen arrays
@@ -561,11 +658,11 @@
       call DMDAVecRestoreArrayF90(lbm%da_flow, lbm%ut, lbm%ut_a, ierr)
 
       ! communicate local to global
-      call LBMLocalToGlobal(lbm)
+      call LBMLocalToGlobal(lbm, ierr)
       return
     end subroutine LBMRun
 
-    subroutine LBMLocalToGlobal(lbm)
+    subroutine LBMLocalToGlobal(lbm, ierr)
       type(lbm_type) lbm
       PetscErrorCode ierr
 

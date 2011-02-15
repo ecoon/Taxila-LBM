@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   03 February 2011
-!!!       at:            13:20:43 MST
+!!!     last modified:   15 February 2011
+!!!       at:            11:58:38 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -34,6 +34,9 @@
        PetscInt b
        PetscInt dim
        PetscInt discretization
+       PetscBool,allocatable:: periodic(:)
+       PetscReal,allocatable:: gridsize(:)
+       PetscReal,allocatable:: corners(:,:)
        character(len=MAXWORDLENGTH):: options_prefix
     end type info_type
     
@@ -129,6 +132,21 @@
          CHKERRQ(ierr)
       end if
 
+      ! set up the grid
+      allocate(info%corners(info%dim,2))
+      allocate(info%gridsize(info%dim))
+      allocate(info%periodic(info%dim))
+      info%periodic = PETSC_FALSE
+
+      call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_x', &
+           info%periodic(1), flag,ierr)
+      call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_y', &
+           info%periodic(2), flag,ierr)
+      if (info%dim > 2) then
+         call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_z', &
+              info%periodic(3), flag,ierr)
+      end if
+      
     end subroutine InfoSetFromOptions
 
     subroutine InfoSetDiscretizationD3Q19(info)
@@ -159,6 +177,9 @@
     subroutine InfoDestroy(info, ierr)
       type(info_type) info
       PetscErrorCode ierr
+
+      deallocate(info%corners)
+      deallocate(info%gridsize)
     end subroutine InfoDestroy
 
   end module LBM_Info_module

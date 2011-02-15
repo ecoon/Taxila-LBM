@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   03 February 2011
-!!!       at:            14:10:41 MST
+!!!     last modified:   15 February 2011
+!!!       at:            12:25:15 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -18,6 +18,7 @@
 #include "finclude/petscdmdef.h"
 
 module LBM_BC_module
+  use LBM_Options_module
   use LBM_Info_module
   use petsc
   implicit none
@@ -25,7 +26,8 @@ module LBM_BC_module
 #include "lbm_definitions.h"
 
   type, public:: bc_type
-     integer, dimension(6):: flags ! enum for boundary conditions
+     PetscInt, dimension(6):: flags ! enum for boundary conditions
+     PetscInt dim
      PetscScalar,pointer,dimension(:):: xm_a, xp_a
      PetscScalar,pointer,dimension(:):: ym_a, yp_a
      PetscScalar,pointer,dimension(:):: zm_a, zp_a
@@ -38,7 +40,7 @@ module LBM_BC_module
   end type bc_type
 
   public :: BCCreate, &
-       BCSetSizes, &
+       BCSetFromOptions, &
        BCDestroy, &
        BCSetValues, &
        BCGetArrays, &
@@ -59,6 +61,7 @@ contains
     nullify(bc%zm_a)
     nullify(bc%zp_a)
     bc%flags = 0
+    bc%dim = 0
     
     bc%xm = 0
     bc%xp = 0
@@ -81,58 +84,191 @@ contains
   end subroutine BCDestroy
   
   ! set up the vectors for holding boundary data
-  subroutine BCSetSizes(bc, comm, info)
+  subroutine BCSetFromOptions(bc, info, options, ierr)
     type(bc_type) bc
-    MPI_Comm comm
     type(info_type) info
-    PetscInt locn
+    type(options_type) options
     PetscErrorCode ierr
-    
+
+    ! locals
+    PetscInt locn
+    PetscBool flag
+    PetscInt nmax
+    PetscBool bcvalue
+
+    ! dimension 
+    bc%dim = MAX(info%dim, info%s)
+
+    ! flags
+    nmax = 6
+    call PetscOptionsGetIntArray(options%my_prefix, '-bc_flags', bc%flags, &
+         nmax, flag, ierr)
+
+    ! parse all potential boundary conditions
+    ! x boundary
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_xm', bcvalue, flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_XM) = BC_PRESSURE
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_xm', bcvalue, flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_XM) = BC_FLUX
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_xm_poiseuille', bcvalue, &
+         flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_XM) = BC_FLUX
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_xp', bcvalue, flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_XP) = BC_PRESSURE
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_xp', bcvalue, flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_XP) = BC_FLUX
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_xp_poiseuille', bcvalue, &
+         flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_XP) = BC_FLUX
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_x', bcvalue, flag, ierr)
+    if (bcvalue) then
+       bc%flags(BOUNDARY_XM) = BC_PERIODIC
+       bc%flags(BOUNDARY_XP) = BC_PERIODIC
+    end if
+
+    ! y boundary
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_ym', bcvalue, flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_YM) = BC_PRESSURE
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_ym', bcvalue, flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_YM) = BC_FLUX
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_ym_poiseuille', bcvalue, &
+         flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_YM) = BC_FLUX
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_yp', bcvalue, flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_YP) = BC_PRESSURE
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_yp', bcvalue, flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_YP) = BC_FLUX
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_yp_poiseuille', bcvalue, &
+         flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_YP) = BC_FLUX
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_y', bcvalue, flag, ierr)
+    if (bcvalue) then
+       bc%flags(BOUNDARY_YM) = BC_PERIODIC
+       bc%flags(BOUNDARY_YP) = BC_PERIODIC
+    end if
+
+    if (info%dim > 2) then
+       ! z boundary
+       bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_zm', bcvalue, flag, ierr)
+       if (bcvalue) bc%flags(BOUNDARY_ZM) = BC_PRESSURE
+       
+       bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix, '-bc_flux_zm', bcvalue, flag, ierr)
+       if (bcvalue) bc%flags(BOUNDARY_ZM) = BC_FLUX
+       
+       bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix, '-bc_flux_zm_poiseuille', bcvalue, &
+            flag, ierr)
+       if (bcvalue) bc%flags(BOUNDARY_ZM) = BC_FLUX
+       
+       bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_zp', bcvalue, flag, ierr)
+       if (bcvalue) bc%flags(BOUNDARY_ZP) = BC_PRESSURE
+       
+       bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix, '-bc_flux_zp', bcvalue, flag, ierr)
+       if (bcvalue) bc%flags(BOUNDARY_ZP) = BC_FLUX
+       
+       bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix, '-bc_flux_zp_poiseuille', bcvalue, &
+         flag, ierr)
+       if (bcvalue) bc%flags(BOUNDARY_ZP) = BC_FLUX
+       
+       bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_z', bcvalue, flag, ierr)
+       if (bcvalue) then
+          bc%flags(BOUNDARY_ZM) = BC_PERIODIC
+          bc%flags(BOUNDARY_ZP) = BC_PERIODIC
+       end if
+    end if
+
+    ! now make the boundary vecs/arrays
     ! x boundaries
     if (info%xs.eq.1) then
-       locn = info%yl*info%zl*info%dim
+       locn = info%yl*info%zl*bc%dim
     else
        locn = 0
     endif
-    call VecCreateMPI(comm, locn, info%NY*info%NZ*info%dim, bc%xm, ierr)
+    call VecCreateMPI(options%comm, locn, info%NY*info%NZ*bc%dim, bc%xm, ierr)
+    call VecSetBlockSize(bc%xm, bc%dim, ierr)
+    call PetscObjectSetName(bc%xm, 'xm_bc', ierr)
     
     if (info%xe.eq.info%NX) then
-       locn = info%yl*info%zl*info%dim
+       locn = info%yl*info%zl*bc%dim
     else
        locn = 0
     endif
-    call VecCreateMPI(comm, locn, info%NY*info%NZ*info%dim, bc%xp, ierr)
+    call VecCreateMPI(options%comm, locn, info%NY*info%NZ*bc%dim, bc%xp, ierr)
+    call VecSetBlockSize(bc%xp, bc%dim, ierr)
+    call PetscObjectSetName(bc%xp, 'xp_bc', ierr)
     
     ! y boundaries
     if (info%ys.eq.1) then
-       locn = info%xl*info%zl*info%dim
+       locn = info%xl*info%zl*bc%dim
     else
        locn = 0
     endif
-    call VecCreateMPI(comm, locn, info%NX*info%NZ*info%dim, bc%ym, ierr)
+    call VecCreateMPI(options%comm, locn, info%NX*info%NZ*bc%dim, bc%ym, ierr)
+    call VecSetBlockSize(bc%ym, bc%dim, ierr)
+    call PetscObjectSetName(bc%ym, 'ym_bc', ierr)
     
     if (info%ye.eq.info%NY) then
-       locn = info%xl*info%zl*info%dim
+       locn = info%xl*info%zl*bc%dim
     else
        locn = 0
     endif
-    call VecCreateMPI(comm, locn, info%NX*info%NZ*info%dim, bc%yp, ierr)
+    call VecCreateMPI(options%comm, locn, info%NX*info%NZ*bc%dim, bc%yp, ierr)
+    call VecSetBlockSize(bc%yp, bc%dim, ierr)
+    call PetscObjectSetName(bc%yp, 'yp_bc', ierr)
     
-    ! z boundaries
-    if (info%zs.eq.1) then
-       locn = info%xl*info%yl*info%dim
-    else
-       locn = 0
-    endif
-    call VecCreateMPI(comm, locn, info%NX*info%NY*info%dim, bc%zm, ierr)
-    
-    if (info%ze.eq.info%NZ) then
-       locn = info%xl*info%yl*info%dim
-    else
-       locn = 0
-    endif
-    call VecCreateMPI(comm, locn, info%NX*info%NY*info%dim, bc%zp, ierr)
-  end subroutine BCSetSizes
+    if (info%dim > 2) then
+       ! z boundaries
+       if (info%zs.eq.1) then
+          locn = info%xl*info%yl*bc%dim
+       else
+          locn = 0
+       endif
+       call VecCreateMPI(options%comm, locn, info%NX*info%NY*bc%dim, bc%zm, ierr)
+       call VecSetBlockSize(bc%zm, bc%dim, ierr)
+       call PetscObjectSetName(bc%zm, 'zm_bc', ierr)
+       
+       if (info%ze.eq.info%NZ) then
+          locn = info%xl*info%yl*bc%dim
+       else
+          locn = 0
+       endif
+       call VecCreateMPI(options%comm, locn, info%NX*info%NY*bc%dim, bc%zp, ierr)
+       call VecSetBlockSize(bc%zp, bc%dim, ierr)
+       call PetscObjectSetName(bc%zp, 'zp_bc', ierr)
+    end if
+  end subroutine BCSetFromOptions
   
   ! call initialize
   subroutine BCSetValues(bc, info, bc_subroutine)
@@ -155,7 +291,7 @@ contains
     external bc_subroutine
     PetscErrorCode ierr
     call BCGetArrays(bc, ierr)
-    call bc_subroutine(bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, bc%zm_a, bc%zp_a, info%dim, info)
+    call bc_subroutine(bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, bc%zm_a, bc%zp_a, bc%dim, info)
     CHKERRQ(ierr)
     CHKMEMQ
     call BCRestoreArrays(bc, ierr)
@@ -168,8 +304,8 @@ contains
     call VecGetArrayF90(bc%xp, bc%xp_a, ierr)
     call VecGetArrayF90(bc%ym, bc%ym_a, ierr)
     call VecGetArrayF90(bc%yp, bc%yp_a, ierr)
-    call VecGetArrayF90(bc%zm, bc%zm_a, ierr)
-    call VecGetArrayF90(bc%zp, bc%zp_a, ierr)
+    if (bc%zm /= 0) call VecGetArrayF90(bc%zm, bc%zm_a, ierr)
+    if (bc%zp /= 0) call VecGetArrayF90(bc%zp, bc%zp_a, ierr)
   end subroutine BCGetArrays
 
   subroutine BCRestoreArrays(bc, ierr)
@@ -179,25 +315,24 @@ contains
     call VecRestoreArrayF90(bc%xp, bc%xp_a, ierr)
     call VecRestoreArrayF90(bc%ym, bc%ym_a, ierr)
     call VecRestoreArrayF90(bc%yp, bc%yp_a, ierr)
-    call VecRestoreArrayF90(bc%zm, bc%zm_a, ierr)
-    call VecRestoreArrayF90(bc%zp, bc%zp_a, ierr)
+    if (bc%zm /= 0) call VecRestoreArrayF90(bc%zm, bc%zm_a, ierr)
+    if (bc%zp /= 0) call VecRestoreArrayF90(bc%zp, bc%zp_a, ierr)
   end subroutine BCRestoreArrays
   
 
-  subroutine BCPressure(fi, walls, bc_flags, bc_dim, &
-       xm_vals, xp_vals, ym_vals, yp_vals, zm_vals, zp_vals, info)
+  subroutine BCPressure(bc, fi, walls, xm_vals, xp_vals, &
+       ym_vals, yp_vals, zm_vals, zp_vals, info)
 
+    type(bc_type) bc
     type(info_type) info
-    PetscInt bc_dim
 
-    PetscInt,dimension(1:6)::bc_flags
     PetscScalar,dimension(1:info%s, 0:info%b, info%gxs:info%gxe, &
          info%gys:info%gye, info%gzs:info%gze):: fi
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
          info%gzs:info%gze):: walls
-    PetscScalar,dimension(bc_dim,info%ys:info%ye,info%zs:info%ze):: xm_vals, xp_vals
-    PetscScalar,dimension(bc_dim,info%xs:info%xe,info%zs:info%ze):: ym_vals, yp_vals
-    PetscScalar,dimension(bc_dim,info%xs:info%xe,info%ys:info%ye):: zm_vals, zp_vals
+    PetscScalar,dimension(bc%dim,info%ys:info%ye,info%zs:info%ze):: xm_vals, xp_vals
+    PetscScalar,dimension(bc%dim,info%xs:info%xe,info%zs:info%ze):: ym_vals, yp_vals
+    PetscScalar,dimension(bc%dim,info%xs:info%xe,info%ys:info%ye):: zm_vals, zp_vals
 
     PetscInt i,j,k
     PetscInt directions(0:info%b)
@@ -205,13 +340,13 @@ contains
 
     directions(:) = 0
     ! XM BOUNDARY
-    if ((bc_flags(BOUNDARY_XM).eq.BC_PRESSURE).and.(info%xs.eq.1)) then
+    if ((bc%flags(BOUNDARY_XM).eq.BC_PRESSURE).and.(info%xs.eq.1)) then
        call BCSetLocalDirections(BOUNDARY_XM, directions, cardinals)
        do k=info%zs,info%ze
           do j=info%ys,info%ye
              i = 1
              if (walls(i,j,k).eq.0) then
-                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, xm_vals(:,j,k), &
+                call BCPressureApplyBoundary(bc, fi(:,:,i,j,k), xm_vals(:,j,k), &
                      directions, info)
              end if
           end do
@@ -220,13 +355,13 @@ contains
 
     directions(:) = 0
     ! XP BOUNDARY
-    if ((bc_flags(BOUNDARY_XP).eq.BC_PRESSURE).and.(info%xe.eq.info%NX)) then
+    if ((bc%flags(BOUNDARY_XP).eq.BC_PRESSURE).and.(info%xe.eq.info%NX)) then
        call BCSetLocalDirections(BOUNDARY_XP, directions, cardinals)
        do k=info%zs,info%ze
           do j=info%ys,info%ye
              i = info%NX
              if (walls(i,j,k).eq.0) then
-                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, xp_vals(:,j,k), &
+                call BCPressureApplyBoundary(bc, fi(:,:,i,j,k), xp_vals(:,j,k), &
                      directions, info)
              end if
           end do
@@ -235,13 +370,13 @@ contains
 
     directions(:) = 0
     ! YM BOUNDARY
-    if ((bc_flags(BOUNDARY_YM).eq.BC_PRESSURE).and.(info%ys.eq.1)) then
+    if ((bc%flags(BOUNDARY_YM).eq.BC_PRESSURE).and.(info%ys.eq.1)) then
        call BCSetLocalDirections(BOUNDARY_YM, directions, cardinals)
        do k=info%zs,info%ze
           do i=info%xs,info%xe
              j = 1
              if (walls(i,j,k).eq.0) then
-                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, ym_vals(:,i,k), &
+                call BCPressureApplyBoundary(bc, fi(:,:,i,j,k), ym_vals(:,i,k), &
                      directions, info)
              end if
           end do
@@ -250,13 +385,13 @@ contains
 
     directions(:) = 0
     ! YP BOUNDARY
-    if ((bc_flags(BOUNDARY_YP).eq.BC_PRESSURE).and.(info%ye.eq.info%NY)) then
+    if ((bc%flags(BOUNDARY_YP).eq.BC_PRESSURE).and.(info%ye.eq.info%NY)) then
        call BCSetLocalDirections(BOUNDARY_YP, directions, cardinals)
        do k=info%zs,info%ze
           do i=info%xs,info%xe
              j = info%NY
              if (walls(i,j,k).eq.0) then
-                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, yp_vals(:,i,k), &
+                call BCPressureApplyBoundary(bc, fi(:,:,i,j,k), yp_vals(:,i,k), &
                      directions, info)
              end if
           end do
@@ -265,13 +400,13 @@ contains
 
     directions(:) = 0
     ! ZM BOUNDARY
-    if ((bc_flags(BOUNDARY_ZM).eq.BC_PRESSURE).and.(info%zs.eq.1)) then
+    if ((bc%flags(BOUNDARY_ZM).eq.BC_PRESSURE).and.(info%zs.eq.1)) then
        call BCSetLocalDirections(BOUNDARY_ZM, directions, cardinals)
        do j=info%ys,info%ye
           do i=info%xs,info%xe
              k = 1
              if (walls(i,j,k).eq.0) then
-                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, zm_vals(:,i,j), &
+                call BCPressureApplyBoundary(bc, fi(:,:,i,j,k), zm_vals(:,i,j), &
                      directions, info)
              end if
           end do
@@ -280,13 +415,13 @@ contains
 
     directions(:) = 0
     ! ZP BOUNDARY
-    if ((bc_flags(BOUNDARY_ZP).eq.BC_PRESSURE).and.(info%ze.eq.info%NZ)) then
+    if ((bc%flags(BOUNDARY_ZP).eq.BC_PRESSURE).and.(info%ze.eq.info%NZ)) then
        call BCSetLocalDirections(BOUNDARY_ZP, directions, cardinals)
        do j=info%ys,info%ye
           do i=info%xs,info%xe
              k = info%NZ
              if (walls(i,j,k).eq.0) then
-                call BCPressureApplyBoundary(fi(:,:,i,j,k), bc_dim, zp_vals(:,i,j), &
+                call BCPressureApplyBoundary(bc, fi(:,:,i,j,k), zp_vals(:,i,j), &
                      directions, info)
              end if
           end do
@@ -296,14 +431,14 @@ contains
     return
   end subroutine BCPressure
 
-  subroutine BCPressureApplyBoundary(fi, bc_dim, pvals, directions, info)
+  subroutine BCPressureApplyBoundary(bc, fi, pvals, directions, info)
     use LBM_Discretization_D3Q19_module
 
+    type(bc_type) bc
     type(info_type) info
-    PetscInt bc_dim
     PetscInt,intent(in),dimension(0:info%b):: directions
     PetscScalar,intent(inout),dimension(1:info%s, 0:info%b):: fi
-    PetscScalar,intent(in),dimension(bc_dim):: pvals
+    PetscScalar,intent(in),dimension(bc%dim):: pvals
 
 !    PetscScalar utmp, vtmp
     PetscScalar wtmp
@@ -396,20 +531,19 @@ contains
     return
   end subroutine BCPressureApplyBoundary
 
-  subroutine BCFlux(fi, walls, bc_flags, bc_dim, &
-       xm_vals, xp_vals, ym_vals, yp_vals, zm_vals, zp_vals, info)
+  subroutine BCFlux(bc, fi, walls, xm_vals, xp_vals, &
+       ym_vals, yp_vals, zm_vals, zp_vals, info)
 
+    type(bc_type) bc
     type(info_type) info
-    PetscInt bc_dim
 
-    PetscInt,dimension(1:6)::bc_flags
     PetscScalar,dimension(1:info%s, 0:info%b, info%gxs:info%gxe, &
          info%gys:info%gye, info%gzs:info%gze):: fi
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
          info%gzs:info%gze):: walls
-    PetscScalar,dimension(bc_dim,info%ys:info%ye,info%zs:info%ze):: xm_vals, xp_vals
-    PetscScalar,dimension(bc_dim,info%xs:info%xe,info%zs:info%ze):: ym_vals, yp_vals
-    PetscScalar,dimension(bc_dim,info%xs:info%xe,info%ys:info%ye):: zm_vals, zp_vals
+    PetscScalar,dimension(bc%dim,info%ys:info%ye,info%zs:info%ze):: xm_vals, xp_vals
+    PetscScalar,dimension(bc%dim,info%xs:info%xe,info%zs:info%ze):: ym_vals, yp_vals
+    PetscScalar,dimension(bc%dim,info%xs:info%xe,info%ys:info%ye):: zm_vals, zp_vals
 
     PetscInt i,j,k
     PetscInt directions(0:info%b)
@@ -418,13 +552,13 @@ contains
     directions(:) = 0
     cardinals(:) = 0
     ! XM BOUNDARY
-    if ((bc_flags(BOUNDARY_XM).eq.BC_FLUX).and.(info%xs.eq.1)) then
+    if ((bc%flags(BOUNDARY_XM).eq.BC_FLUX).and.(info%xs.eq.1)) then
        call BCSetLocalDirections(BOUNDARY_XM, directions, cardinals)
        do k=info%zs,info%ze
           do j=info%ys,info%ye
              i = 1
              if (walls(i,j,k).eq.0) then
-                call BCFluxApplyBoundary(fi(:,:,i,j,k), bc_dim, xm_vals(:,j,k), &
+                call BCFluxApplyBoundary(bc, fi(:,:,i,j,k), xm_vals(:,j,k), &
                      directions, cardinals, info)
              end if
           end do
@@ -434,13 +568,13 @@ contains
     directions(:) = 0
     cardinals(:) = 0
     ! XP BOUNDARY
-    if ((bc_flags(BOUNDARY_XP).eq.BC_FLUX).and.(info%xe.eq.info%NX)) then
+    if ((bc%flags(BOUNDARY_XP).eq.BC_FLUX).and.(info%xe.eq.info%NX)) then
        call BCSetLocalDirections(BOUNDARY_XP, directions, cardinals)
        do k=info%zs,info%ze
           do j=info%ys,info%ye
              i = info%NX
              if (walls(i,j,k).eq.0) then
-                call BCFluxApplyBoundary(fi(:,:,i,j,k), bc_dim, xp_vals(:,j,k), &
+                call BCFluxApplyBoundary(bc, fi(:,:,i,j,k), xp_vals(:,j,k), &
                      directions, cardinals, info)
              end if
           end do
@@ -450,13 +584,13 @@ contains
     directions(:) = 0
     cardinals(:) = 0
     ! YM BOUNDARY
-    if ((bc_flags(BOUNDARY_YM).eq.BC_FLUX).and.(info%ys.eq.1)) then
+    if ((bc%flags(BOUNDARY_YM).eq.BC_FLUX).and.(info%ys.eq.1)) then
        call BCSetLocalDirections(BOUNDARY_YM, directions, cardinals)
        do k=info%zs,info%ze
           do i=info%xs,info%xe
              j = 1
              if (walls(i,j,k).eq.0) then
-                call BCFluxApplyBoundary(fi(:,:,i,j,k), bc_dim, ym_vals(:,i,k), &
+                call BCFluxApplyBoundary(bc, fi(:,:,i,j,k), ym_vals(:,i,k), &
                      directions, cardinals, info)
              end if
           end do
@@ -466,13 +600,13 @@ contains
     directions(:) = 0
     cardinals(:) = 0
     ! YP BOUNDARY
-    if ((bc_flags(BOUNDARY_YP).eq.BC_FLUX).and.(info%ye.eq.info%NY)) then
+    if ((bc%flags(BOUNDARY_YP).eq.BC_FLUX).and.(info%ye.eq.info%NY)) then
        call BCSetLocalDirections(BOUNDARY_YP, directions, cardinals)
        do k=info%zs,info%ze
           do i=info%xs,info%xe
              j = info%NY
              if (walls(i,j,k).eq.0) then
-                call BCFluxApplyBoundary(fi(:,:,i,j,k), bc_dim, yp_vals(:,i,k), &
+                call BCFluxApplyBoundary(bc, fi(:,:,i,j,k), yp_vals(:,i,k), &
                      directions, cardinals, info)
              end if
           end do
@@ -482,13 +616,13 @@ contains
     directions(:) = 0
     cardinals(:) = 0
     ! ZM BOUNDARY
-    if ((bc_flags(BOUNDARY_ZM).eq.BC_FLUX).and.(info%zs.eq.1)) then
+    if ((bc%flags(BOUNDARY_ZM).eq.BC_FLUX).and.(info%zs.eq.1)) then
        call BCSetLocalDirections(BOUNDARY_ZM, directions, cardinals)
        do j=info%ys,info%ye
           do i=info%xs,info%xe
              k = 1
              if (walls(i,j,k).eq.0) then
-                call BCFluxApplyBoundary(fi(:,:,i,j,k), bc_dim, zm_vals(:,i,j), &
+                call BCFluxApplyBoundary(bc, fi(:,:,i,j,k), zm_vals(:,i,j), &
                      directions, cardinals, info)
              end if
           end do
@@ -498,13 +632,13 @@ contains
     directions(:) = 0
     cardinals(:) = 0
     ! ZP BOUNDARY
-    if ((bc_flags(BOUNDARY_ZP).eq.BC_FLUX).and.(info%ze.eq.info%NZ)) then
+    if ((bc%flags(BOUNDARY_ZP).eq.BC_FLUX).and.(info%ze.eq.info%NZ)) then
        call BCSetLocalDirections(BOUNDARY_ZP, directions, cardinals)
        do j=info%ys,info%ye
           do i=info%xs,info%xe
              k = info%NZ
              if (walls(i,j,k).eq.0) then
-                call BCFluxApplyBoundary(fi(:,:,i,j,k), bc_dim, zp_vals(:,i,j), &
+                call BCFluxApplyBoundary(bc, fi(:,:,i,j,k), zp_vals(:,i,j), &
                      directions, cardinals, info)
              end if
           end do
@@ -514,14 +648,14 @@ contains
     return
   end subroutine BCFlux
   
-  subroutine BCFluxApplyBoundary(fi, bc_dim, fvals, directions, cardinals, info)
+  subroutine BCFluxApplyBoundary(bc, fi, fvals, directions, cardinals, info)
     use LBM_Discretization_D3Q19_module
 
+    type(bc_type) bc
     type(info_type) info
-    PetscInt bc_dim
 
     PetscScalar,intent(inout),dimension(1:info%s, 0:info%b):: fi
-    PetscScalar,intent(in),dimension(bc_dim):: fvals
+    PetscScalar,intent(in),dimension(bc%dim):: fvals
     PetscInt,intent(in),dimension(0:info%b):: directions
     PetscInt,intent(in),dimension(1:info%dim):: cardinals
 
@@ -765,22 +899,20 @@ contains
     end select
   end subroutine BCSetLocalDirections
 
-  subroutine BCPseudoperiodic(fi, walls, bc_flags, bc_dim, &
-       xm_vals, xp_vals, ym_vals, yp_vals, zm_vals, zp_vals, info)
+  subroutine BCPseudoperiodic(bc, fi, walls, xm_vals, xp_vals, &
+       ym_vals, yp_vals, zm_vals, zp_vals, info)
 
+    type(bc_type) bc
     type(info_type) info
-    integer bc_dim
 
     PetscScalar,dimension(1:info%s, 0:info%b, info%gxs:info%gxe, &
          info%gys:info%gye, info%gzs:info%gze):: fi
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
          info%gzs:info%gze):: walls
 
-    PetscInt,dimension(1:6)::bc_flags
-
-    PetscScalar,dimension(bc_dim,info%ys:info%ye,info%zs:info%ze):: xm_vals, xp_vals
-    PetscScalar,dimension(bc_dim,info%xs:info%xe,info%zs:info%ze):: ym_vals, yp_vals
-    PetscScalar,dimension(bc_dim,info%xs:info%xe,info%ys:info%ye):: zm_vals, zp_vals
+    PetscScalar,dimension(bc%dim,info%ys:info%ye,info%zs:info%ze):: xm_vals, xp_vals
+    PetscScalar,dimension(bc%dim,info%xs:info%xe,info%zs:info%ze):: ym_vals, yp_vals
+    PetscScalar,dimension(bc%dim,info%xs:info%xe,info%ys:info%ye):: zm_vals, zp_vals
 
     integer i,j,m
     PetscScalar ftmp
@@ -790,7 +922,7 @@ contains
     ! one is correctly flagged
 
     ! In the y-direction
-    if ((info%ye.eq.info%NY).and.(bc_flags(4).eq.1)) then
+    if ((bc%flags(BOUNDARY_YP).eq.BC_PSEUDOPERIODIC).and.(info%ye.eq.info%NY)) then
        do i=info%xs,info%xe
           do j=info%zs,info%ze
              !   at the exit
@@ -817,8 +949,7 @@ contains
        enddo
     endif
 
-
-    if ((info%ys.eq.1).and.(bc_flags(3).eq.1)) then
+    if ((bc%flags(BOUNDARY_YM).eq.BC_PSEUDOPERIODIC).and.(info%ys.eq.1)) then
        do i=info%xs,info%xe
           do j=info%zs,info%ze
              !    at the entrance
@@ -847,7 +978,7 @@ contains
     endif
 
     ! In the z-direction (parallelized)
-    if ((info%ze.eq.info%NZ).and.(bc_flags(6).eq.1)) then
+    if ((bc%flags(BOUNDARY_ZP).eq.BC_PSEUDOPERIODIC).and.(info%ze.eq.info%NZ)) then
        do i=info%xs,info%xe
           do j=info%ys,info%ye
              !  at the exit
@@ -874,7 +1005,7 @@ contains
        end do
     endif
 
-    if ((info%zs.eq.1).and.(bc_flags(5).eq.1)) then
+    if ((bc%flags(BOUNDARY_ZM).eq.BC_PSEUDOPERIODIC).and.(info%zs.eq.1)) then
        do i=info%xs,info%xe
           do j=info%ys,info%ye
 
