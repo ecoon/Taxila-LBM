@@ -69,7 +69,6 @@
        PetscScalar,pointer,dimension(:,:,:,:):: uxe,uye,uze
        PetscScalar,pointer,dimension(:,:,:,:):: Fx,Fy,Fz
 
-       PetscScalar,dimension(3,2):: corners
     end type lbm_type
 
     public :: LBMCreate, &
@@ -241,6 +240,11 @@
       deallocate(ownership_y)
       deallocate(ownership_z)
 
+      ! set up constants, bcs, periodicity
+      call ConstantsSetSizes(lbm%constants, lbm%info%s)
+      call ConstantsSetFromOptions(lbm%constants, options, ierr)
+      call BCSetFromOptions(lbm%bc, lbm%info, options, ierr)
+
       ! coordinates
       tmpcorners = 0.d0
       corners = 0.d0
@@ -328,18 +332,12 @@
       call VecSet(lbm%fi, zero, ierr)
       call VecSet(lbm%ut, zero, ierr)
 
-
       call PetscObjectSetName(lbm%prs_g, 'prs', ierr)
       call PetscObjectSetName(lbm%walls_g, 'walls', ierr)
       call PetscObjectSetName(lbm%rhot_g, 'rhot', ierr)
       call PetscObjectSetName(lbm%rho_g, 'rho', ierr)
       call PetscObjectSetName(lbm%fi_g, 'fi', ierr)
       call PetscObjectSetName(lbm%ut_g, 'ut', ierr)
-
-      ! set up constants, bcs
-      call ConstantsSetSizes(lbm%constants, lbm%info%s)
-      call ConstantsSetFromOptions(lbm%constants, options, ierr)
-      call BCSetFromOptions(lbm%bc, lbm%info, options, ierr)
 
       CHKERRQ(ierr)
       CHKMEMQ
@@ -404,7 +402,7 @@
 
       ! note, because DAs are all periodic, it really screws up the corners in a 
       ! uniform coordinates DA.  We must adjust these in the nonperiodic cases.
-      if (lbm%bc%flags(BOUNDARY_XM) /= BC_PERIODIC) then
+      if (.not.lbm%info%periodic(X_DIRECTION)) then
          deltacoord = (corners(X_DIRECTION,2) - corners(X_DIRECTION,1))/dble(lbm%info%NX-1)
          newcoord_x = corners(X_DIRECTION,2) + deltacoord
          lbm%info%gridsize(X_DIRECTION) = deltacoord
@@ -414,7 +412,7 @@
               corners(X_DIRECTION,1))/dble(lbm%info%NX)
       endif
 
-      if (lbm%bc%flags(BOUNDARY_YM) /= BC_PERIODIC) then
+      if (.not.lbm%info%periodic(Y_DIRECTION)) then
          deltacoord = (corners(Y_DIRECTION,2) - corners(Y_DIRECTION,1))/(lbm%info%NY-1)
          newcoord_y = corners(Y_DIRECTION,2) + deltacoord
          lbm%info%gridsize(Y_DIRECTION) = deltacoord
@@ -425,7 +423,7 @@
       endif
 
       if (lbm%info%dim > 2) then
-         if (lbm%bc%flags(BOUNDARY_ZM) /= 0) then
+         if (.not.lbm%info%periodic(Z_DIRECTION)) then
             deltacoord = (corners(Z_DIRECTION,2) - corners(Z_DIRECTION,1))/(lbm%info%NZ-1)
             newcoord_z = corners(Z_DIRECTION,2) + deltacoord
             lbm%info%gridsize(Z_DIRECTION) = deltacoord
@@ -769,7 +767,7 @@
       type(lbm_type) lbm
       PetscScalar,dimension(3,2):: corners
       
-      corners = lbm%corners
+      corners = lbm%info%corners
     end subroutine LBMGetCorners
 
     subroutine LBMPrintAFew(rho, fi, walls, uxe, uye, uze, info)
