@@ -68,9 +68,14 @@
        PetscScalar,pointer,dimension(:,:,:,:):: ux,uy,uz
        PetscScalar,pointer,dimension(:,:,:,:):: uxe,uye,uze
        PetscScalar,pointer,dimension(:,:,:,:):: Fx,Fy,Fz
-
+       character(len=MAXSTRINGLENGTH) name       
     end type lbm_type
 
+    interface LBMCreate
+       module procedure LBMCreate_Comm
+       module procedure LBMCreate_CommName
+    end interface
+    
     public :: LBMCreate, &
          LBMSetFromOptions, &
          LBMDestroy, &
@@ -87,10 +92,9 @@
          LBMInput
 
   contains
-    function LBMCreate(comm) result(lbm)
+    function LBMCreate_Comm(comm) result(lbm)
       type(lbm_type),pointer:: lbm
       MPI_Comm comm
-      PetscErrorCode ierr
 
       allocate(lbm)
       allocate(lbm%da_one)
@@ -98,6 +102,7 @@
       allocate(lbm%da_sb)
       allocate(lbm%da_flow)
 
+      lbm%comm = 0
       lbm%da_one = 0
       lbm%da_s = 0
       lbm%da_sb = 0
@@ -140,12 +145,21 @@
       nullify(lbm%Fx)
       nullify(lbm%Fy)
       nullify(lbm%Fz)
-    end function LBMCreate
+
+      lbm%name = ''
+    end function LBMCreate_Comm
+
+    function LBMCreate_CommName(comm, name) result(lbm)
+      type(lbm_type),pointer:: lbm 
+      MPI_Comm comm
+      character(len=*):: name       
+
+      lbm => LBMCreate_Comm(comm)
+      lbm%name = name
+    end function LBMCreate_CommName
 
     ! --- set up LB method
     subroutine LBMSetFromOptions(lbm, options)
-
-      ! input
       type(lbm_type) lbm
       type(options_type) options
 
@@ -181,7 +195,7 @@
            PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, lbm%dm_index_to_ndof(ONEDOF), 1, &
            PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_one, ierr)
       CHKERRQ(ierr)
-
+      call PetscObjectSetName(lbm%da_one, trim(lbm%name)//'DA_one_dof', ierr)
 
 !      call DMView(lbm%da_one, PETSC_VIEWER_STDOUT_WORLD,  ierr)
       call DMDAGetCorners(lbm%da_one, xs, ys, zs, lbm%info%xl, lbm%info%yl, lbm%info%zl, ierr)
@@ -221,6 +235,7 @@
            lbm%dm_index_to_ndof(NPHASEDOF), 1, &
            ownership_x, ownership_y, ownership_z, &
            lbm%da_s, ierr)
+      call PetscObjectSetName(lbm%da_s, trim(lbm%name)//'DA_NPHASE', ierr)
 
       call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
            lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
@@ -228,6 +243,7 @@
            lbm%dm_index_to_ndof(NPHASEXBDOF), 1, &
            ownership_x, ownership_y, ownership_z, &
            lbm%da_sb, ierr)
+      call PetscObjectSetName(lbm%da_sb, trim(lbm%name)//'DA_fi', ierr)
 
       call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
            lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
@@ -235,6 +251,7 @@
            lbm%dm_index_to_ndof(NFLOWDOF), 1, &
            ownership_x, ownership_y, ownership_z, &
            lbm%da_flow, ierr)
+      call PetscObjectSetName(lbm%da_flow, trim(lbm%name)//'DA_nflow', ierr)
 
       deallocate(ownership_x)
       deallocate(ownership_y)
@@ -332,12 +349,12 @@
       call VecSet(lbm%fi, zero, ierr)
       call VecSet(lbm%ut, zero, ierr)
 
-      call PetscObjectSetName(lbm%prs_g, 'prs', ierr)
-      call PetscObjectSetName(lbm%walls_g, 'walls', ierr)
-      call PetscObjectSetName(lbm%rhot_g, 'rhot', ierr)
-      call PetscObjectSetName(lbm%rho_g, 'rho', ierr)
-      call PetscObjectSetName(lbm%fi_g, 'fi', ierr)
-      call PetscObjectSetName(lbm%ut_g, 'ut', ierr)
+      call PetscObjectSetName(lbm%prs_g, trim(lbm%name)//'prs', ierr)
+      call PetscObjectSetName(lbm%walls_g, trim(lbm%name)//'walls', ierr)
+      call PetscObjectSetName(lbm%rhot_g, trim(lbm%name)//'rhot', ierr)
+      call PetscObjectSetName(lbm%rho_g, trim(lbm%name)//'rho', ierr)
+      call PetscObjectSetName(lbm%fi_g, trim(lbm%name)//'fi', ierr)
+      call PetscObjectSetName(lbm%ut_g, trim(lbm%name)//'ut', ierr)
 
       CHKERRQ(ierr)
       CHKMEMQ
@@ -527,7 +544,7 @@
       call BCGetArrays(lbm%bc, ierr)
 
 
-      timername = 'Simulation'
+      timername = trim(lbm%name)//'Simulation'
       timer1 => TimingCreate(lbm%comm, timername)
       do lcv_step = istep+1,kstep
 !         timername = 'Streaming'
