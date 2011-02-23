@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   15 February 2011
-!!!       at:            11:58:38 MST
+!!!     last modified:   23 February 2011
+!!!       at:            12:32:57 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -34,9 +34,9 @@
        PetscInt b
        PetscInt dim
        PetscInt discretization
-       PetscBool,allocatable:: periodic(:)
-       PetscReal,allocatable:: gridsize(:)
-       PetscReal,allocatable:: corners(:,:)
+       PetscBool,pointer:: periodic(:)
+       PetscReal,pointer:: gridsize(:)
+       PetscReal,pointer:: corners(:,:)
        character(len=MAXWORDLENGTH):: options_prefix
     end type info_type
     
@@ -87,6 +87,9 @@
 
       info%options_prefix = ''
 
+      nullify(info%periodic)
+      nullify(info%gridsize)
+      nullify(info%corners)
     end function InfoCreate
 
     subroutine InfoSetFromOptions(info, options, ierr)
