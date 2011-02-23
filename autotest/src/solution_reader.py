@@ -5,8 +5,8 @@
 ###     version:         
 ###     created:         25 January 2011
 ###       on:            10:53:33 MST
-###     last modified:   14 February 2011
-###       at:            15:29:10 MST
+###     last modified:   16 February 2011
+###       at:            10:38:20 MST
 ###     URL:             http://www.ldeo.columbia.edu/~ecoon/
 ###     email:           ecoon _at_ lanl.gov
 ###  
@@ -78,7 +78,8 @@ class SolutionReader(object):
         # scale
         if name.startswith('u'):
             npvec = npvec*self._scalefactor
-
+            print np.where(np.abs(npvec)/np.abs(npvec).mean() > 1e2)[0]
+            npvec = np.where(np.abs(npvec)/np.abs(npvec).mean() > 1e2, 0., npvec)
 
         if ndofs == 1:
             data = pyvtk.Scalars(npvec, self._prefix.strip('_')+' '+name[:-7], 'default')
