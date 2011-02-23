@@ -603,11 +603,19 @@
          lbm%Fy=0.
          lbm%Fz=0.
 
-         if (lbm%info%s.eq.2) then
-            call LBMAddFluidFluidForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info, lbm%constants)
+         if (lbm%info%s > 1) then
+            if ((lbm%constants%g /= 0.0d0).or.(lbm%constants%g11 /= 0.0d0).or. &
+                 (lbm%constants%g22 /= 0.0d0)) then
+               call LBMAddFluidFluidForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, &
+                    lbm%walls_a, lbm%info, lbm%constants)
+            end if
+
+            if ((lbm%constants%gw(1) /= 0.0d0).or.(lbm%constants%gw(2) /= 0.0d0)) then
+               call LBMAddFluidSolidForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, &
+                    lbm%walls_a, lbm%info, lbm%constants)
+            end if
          endif
          call LBMAddBodyForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info, lbm%constants)
-         call LBMAddFluidSolidForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info, lbm%constants)
          call LBMZeroBoundaryForces(lbm%bc%flags, lbm%Fx, lbm%Fy, lbm%Fz, lbm%info%dim, lbm%info, lbm%constants)
 
 !         call TimingEnd(timer2)
