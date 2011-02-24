@@ -47,8 +47,8 @@ contains
     integer i,j,k,m,n
     PetscScalar,dimension(1:info%s,0:info%b,info%gxs:info%gxe, &
          info%gys:info%gye,info%gzs:info%gze)::tmp
-    PetscScalar,dimension(info%gxs:info%gxe,info%gys:info%gye, &
-         info%gzs:info%gze):: fluidfluid
+!!$    PetscScalar,dimension(info%gxs:info%gxe,info%gys:info%gye, &
+!!$         info%gzs:info%gze):: fluidfluid
 
     do m=1,info%s
        tmp(m, 1,:,:,:)= (cshift(rho(m,:,:,:),shift= 1,dim=1))
@@ -74,66 +74,35 @@ contains
        tmp(m,18,:,:,:)= (cshift(tmp(m,6,:,:,:),shift= 1,dim=2))
     enddo
 
-    fluidfluid = (cshift(walls, shift= 1, dim=1) + cshift(walls, shift=-1, dim=1) + walls)
+!!$  MLP: I don't think we need the fluidfluid and I think we can vectorize the loops
+    !fluidfluid = (cshift(walls, shift= 1, dim=1) + cshift(walls, shift=-1, dim=1) + walls)
     do i=info%xs,info%xe 
        do j=info%ys,info%ye 
           do k=info%zs,info%ze
-             if (fluidfluid(i,j,k).eq.0) then
-                ! where i'm fluid and fluid on both sides of me
+             if (walls(i,j,k).eq.0) then
                 do n=1,6
                    Fx(1,i,j,k)=Fx(1,i,j,k)+tmp(2,n,i,j,k)*cix(n)*constants%g
                    Fx(1,i,j,k)=Fx(1,i,j,k)+tmp(1,n,i,j,k)*cix(n)*constants%g11
                    Fx(2,i,j,k)=Fx(2,i,j,k)+tmp(1,n,i,j,k)*cix(n)*constants%g
                    Fx(2,i,j,k)=Fx(2,i,j,k)+tmp(2,n,i,j,k)*cix(n)*constants%g22
-                enddo
-                do n=7,18
-                   Fx(1,i,j,k)=Fx(1,i,j,k)+tmp(2,n,i,j,k)*cix(n)*constants%g*0.5
-                   Fx(1,i,j,k)=Fx(1,i,j,k)+tmp(1,n,i,j,k)*cix(n)*constants%g11*0.5
-                   Fx(2,i,j,k)=Fx(2,i,j,k)+tmp(1,n,i,j,k)*cix(n)*constants%g*0.5
-                   Fx(2,i,j,k)=Fx(2,i,j,k)+tmp(2,n,i,j,k)*cix(n)*constants%g22*0.5
-                enddo
-             end if
-          end do
-       end do
-    end do
-
-    fluidfluid = cshift(walls, shift= 1, dim=2) + cshift(walls, shift=-1, dim=2) + walls
-
-    do i=info%xs,info%xe 
-       do j=info%ys,info%ye 
-          do k=info%zs,info%ze
-             if (fluidfluid(i,j,k).eq.0) then
-                ! where i'm fluid and fluid on both sides of me
-                do n=1,6
                    Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(2,n,i,j,k)*ciy(n)*constants%g
                    Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(1,n,i,j,k)*ciy(n)*constants%g11
                    Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(1,n,i,j,k)*ciy(n)*constants%g
                    Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(2,n,i,j,k)*ciy(n)*constants%g22
-                enddo
-                do n=7,18
-                   Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(2,n,i,j,k)*ciy(n)*constants%g*0.5
-                   Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(1,n,i,j,k)*ciy(n)*constants%g11*0.5
-                   Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(1,n,i,j,k)*ciy(n)*constants%g*0.5
-                   Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(2,n,i,j,k)*ciy(n)*constants%g22*0.5
-                enddo
-             end if
-          end do
-       end do
-    end do
-
-    fluidfluid = cshift(walls, shift= 1, dim=3) + cshift(walls, shift=-1, dim=3) + walls
-    do i=info%xs,info%xe 
-       do j=info%ys,info%ye 
-          do k=info%zs,info%ze
-             if (fluidfluid(i,j,k).eq.0) then
-                ! where i'm fluid and fluid on both sides of me
-                do n=1,6
                    Fz(1,i,j,k)=Fz(1,i,j,k)+tmp(2,n,i,j,k)*ciz(n)*constants%g
                    Fz(1,i,j,k)=Fz(1,i,j,k)+tmp(1,n,i,j,k)*ciz(n)*constants%g11
                    Fz(2,i,j,k)=Fz(2,i,j,k)+tmp(1,n,i,j,k)*ciz(n)*constants%g
                    Fz(2,i,j,k)=Fz(2,i,j,k)+tmp(2,n,i,j,k)*ciz(n)*constants%g22
                 enddo
                 do n=7,18
+                   Fx(1,i,j,k)=Fx(1,i,j,k)+tmp(2,n,i,j,k)*cix(n)*constants%g*0.5
+                   Fx(1,i,j,k)=Fx(1,i,j,k)+tmp(1,n,i,j,k)*cix(n)*constants%g11*0.5
+                   Fx(2,i,j,k)=Fx(2,i,j,k)+tmp(1,n,i,j,k)*cix(n)*constants%g*0.5
+                   Fx(2,i,j,k)=Fx(2,i,j,k)+tmp(2,n,i,j,k)*cix(n)*constants%g22*0.5
+                   Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(2,n,i,j,k)*ciy(n)*constants%g*0.5
+                   Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(1,n,i,j,k)*ciy(n)*constants%g11*0.5
+                   Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(1,n,i,j,k)*ciy(n)*constants%g*0.5
+                   Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(2,n,i,j,k)*ciy(n)*constants%g22*0.5
                    Fz(1,i,j,k)=Fz(1,i,j,k)+tmp(2,n,i,j,k)*ciz(n)*constants%g*0.5
                    Fz(1,i,j,k)=Fz(1,i,j,k)+tmp(1,n,i,j,k)*ciz(n)*constants%g11*0.5
                    Fz(2,i,j,k)=Fz(2,i,j,k)+tmp(1,n,i,j,k)*ciz(n)*constants%g*0.5
@@ -143,6 +112,91 @@ contains
           end do
        end do
     end do
+
+!!$    !fluidfluid = cshift(walls, shift= 1, dim=2) + cshift(walls, shift=-1, dim=2) + walls
+!!$    do i=info%xs,info%xe 
+!!$       do j=info%ys,info%ye 
+!!$          do k=info%zs,info%ze
+!!$             if (walls(i,j,k).eq.0) then
+!!$                ! where i'm fluid and fluid on both sides of me
+!!$                do n=1,6
+!!$                   Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(2,n,i,j,k)*ciy(n)*constants%g
+!!$                   Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(1,n,i,j,k)*ciy(n)*constants%g11
+!!$                   Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(1,n,i,j,k)*ciy(n)*constants%g
+!!$                   Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(2,n,i,j,k)*ciy(n)*constants%g22
+!!$                enddo
+!!$                do n=7,18
+!!$                   Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(2,n,i,j,k)*ciy(n)*constants%g*0.5
+!!$                   Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(1,n,i,j,k)*ciy(n)*constants%g11*0.5
+!!$                   Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(1,n,i,j,k)*ciy(n)*constants%g*0.5
+!!$                   Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(2,n,i,j,k)*ciy(n)*constants%g22*0.5
+!!$                enddo
+!!$             end if
+!!$          end do
+!!$       end do
+!!$    end do
+!!$
+!!$    !fluidfluid = cshift(walls, shift= 1, dim=3) + cshift(walls, shift=-1, dim=3) + walls
+!!$    do i=info%xs,info%xe 
+!!$       do j=info%ys,info%ye 
+!!$          do k=info%zs,info%ze
+!!$             if (walls(i,j,k).eq.0) then
+!!$                ! where i'm fluid and fluid on both sides of me
+!!$                do n=1,6
+!!$                   Fz(1,i,j,k)=Fz(1,i,j,k)+tmp(2,n,i,j,k)*ciz(n)*constants%g
+!!$                   Fz(1,i,j,k)=Fz(1,i,j,k)+tmp(1,n,i,j,k)*ciz(n)*constants%g11
+!!$                   Fz(2,i,j,k)=Fz(2,i,j,k)+tmp(1,n,i,j,k)*ciz(n)*constants%g
+!!$                   Fz(2,i,j,k)=Fz(2,i,j,k)+tmp(2,n,i,j,k)*ciz(n)*constants%g22
+!!$                enddo
+!!$                do n=7,18
+!!$                   Fz(1,i,j,k)=Fz(1,i,j,k)+tmp(2,n,i,j,k)*ciz(n)*constants%g*0.5
+!!$                   Fz(1,i,j,k)=Fz(1,i,j,k)+tmp(1,n,i,j,k)*ciz(n)*constants%g11*0.5
+!!$                   Fz(2,i,j,k)=Fz(2,i,j,k)+tmp(1,n,i,j,k)*ciz(n)*constants%g*0.5
+!!$                   Fz(2,i,j,k)=Fz(2,i,j,k)+tmp(2,n,i,j,k)*ciz(n)*constants%g22*0.5
+!!$                enddo
+!!$             end if
+!!$          end do
+!!$       end do
+!!$    end do
+
+!!$    ! code that replaces the code above
+!!$    do i=info%xs,info%xe 
+!!$      do j=info%ys,info%ye 
+!!$        do k=info%zs,info%ze
+!!$          if (walls(i,j,k).eq.0) then
+!!$            do n=1,6
+!!$              Fx(1,i,j,k)=Fx(1,i,j,k)+tmp(2,n,i,j,k)*cix(i)*constants%g
+!!$              Fx(1,i,j,k)=Fx(1,i,j,k)+tmp(1,n,i,j,k)*cix(i)*constants%g11
+!!$              Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(2,n,i,j,k)*ciy(i)*constants%g
+!!$              Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(1,n,i,j,k)*ciy(i)*constants%g11
+!!$              Fz(1,i,j,k)=Fz(1,i,j,k)+tmp(2,n,i,j,k)*ciz(i)*constants%g
+!!$              Fz(1,i,j,k)=Fz(1,i,j,k)+tmp(1,n,i,j,k)*ciz(i)*constants%g11
+!!$              Fx(2,i,j,k)=Fx(2,i,j,k)+tmp(1,n,i,j,k)*cix(i)*constants%g
+!!$              Fx(2,i,j,k)=Fx(2,i,j,k)+tmp(2,n,i,j,k)*cix(i)*constants%g22
+!!$              Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(1,n,i,j,k)*ciy(i)*constants%g
+!!$              Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(2,n,i,j,k)*ciy(i)*constants%g22
+!!$              Fz(2,i,j,k)=Fz(2,i,j,k)+tmp(1,n,i,j,k)*ciz(i)*constants%g
+!!$              Fz(2,i,j,k)=Fz(2,i,j,k)+tmp(2,n,i,j,k)*ciz(i)*constants%g22 
+!!$            enddo
+!!$            do n=7,18
+!!$              Fx(1,i,j,k)=Fx(1,i,j,k)+tmp(2,n,i,j,k)*cix(i)*constants%g*0.5
+!!$              Fx(1,i,j,k)=Fx(1,i,j,k)+tmp(1,n,i,j,k)*cix(i)*constants%g11*0.5
+!!$              Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(2,n,i,j,k)*ciy(i)*constants%g*0.5
+!!$              Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(1,n,i,j,k)*ciy(i)*constants%g11*0.5
+!!$              Fz(1,i,j,k)=Fz(1,i,j,k)+tmp(2,n,i,j,k)*ciz(i)*constants%g*0.5
+!!$              Fz(1,i,j,k)=Fz(1,i,j,k)+tmp(1,n,i,j,k)*ciz(i)*constants%g11*0.5
+!!$              Fx(2,i,j,k)=Fx(2,i,j,k)+tmp(1,n,i,j,k)*cix(i)*constants%g*0.5
+!!$              Fx(2,i,j,k)=Fx(2,i,j,k)+tmp(2,n,i,j,k)*cix(i)*constants%g22*0.5
+!!$              Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(1,n,i,j,k)*ciy(i)*constants%g*0.5
+!!$              Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(2,n,i,j,k)*ciy(i)*constants%g22*0.5
+!!$              Fz(2,i,j,k)=Fz(2,i,j,k)+tmp(1,n,i,j,k)*ciz(i)*constants%g*0.5
+!!$              Fz(2,i,j,k)=Fz(2,i,j,k)+tmp(2,n,i,j,k)*ciz(i)*constants%g22*0.5
+!!$            enddo
+!!$          end if
+!!$        end do
+!!$      end do
+!!$    end do
+
 
     Fx = -Fx*rho
     Fy = -Fy*rho
@@ -235,6 +289,38 @@ contains
   subroutine LBMAddFluidSolidForces(rho,Fx,Fy,Fz,walls,info,constants)
     !     NONLOCAL IN WALLS
 
+!!$    ! input
+!!$    type(info_type) info
+!!$    type(constants_type) constants
+!!$    PetscScalar,dimension(1:info%s,info%gxs:info%gxe, info%gys:info%gye, &
+!!$         info%gzs:info%gze):: rho
+!!$    PetscScalar,dimension(1:info%s, info%gxs:info%gxe, info%gys:info%gye, &
+!!$         info%gzs:info%gze):: Fx,Fy,Fz
+!!$    PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
+!!$         info%gzs:info%gze):: walls
+!!$
+!!$    ! local
+!!$    integer i,j,k,m,n
+!!$
+!!$    do m=1,info%s
+!!$       where( (walls.eq.0) )
+!!$          Fx(m,:,:,:)=Fx(m,:,:,:) - rho(m,:,:,:)*constants%gw(m) &
+!!$               *(cshift(walls, shift= 1, dim=1) - cshift(walls, shift=-1, dim=1))
+!!$
+!!$          Fy(m,:,:,:)=Fy(m,:,:,:) - rho(m,:,:,:)*constants%gw(m) &
+!!$               *(cshift(walls, shift= 1, dim=2) - cshift(walls, shift=-1, dim=2))
+!!$
+!!$          Fz(m,:,:,:)=Fz(m,:,:,:) - rho(m,:,:,:)*constants%gw(m) &
+!!$               *(cshift(walls, shift= 1, dim=3) - cshift(walls, shift=-1, dim=3))
+!!$       end where
+!!$    enddo
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! New code added by MLP.  This accounts for fluid-solid forces on the diagonals, which is
+    ! not accounted for in the other version.
+ 
+    use LBM_Discretization_D3Q19_module
+
     ! input
     type(info_type) info
     type(constants_type) constants
@@ -245,21 +331,66 @@ contains
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
          info%gzs:info%gze):: walls
 
+
     ! local
     integer i,j,k,m,n
+    PetscScalar,dimension(0:info%b,info%gxs:info%gxe, &
+         info%gys:info%gye,info%gzs:info%gze)::tmp
+        
+    tmp(1,:,:,:)= (cshift(walls(:,:,:),shift= 1,dim=1))
+    tmp(2,:,:,:)= (cshift(walls(:,:,:),shift= 1,dim=2))
+    tmp(3,:,:,:)= (cshift(walls(:,:,:),shift=-1,dim=1))
+    tmp(4,:,:,:)= (cshift(walls(:,:,:),shift=-1,dim=2))
+    tmp(5,:,:,:)= (cshift(walls(:,:,:),shift= 1,dim=3))
+    tmp(6,:,:,:)= (cshift(walls(:,:,:),shift=-1,dim=3))
+
+    tmp(7 ,:,:,:)= (cshift(tmp(1,:,:,:),shift= 1,dim=2))
+    tmp(8 ,:,:,:)= (cshift(tmp(3,:,:,:),shift= 1,dim=2))
+    tmp(9 ,:,:,:)= (cshift(tmp(3,:,:,:),shift=-1,dim=2))
+    tmp(10,:,:,:)= (cshift(tmp(1,:,:,:),shift=-1,dim=2))
+
+    tmp(11,:,:,:)= (cshift(tmp(5,:,:,:),shift= 1,dim=1))
+    tmp(12,:,:,:)= (cshift(tmp(5,:,:,:),shift=-1,dim=1))
+    tmp(13,:,:,:)= (cshift(tmp(6,:,:,:),shift=-1,dim=1))
+    tmp(14,:,:,:)= (cshift(tmp(6,:,:,:),shift= 1,dim=1))
+
+    tmp(15,:,:,:)= (cshift(tmp(5,:,:,:),shift= 1,dim=2))
+    tmp(16,:,:,:)= (cshift(tmp(5,:,:,:),shift=-1,dim=2))
+    tmp(17,:,:,:)= (cshift(tmp(6,:,:,:),shift=-1,dim=2))
+    tmp(18,:,:,:)= (cshift(tmp(6,:,:,:),shift= 1,dim=2))
+
 
     do m=1,info%s
-       where( (walls.eq.0) )
-          Fx(m,:,:,:)=Fx(m,:,:,:) - rho(m,:,:,:)*constants%gw(m) &
-               *(cshift(walls, shift= 1, dim=1) - cshift(walls, shift=-1, dim=1))
+      do i=info%xs,info%xe 
+        do j=info%ys,info%ye 
+          do k=info%zs,info%ze
+            if (walls(i,j,k).eq.0) then
+              do n=1,6
+                Fx(m,i,j,k)=Fx(m,i,j,k)+tmp(n,i,j,k)*cix(n)*constants%gw(m)
+                Fy(m,i,j,k)=Fy(m,i,j,k)+tmp(n,i,j,k)*ciy(n)*constants%gw(m)
+                Fz(m,i,j,k)=Fz(m,i,j,k)+tmp(n,i,j,k)*ciz(n)*constants%gw(m)
+              enddo
+              do n=7,18
+                Fx(m,i,j,k)=Fx(m,i,j,k)+tmp(n,i,j,k)*cix(n)*constants%gw(m)*0.5
+                Fy(m,i,j,k)=Fy(m,i,j,k)+tmp(n,i,j,k)*ciy(n)*constants%gw(m)*0.5
+	      	Fz(m,i,j,k)=Fz(m,i,j,k)+tmp(n,i,j,k)*ciz(n)*constants%gw(m)*0.5
+              enddo
+            end if
+            !write(*,*) Fz(1,i,j,k),Fz(2,i,j,k)
+          end do
+        end do
+      end do
+    end do
 
-          Fy(m,:,:,:)=Fy(m,:,:,:) - rho(m,:,:,:)*constants%gw(m) &
-               *(cshift(walls, shift= 1, dim=2) - cshift(walls, shift=-1, dim=2))
-
-          Fz(m,:,:,:)=Fz(m,:,:,:) - rho(m,:,:,:)*constants%gw(m) &
-               *(cshift(walls, shift= 1, dim=3) - cshift(walls, shift=-1, dim=3))
-       end where
-    enddo
+    Fx = -Fx*rho
+    Fy = -Fy*rho
+    Fz = -Fz*rho
+   
+!!$    write(*,*) i-1,j-1,k-1
+!!$    write(*,*) Fx(1,i-1,j-1,k-1),Fx(2,i-1,j-1,k-1)
+!!$    write(*,*) Fy(1,i-1,j-1,k-1),Fy(2,i-1,j-1,k-1)
+!!$    write(*,*) Fz(1,i-1,j-1,k-1),Fz(2,i-1,j-1,k-1)
+!!$    write(*,*) tmp(1,i-1,j-1,k-1)
     return
   end subroutine LBMAddFluidSolidForces
 
