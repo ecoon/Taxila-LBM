@@ -81,32 +81,32 @@ contains
           do k=info%zs,info%ze
              if (walls(i,j,k).eq.0) then
                 do n=1,6
-                   Fx(1,i,j,k)=Fx(1,i,j,k)+tmp(2,n,i,j,k)*cix(n)*constants%g
-                   Fx(1,i,j,k)=Fx(1,i,j,k)+tmp(1,n,i,j,k)*cix(n)*constants%g11
-                   Fx(2,i,j,k)=Fx(2,i,j,k)+tmp(1,n,i,j,k)*cix(n)*constants%g
-                   Fx(2,i,j,k)=Fx(2,i,j,k)+tmp(2,n,i,j,k)*cix(n)*constants%g22
-                   Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(2,n,i,j,k)*ciy(n)*constants%g
-                   Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(1,n,i,j,k)*ciy(n)*constants%g11
-                   Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(1,n,i,j,k)*ciy(n)*constants%g
-                   Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(2,n,i,j,k)*ciy(n)*constants%g22
-                   Fz(1,i,j,k)=Fz(1,i,j,k)+tmp(2,n,i,j,k)*ciz(n)*constants%g
-                   Fz(1,i,j,k)=Fz(1,i,j,k)+tmp(1,n,i,j,k)*ciz(n)*constants%g11
-                   Fz(2,i,j,k)=Fz(2,i,j,k)+tmp(1,n,i,j,k)*ciz(n)*constants%g
-                   Fz(2,i,j,k)=Fz(2,i,j,k)+tmp(2,n,i,j,k)*ciz(n)*constants%g22
+                   Fx(1,i,j,k)=Fx(1,i,j,k)-rho(1,i,j,k)*tmp(2,n,i,j,k)*cix(n)*constants%g
+                   Fx(1,i,j,k)=Fx(1,i,j,k)-rho(1,i,j,k)*tmp(1,n,i,j,k)*cix(n)*constants%g11
+                   Fx(2,i,j,k)=Fx(2,i,j,k)-rho(2,i,j,k)*tmp(1,n,i,j,k)*cix(n)*constants%g
+                   Fx(2,i,j,k)=Fx(2,i,j,k)-rho(2,i,j,k)*tmp(2,n,i,j,k)*cix(n)*constants%g22
+                   Fy(1,i,j,k)=Fy(1,i,j,k)-rho(1,i,j,k)*tmp(2,n,i,j,k)*ciy(n)*constants%g
+                   Fy(1,i,j,k)=Fy(1,i,j,k)-rho(1,i,j,k)*tmp(1,n,i,j,k)*ciy(n)*constants%g11
+                   Fy(2,i,j,k)=Fy(2,i,j,k)-rho(2,i,j,k)*tmp(1,n,i,j,k)*ciy(n)*constants%g
+                   Fy(2,i,j,k)=Fy(2,i,j,k)-rho(2,i,j,k)*tmp(2,n,i,j,k)*ciy(n)*constants%g22
+                   Fz(1,i,j,k)=Fz(1,i,j,k)-rho(1,i,j,k)*tmp(2,n,i,j,k)*ciz(n)*constants%g
+                   Fz(1,i,j,k)=Fz(1,i,j,k)-rho(1,i,j,k)*tmp(1,n,i,j,k)*ciz(n)*constants%g11
+                   Fz(2,i,j,k)=Fz(2,i,j,k)-rho(2,i,j,k)*tmp(1,n,i,j,k)*ciz(n)*constants%g
+                   Fz(2,i,j,k)=Fz(2,i,j,k)-rho(2,i,j,k)*tmp(2,n,i,j,k)*ciz(n)*constants%g22
                 enddo
                 do n=7,18
-                   Fx(1,i,j,k)=Fx(1,i,j,k)+tmp(2,n,i,j,k)*cix(n)*constants%g*0.5
-                   Fx(1,i,j,k)=Fx(1,i,j,k)+tmp(1,n,i,j,k)*cix(n)*constants%g11*0.5
-                   Fx(2,i,j,k)=Fx(2,i,j,k)+tmp(1,n,i,j,k)*cix(n)*constants%g*0.5
-                   Fx(2,i,j,k)=Fx(2,i,j,k)+tmp(2,n,i,j,k)*cix(n)*constants%g22*0.5
-                   Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(2,n,i,j,k)*ciy(n)*constants%g*0.5
-                   Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(1,n,i,j,k)*ciy(n)*constants%g11*0.5
-                   Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(1,n,i,j,k)*ciy(n)*constants%g*0.5
-                   Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(2,n,i,j,k)*ciy(n)*constants%g22*0.5
-                   Fz(1,i,j,k)=Fz(1,i,j,k)+tmp(2,n,i,j,k)*ciz(n)*constants%g*0.5
-                   Fz(1,i,j,k)=Fz(1,i,j,k)+tmp(1,n,i,j,k)*ciz(n)*constants%g11*0.5
-                   Fz(2,i,j,k)=Fz(2,i,j,k)+tmp(1,n,i,j,k)*ciz(n)*constants%g*0.5
-                   Fz(2,i,j,k)=Fz(2,i,j,k)+tmp(2,n,i,j,k)*ciz(n)*constants%g22*0.5
+                   Fx(1,i,j,k)=Fx(1,i,j,k)-rho(1,i,j,k)*tmp(2,n,i,j,k)*cix(n)*constants%g*0.5
+                   Fx(1,i,j,k)=Fx(1,i,j,k)-rho(1,i,j,k)*tmp(1,n,i,j,k)*cix(n)*constants%g11*0.5
+                   Fx(2,i,j,k)=Fx(2,i,j,k)-rho(2,i,j,k)*tmp(1,n,i,j,k)*cix(n)*constants%g*0.5
+                   Fx(2,i,j,k)=Fx(2,i,j,k)-rho(2,i,j,k)*tmp(2,n,i,j,k)*cix(n)*constants%g22*0.5
+                   Fy(1,i,j,k)=Fy(1,i,j,k)-rho(1,i,j,k)*tmp(2,n,i,j,k)*ciy(n)*constants%g*0.5
+                   Fy(1,i,j,k)=Fy(1,i,j,k)-rho(1,i,j,k)*tmp(1,n,i,j,k)*ciy(n)*constants%g11*0.5
+                   Fy(2,i,j,k)=Fy(2,i,j,k)-rho(2,i,j,k)*tmp(1,n,i,j,k)*ciy(n)*constants%g*0.5
+                   Fy(2,i,j,k)=Fy(2,i,j,k)-rho(2,i,j,k)*tmp(2,n,i,j,k)*ciy(n)*constants%g22*0.5
+                   Fz(1,i,j,k)=Fz(1,i,j,k)-rho(1,i,j,k)*tmp(2,n,i,j,k)*ciz(n)*constants%g*0.5
+                   Fz(1,i,j,k)=Fz(1,i,j,k)-rho(1,i,j,k)*tmp(1,n,i,j,k)*ciz(n)*constants%g11*0.5
+                   Fz(2,i,j,k)=Fz(2,i,j,k)-rho(2,i,j,k)*tmp(1,n,i,j,k)*ciz(n)*constants%g*0.5
+                   Fz(2,i,j,k)=Fz(2,i,j,k)-rho(2,i,j,k)*tmp(2,n,i,j,k)*ciz(n)*constants%g22*0.5
                 enddo
              end if
           end do
@@ -196,11 +196,6 @@ contains
 !!$        end do
 !!$      end do
 !!$    end do
-
-
-    Fx = -Fx*rho
-    Fy = -Fy*rho
-    Fz = -Fz*rho
 
 
     ! this code is way more efficient than the existing code,
@@ -366,14 +361,14 @@ contains
           do k=info%zs,info%ze
             if (walls(i,j,k).eq.0) then
               do n=1,6
-                Fx(m,i,j,k)=Fx(m,i,j,k)+tmp(n,i,j,k)*cix(n)*constants%gw(m)
-                Fy(m,i,j,k)=Fy(m,i,j,k)+tmp(n,i,j,k)*ciy(n)*constants%gw(m)
-                Fz(m,i,j,k)=Fz(m,i,j,k)+tmp(n,i,j,k)*ciz(n)*constants%gw(m)
+                Fx(m,i,j,k)=Fx(m,i,j,k)-rho(m,i,j,k)*tmp(n,i,j,k)*cix(n)*constants%gw(m)
+                Fy(m,i,j,k)=Fy(m,i,j,k)-rho(m,i,j,k)*tmp(n,i,j,k)*ciy(n)*constants%gw(m)
+                Fz(m,i,j,k)=Fz(m,i,j,k)-rho(m,i,j,k)*tmp(n,i,j,k)*ciz(n)*constants%gw(m)
               enddo
               do n=7,18
-                Fx(m,i,j,k)=Fx(m,i,j,k)+tmp(n,i,j,k)*cix(n)*constants%gw(m)*0.5
-                Fy(m,i,j,k)=Fy(m,i,j,k)+tmp(n,i,j,k)*ciy(n)*constants%gw(m)*0.5
-	      	Fz(m,i,j,k)=Fz(m,i,j,k)+tmp(n,i,j,k)*ciz(n)*constants%gw(m)*0.5
+                Fx(m,i,j,k)=Fx(m,i,j,k)-rho(m,i,j,k)*tmp(n,i,j,k)*cix(n)*constants%gw(m)*0.5
+                Fy(m,i,j,k)=Fy(m,i,j,k)-rho(m,i,j,k)*tmp(n,i,j,k)*ciy(n)*constants%gw(m)*0.5
+	      	Fz(m,i,j,k)=Fz(m,i,j,k)-rho(m,i,j,k)*tmp(n,i,j,k)*ciz(n)*constants%gw(m)*0.5
               enddo
             end if
             !write(*,*) Fz(1,i,j,k),Fz(2,i,j,k)
@@ -382,10 +377,7 @@ contains
       end do
     end do
 
-    Fx = -Fx*rho
-    Fy = -Fy*rho
-    Fz = -Fz*rho
-   
+     
 !!$    write(*,*) i-1,j-1,k-1
 !!$    write(*,*) Fx(1,i-1,j-1,k-1),Fx(2,i-1,j-1,k-1)
 !!$    write(*,*) Fy(1,i-1,j-1,k-1),Fy(2,i-1,j-1,k-1)
