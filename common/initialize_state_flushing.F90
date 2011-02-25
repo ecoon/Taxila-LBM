@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
-!!!     last modified:   02 February 2011
-!!!       at:            17:00:58 MST
+!!!     last modified:   24 February 2011
+!!!       at:            17:47:52 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -16,7 +16,7 @@
 #include "finclude/petscvecdef.h"
 #include "finclude/petscdmdef.h"
 
-  subroutine initialize_state(fi, rho, ux, uy, uz, walls, info, constants)
+  subroutine initialize_state(fi, rho, u, walls, info, constants)
     use petsc
     use LBM_Info_module
     use LBM_Constants_module
@@ -34,10 +34,10 @@
          info%gxs:info%gxe, &
          info%gys:info%gye, &
          info%gzs:info%gze):: rho
-    PetscScalar,dimension(1:info%s, &
+    PetscScalar,dimension(1:info%s, 1:info%dim, &
          info%gxs:info%gxe, &
          info%gys:info%gye, &
-         info%gzs:info%gze):: ux,uy,uz
+         info%gzs:info%gze):: u
     PetscScalar,dimension(info%gxs:info%gxe, &
          info%gys:info%gye, &
          info%gzs:info%gze):: walls
@@ -69,9 +69,7 @@
     
     ! initialize state
     fi=0.0
-    ux=0.0
-    uy=0.0
-    uz=0.0
+    u=0.0
 
     ! flushing experiement 
     if (flushx) then
@@ -122,8 +120,8 @@
        do j=info%ys,info%ye
           do k=info%zs,info%ze
              do m=1,info%s
-                call LBMEquilf(fi(m,:,i,j,k),rho(m,i,j,k),ux(m,i,j,k), &
-                     uy(m,i,j,k), uz(m,i,j,k), constants%alf(m), info%b)
+                call LBMEquilf(fi(m,:,i,j,k),rho(m,i,j,k),u(m,:,i,j,k), &
+                     constants%alf(m), info)
              enddo
           enddo
        enddo

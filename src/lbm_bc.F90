@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   15 February 2011
-!!!       at:            12:25:15 MST
+!!!     last modified:   24 February 2011
+!!!       at:            17:20:04 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -96,118 +96,16 @@ contains
     PetscInt nmax
     PetscBool bcvalue
 
+    ! lots of internals for flags
+    PetscScalar xp3_ave, xm3_ave, xp3_max, xm3_max
+    PetscScalar,dimension(1:info%s):: xp3_ave_p, xm3_ave_p
+    PetscScalar yp3_ave, ym3_ave, yp3_max, ym3_max
+    PetscScalar,dimension(1:info%s):: yp3_ave_p, ym3_ave_p
+    PetscScalar zp3_ave, zm3_ave, zp3_max, zm3_max
+    PetscScalar,dimension(1:info%s):: zp3_ave_p, zm3_ave_p
+
     ! dimension 
     bc%dim = MAX(info%dim, info%s)
-
-    ! flags
-    nmax = 6
-    call PetscOptionsGetIntArray(options%my_prefix, '-bc_flags', bc%flags, &
-         nmax, flag, ierr)
-
-    ! parse all potential boundary conditions
-    ! x boundary
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_xm', bcvalue, flag, ierr)
-    if (bcvalue) bc%flags(BOUNDARY_XM) = BC_PRESSURE
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_xm', bcvalue, flag, ierr)
-    if (bcvalue) bc%flags(BOUNDARY_XM) = BC_FLUX
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_xm_poiseuille', bcvalue, &
-         flag, ierr)
-    if (bcvalue) bc%flags(BOUNDARY_XM) = BC_FLUX
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_xp', bcvalue, flag, ierr)
-    if (bcvalue) bc%flags(BOUNDARY_XP) = BC_PRESSURE
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_xp', bcvalue, flag, ierr)
-    if (bcvalue) bc%flags(BOUNDARY_XP) = BC_FLUX
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_xp_poiseuille', bcvalue, &
-         flag, ierr)
-    if (bcvalue) bc%flags(BOUNDARY_XP) = BC_FLUX
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_x', bcvalue, flag, ierr)
-    if (bcvalue) then
-       bc%flags(BOUNDARY_XM) = BC_PERIODIC
-       bc%flags(BOUNDARY_XP) = BC_PERIODIC
-    end if
-
-    ! y boundary
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_ym', bcvalue, flag, ierr)
-    if (bcvalue) bc%flags(BOUNDARY_YM) = BC_PRESSURE
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_ym', bcvalue, flag, ierr)
-    if (bcvalue) bc%flags(BOUNDARY_YM) = BC_FLUX
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_ym_poiseuille', bcvalue, &
-         flag, ierr)
-    if (bcvalue) bc%flags(BOUNDARY_YM) = BC_FLUX
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_yp', bcvalue, flag, ierr)
-    if (bcvalue) bc%flags(BOUNDARY_YP) = BC_PRESSURE
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_yp', bcvalue, flag, ierr)
-    if (bcvalue) bc%flags(BOUNDARY_YP) = BC_FLUX
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_yp_poiseuille', bcvalue, &
-         flag, ierr)
-    if (bcvalue) bc%flags(BOUNDARY_YP) = BC_FLUX
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_y', bcvalue, flag, ierr)
-    if (bcvalue) then
-       bc%flags(BOUNDARY_YM) = BC_PERIODIC
-       bc%flags(BOUNDARY_YP) = BC_PERIODIC
-    end if
-
-    if (info%dim > 2) then
-       ! z boundary
-       bcvalue = PETSC_FALSE
-       call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_zm', bcvalue, flag, ierr)
-       if (bcvalue) bc%flags(BOUNDARY_ZM) = BC_PRESSURE
-       
-       bcvalue = PETSC_FALSE
-       call PetscOptionsGetBool(options%my_prefix, '-bc_flux_zm', bcvalue, flag, ierr)
-       if (bcvalue) bc%flags(BOUNDARY_ZM) = BC_FLUX
-       
-       bcvalue = PETSC_FALSE
-       call PetscOptionsGetBool(options%my_prefix, '-bc_flux_zm_poiseuille', bcvalue, &
-            flag, ierr)
-       if (bcvalue) bc%flags(BOUNDARY_ZM) = BC_FLUX
-       
-       bcvalue = PETSC_FALSE
-       call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_zp', bcvalue, flag, ierr)
-       if (bcvalue) bc%flags(BOUNDARY_ZP) = BC_PRESSURE
-       
-       bcvalue = PETSC_FALSE
-       call PetscOptionsGetBool(options%my_prefix, '-bc_flux_zp', bcvalue, flag, ierr)
-       if (bcvalue) bc%flags(BOUNDARY_ZP) = BC_FLUX
-       
-       bcvalue = PETSC_FALSE
-       call PetscOptionsGetBool(options%my_prefix, '-bc_flux_zp_poiseuille', bcvalue, &
-         flag, ierr)
-       if (bcvalue) bc%flags(BOUNDARY_ZP) = BC_FLUX
-       
-       bcvalue = PETSC_FALSE
-       call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_z', bcvalue, flag, ierr)
-       if (bcvalue) then
-          bc%flags(BOUNDARY_ZM) = BC_PERIODIC
-          bc%flags(BOUNDARY_ZP) = BC_PERIODIC
-       end if
-    end if
 
     ! now make the boundary vecs/arrays
     ! x boundaries
@@ -268,6 +166,124 @@ contains
        call VecSetBlockSize(bc%zp, bc%dim, ierr)
        call PetscObjectSetName(bc%zp, 'zp_bc', ierr)
     end if
+
+    call BCGetArrays(bc, ierr)
+
+    ! flags and constant values from options
+    nmax = 6
+    call PetscOptionsGetIntArray(options%my_prefix, '-bc_flags', bc%flags, &
+         nmax, flag, ierr)
+
+    ! parse all potential boundary conditions
+    ! xm boundary
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_xm', bcvalue, flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_XM) = BC_PRESSURE
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_xm', bcvalue, flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_XM) = BC_FLUX
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_xm_poiseuille', bcvalue, &
+         flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_XM) = BC_FLUX
+
+    ! xp boundary
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_xp', bcvalue, flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_XP) = BC_PRESSURE
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_xp', bcvalue, flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_XP) = BC_FLUX
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_xp_poiseuille', bcvalue, &
+         flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_XP) = BC_FLUX
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_x', bcvalue, flag, ierr)
+    if (bcvalue) then
+       bc%flags(BOUNDARY_XM) = BC_PERIODIC
+       bc%flags(BOUNDARY_XP) = BC_PERIODIC
+    end if
+
+    ! ym boundary
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_ym', bcvalue, flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_YM) = BC_PRESSURE
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_ym', bcvalue, flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_YM) = BC_FLUX
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_ym_poiseuille', bcvalue, &
+         flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_YM) = BC_FLUX
+
+    ! yp boundary
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_yp', bcvalue, flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_YP) = BC_PRESSURE
+    
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_yp', bcvalue, flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_YP) = BC_FLUX
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_yp_poiseuille', bcvalue, &
+         flag, ierr)
+    if (bcvalue) bc%flags(BOUNDARY_YP) = BC_FLUX
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_y', bcvalue, flag, ierr)
+    if (bcvalue) then
+       bc%flags(BOUNDARY_YM) = BC_PERIODIC
+       bc%flags(BOUNDARY_YP) = BC_PERIODIC
+    end if
+
+    if (info%dim > 2) then
+       ! zm boundary
+       bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_zm', bcvalue, flag, ierr)
+       if (bcvalue) bc%flags(BOUNDARY_ZM) = BC_PRESSURE
+
+       bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix, '-bc_flux_zm', bcvalue, flag, ierr)
+       if (bcvalue) bc%flags(BOUNDARY_ZM) = BC_FLUX
+
+       bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix, '-bc_flux_zm_poiseuille', bcvalue, &
+            flag, ierr)
+       if (bcvalue) bc%flags(BOUNDARY_ZM) = BC_FLUX
+
+       ! zp boundary
+       bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_zp', bcvalue, flag, ierr)
+       if (bcvalue) bc%flags(BOUNDARY_ZP) = BC_PRESSURE
+
+       bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix, '-bc_flux_zp', bcvalue, flag, ierr)
+       if (bcvalue) bc%flags(BOUNDARY_ZP) = BC_FLUX
+
+       bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix, '-bc_flux_zp_poiseuille', bcvalue, &
+            flag, ierr)
+       if (bcvalue) bc%flags(BOUNDARY_ZP) = BC_FLUX
+
+       bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_z', bcvalue, flag, ierr)
+       if (bcvalue) then
+          bc%flags(BOUNDARY_ZM) = BC_PERIODIC
+          bc%flags(BOUNDARY_ZP) = BC_PERIODIC
+       end if
+    end if
+
+    call BCRestoreArrays(bc, ierr)
   end subroutine BCSetFromOptions
   
   ! call initialize
@@ -289,14 +305,18 @@ contains
     !     end subroutine bc_subroutine
     !  end interface
     external bc_subroutine
+    
     PetscErrorCode ierr
+
     call BCGetArrays(bc, ierr)
-    call bc_subroutine(bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, bc%zm_a, bc%zp_a, bc%dim, info)
+
+    call bc_subroutine(bc%flags, bc%xm_a, bc%xp_a, &
+         bc%ym_a, bc%yp_a, bc%zm_a, bc%zp_a, bc%dim, info)
     CHKERRQ(ierr)
     CHKMEMQ
     call BCRestoreArrays(bc, ierr)
   end subroutine BCSetValues
-
+    
   subroutine BCGetArrays(bc, ierr)
     type(bc_type) bc
     PetscErrorCode ierr

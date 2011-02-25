@@ -104,5 +104,14 @@ module LBM_Discretization_D3Q19_module
               -1.d0, &
               -1.d0/)
 
+  PetscScalar,dimension(0:discretization_directions, 1:discretization_dims):: ci
+
+contains
+  subroutine LBMDiscretizationSetup()
+    ci(:,1) = cix
+    ci(:,2) = ciy
+    ci(:,3) = ciz
+  end subroutine LBMDiscretizationSetup
+
 end module LBM_Discretization_D3Q19_module
 

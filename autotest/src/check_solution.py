@@ -6,8 +6,8 @@
 ###     version:         
 ###     created:         28 January 2011
 ###       on:            10:57:45 MST
-###     last modified:   03 February 2011
-###       at:            11:50:01 MST
+###     last modified:   25 February 2011
+###       at:            08:43:48 MST
 ###     URL:             http://www.ldeo.columbia.edu/~ecoon/
 ###     email:           ecoon _at_ lanl.gov
 ###  
@@ -90,7 +90,9 @@ if __name__ == '__main__':
                 print ' ',vecname+'%03d.dat'%i,'failed, norm:', numpy.linalg.norm((truedata - testdata).ravel())
 
                 from matplotlib import pyplot as plt
-                plt.imshow((testdata)[:,:,1,0],origin='lower')
+                plt.imshow((truedata-testdata)[0,:,:,0],origin='lower')
+                plt.colorbar()
+                plt.title(vecname+'%03d'%i)
                 plt.show()
 
             else:

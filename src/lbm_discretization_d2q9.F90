@@ -26,22 +26,39 @@ module LBM_Discretization_D2Q9_module
   PetscInt, parameter :: NORTH = 2
   PetscInt, parameter :: WEST = 3
   PetscInt, parameter :: SOUTH = 4
-  ! PetscInt, parameter :: NORTHEAST = 7
-  ! PetscInt, parameter :: NORTHWEST = 8
-  ! PetscInt, parameter :: SOUTHWEST = 9
-  ! PetscInt, parameter :: SOUTHEAST = 10
+  PetscInt, parameter :: NORTHEAST = 5
+  PetscInt, parameter :: NORTHWEST = 6
+  PetscInt, parameter :: SOUTHWEST = 7
+  PetscInt, parameter :: SOUTHEAST = 8
 
-  ! PetscScalar,parameter,dimension(0:discretization_directions):: &
-  !      cix = (/0.d0, & 
-  !              0.d0/)
+  PetscScalar,parameter,dimension(0:discretization_directions):: &
+       cix = (/ 0.d0, & 
+                1.d0, &
+                0.d0, &
+               -1.d0, &
+                0.d0, &
+                1.d0, &
+               -1.d0, &
+               -1.d0, &
+                1.d0/)
+  PetscScalar,parameter,dimension(0:discretization_directions):: &
+       ciy = (/ 0.d0, &
+                0.d0, &
+                1.d0, &
+                0.d0, &
+               -1.d0, &
+                1.d0, &
+                1.d0, &
+               -1.d0, &
+               -1.d0/)
+  
+  PetscScalar,dimension(0:discretization_directions, 1:discretization_dims):: ci
 
-  ! PetscScalar,parameter,dimension(0:discretization_directions):: &
-  !      ciy = (/0.d0, &
-  !              1.d0/)
-
-  ! PetscScalar,parameter,dimension(0:discretization_directions):: &
-  !      ciz = (/0.d0, &
-  !             -1.d0/)
-
+contains
+  subroutine LBMDiscretizationSetup()
+    ci(:,1) = cix
+    ci(:,2) = ciy
+  end subroutine LBMDiscretizationSetup
+ 
 end module LBM_Discretization_D2Q9_module
 

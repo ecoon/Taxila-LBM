@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   23 February 2011
-!!!       at:            12:32:57 MST
+!!!     last modified:   25 February 2011
+!!!       at:            09:01:16 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -38,12 +38,14 @@
        PetscReal,pointer:: gridsize(:)
        PetscReal,pointer:: corners(:,:)
        character(len=MAXWORDLENGTH):: options_prefix
+       PetscInt,pointer:: ci_int(:,:)
     end type info_type
     
     public :: InfoCreate, &
+         InfoDestroy, &
          InfoSetFromOptions, &
          InfoView, &
-         InfoDestroy
+         InfoGatherValueToDirection
 
   contains
     function InfoCreate() result(info)
@@ -90,6 +92,7 @@
       nullify(info%periodic)
       nullify(info%gridsize)
       nullify(info%corners)
+      nullify(info%ci_int)
     end function InfoCreate
 
     subroutine InfoSetFromOptions(info, options, ierr)
@@ -115,7 +118,8 @@
       call PetscOptionsGetInt(options%my_prefix,'-ny',info%NY,flag,ierr)
       call PetscOptionsGetInt(options%my_prefix,'-nz',info%NZ,flag,ierr)
 
-      call PetscOptionsGetString(options%my_prefix,'-discretization',discretization,flag,ierr)
+      call PetscOptionsGetString(options%my_prefix, '-discretization', &
+           discretization, flag, ierr)
       if (.not.flag) discretization = 'D3Q19'
 
       test_discretization = 'd3q19'
@@ -129,11 +133,8 @@
       end if
 
       ! make sure we have an answer
-      if (info%discretization .eq. NULL_DISCRETIZATION) then
-         write(*,*) 'INVALID DISCRETIZATION:', discretization
-         ierr = 1
-         CHKERRQ(ierr)
-      end if
+      if (info%discretization .eq. NULL_DISCRETIZATION) &
+           SETERRQ(1, 1, 'Invalid Discretization', ierr)
 
       ! set up the grid
       allocate(info%corners(info%dim,2))
@@ -155,20 +156,37 @@
     subroutine InfoSetDiscretizationD3Q19(info)
       use LBM_Discretization_D3Q19_module
       type(info_type) info
-      
+      PetscInt i,j
+
       info%discretization = D3Q19_DISCRETIZATION
       info%dim = discretization_dims
       info%b = discretization_directions
+      call LBMDiscretizationSetup()
+      allocate(info%ci_int(0:info%b, info%dim))
+
+      do i=0,info%b
+         do j=1,info%dim
+            info%ci_int(i,j) = IDNINT(ci(i,j))
+         end do
+      end do
     end subroutine InfoSetDiscretizationD3Q19
 
     subroutine InfoSetDiscretizationD2Q9(info)
       use LBM_Discretization_D2Q9_module
-      use LBM_Discretization_D2Q9_module
       type(info_type) info
+      PetscInt i,j
       
       info%discretization = D2Q9_DISCRETIZATION
       info%dim = discretization_dims
       info%b = discretization_directions
+      call LBMDiscretizationSetup()
+      allocate(info%ci_int(0:info%b, info%dim))
+
+      do i=0,info%b
+         do j=1,info%dim
+            info%ci_int(i,j) = IDNINT(ci(i,j))
+         end do
+      end do
     end subroutine InfoSetDiscretizationD2Q9
 
     subroutine InfoView(info)
@@ -185,4 +203,50 @@
       deallocate(info%gridsize)
     end subroutine InfoDestroy
 
+    subroutine InfoGatherValueToDirection(info, val, out)
+      type(info_type) info
+      PetscScalar,intent(in),dimension(1:info%gxyzl):: val
+      PetscScalar,intent(out),dimension(0:info%b, 1:info%gxyzl):: out
+      PetscErrorCode ierr
+
+      if (info%dim.eq.2) then
+         call InfoGatherValueToDirection2D(info, val, out)
+      else if (info%dim.eq.3) then
+         call InfoGatherValueToDirection3D(info, val, out)
+      else 
+         SETERRQ(1, 1, 'invalid ndims in LBM', ierr)
+      end if
+    end subroutine InfoGatherValueToDirection
+
+
+    subroutine InfoGatherValueToDirection2D(info, val, out)
+      type(info_type) info
+      PetscScalar,intent(in),dimension(info%gxs:info%gxe, &
+           info%gys:info%gye):: val
+      PetscScalar,intent(out),dimension(0:info%b, &
+           info%gxs:info%gxe, info%gys:info%gye):: out
+
+      PetscInt n
+      do n=0,info%b
+         out(n,info%xs:info%xe,info%ys:info%ye) = val( &
+              info%xs+info%ci_int(n,X_DIRECTION):info%xe+info%ci_int(n,X_DIRECTION), &
+              info%ys+info%ci_int(n,Y_DIRECTION):info%ye+info%ci_int(n,Y_DIRECTION))
+      end do
+    end subroutine InfoGatherValueToDirection2D
+
+    subroutine InfoGatherValueToDirection3D(info, val, out)
+      type(info_type) info
+      PetscScalar,intent(in),dimension(info%gxs:info%gxe, &
+           info%gys:info%gye, info%gzs:info%gze):: val
+      PetscScalar,intent(out),dimension(0:info%b, &
+           info%gxs:info%gxe, info%gys:info%gye, info%gzs:info%gze):: out
+
+      PetscInt n
+      do n=0,info%b
+         out(n,info%xs:info%xe,info%ys:info%ye,info%zs:info%ze) = val( &
+              info%xs+info%ci_int(n,X_DIRECTION):info%xe+info%ci_int(n,X_DIRECTION), &
+              info%ys+info%ci_int(n,Y_DIRECTION):info%ye+info%ci_int(n,Y_DIRECTION), &
+              info%zs+info%ci_int(n,Z_DIRECTION):info%ze+info%ci_int(n,Z_DIRECTION))
+      end do
+    end subroutine InfoGatherValueToDirection3D
   end module LBM_Info_module

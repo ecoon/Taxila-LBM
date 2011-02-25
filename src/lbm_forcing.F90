@@ -17,9 +17,11 @@
 module LBM_Forcing_module
   use LBM_Info_module
   use LBM_Constants_module
+  use petsc
   implicit none
 
   private 
+#include "lbm_definitions.h"
 
   public:: LBMAddFluidFluidForces, &
        LBMAddBodyForces, &
@@ -29,199 +31,84 @@ module LBM_Forcing_module
 contains
   ! --- Fluid-fluid interaction forces, from
   ! ---  (Kang 2002 Eq. 6)
-  subroutine LBMAddFluidFluidForces(rho,Fx,Fy,Fz,walls,info,constants)
-    !     NONLOCAL IN RHO
+  subroutine LBMAddFluidFluidForces(rho, forces, walls, info, constants)
     use LBM_Discretization_D3Q19_module
+    !     NONLOCAL IN RHO
 
     ! input
     type(info_type) info
     type(constants_type) constants
-    PetscScalar,dimension(1:info%s,info%gxs:info%gxe, info%gys:info%gye, &
-         info%gzs:info%gze):: rho
-    PetscScalar,dimension(1:info%s, info%gxs:info%gxe, info%gys:info%gye, &
-         info%gzs:info%gze):: Fx,Fy,Fz
-    PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
-         info%gzs:info%gze):: walls
+    PetscScalar,dimension(1:info%s, 1:info%gxyzl):: rho
+    PetscScalar,dimension(1:info%s, 1:info%dim, 1:info%gxyzl):: forces
+    PetscScalar,dimension(1:info%gxyzl):: walls
 
     ! local
-    integer i,j,k,m,n
-    PetscScalar,dimension(1:info%s,0:info%b,info%gxs:info%gxe, &
-         info%gys:info%gye,info%gzs:info%gze)::tmp
-    PetscScalar,dimension(info%gxs:info%gxe,info%gys:info%gye, &
-         info%gzs:info%gze):: fluidfluid
+    PetscInt i,j,k,m,n,d
+    PetscScalar,dimension(1:info%s, 0:info%b, 1:info%gxyzl)::tmp
+    PetscScalar,dimension(0:info%b, 1:info%gxyzl)::tmpwalls
+    PetscScalar,dimension(1:info%dim, 1:info%gxyzl)::fluidfluid
+    PetscErrorCode ierr
 
     do m=1,info%s
-       tmp(m, 1,:,:,:)= (cshift(rho(m,:,:,:),shift= 1,dim=1))
-       tmp(m, 2,:,:,:)= (cshift(rho(m,:,:,:),shift= 1,dim=2))
-       tmp(m, 3,:,:,:)= (cshift(rho(m,:,:,:),shift=-1,dim=1))
-       tmp(m, 4,:,:,:)= (cshift(rho(m,:,:,:),shift=-1,dim=2))
-       tmp(m, 5,:,:,:)= (cshift(rho(m,:,:,:),shift= 1,dim=3))
-       tmp(m, 6,:,:,:)= (cshift(rho(m,:,:,:),shift=-1,dim=3))
+       call InfoGatherValueToDirection(info, rho(m,:), tmp(m,:,:))
+    end do
+    call InfoGatherValueToDirection(info, walls, tmpwalls)
 
-       tmp(m,7 ,:,:,:)= (cshift(tmp(m,1,:,:,:),shift= 1,dim=2))
-       tmp(m,8 ,:,:,:)= (cshift(tmp(m,3,:,:,:),shift= 1,dim=2))
-       tmp(m,9 ,:,:,:)= (cshift(tmp(m,3,:,:,:),shift=-1,dim=2))
-       tmp(m,10,:,:,:)= (cshift(tmp(m,1,:,:,:),shift=-1,dim=2))
+    ! hack, this breaks in general
+    fluidfluid(X_DIRECTION,:) = tmpwalls(EAST,:) + tmpwalls(WEST,:) + tmpwalls(ORIGIN,:)
+    fluidfluid(Y_DIRECTION,:) = tmpwalls(NORTH,:) + tmpwalls(SOUTH,:) + tmpwalls(ORIGIN,:)
+    fluidfluid(Z_DIRECTION,:) = tmpwalls(UP,:) + tmpwalls(DOWN,:) + tmpwalls(ORIGIN,:)
 
-       tmp(m,11,:,:,:)= (cshift(tmp(m,5,:,:,:),shift= 1,dim=1))
-       tmp(m,12,:,:,:)= (cshift(tmp(m,5,:,:,:),shift=-1,dim=1))
-       tmp(m,13,:,:,:)= (cshift(tmp(m,6,:,:,:),shift=-1,dim=1))
-       tmp(m,14,:,:,:)= (cshift(tmp(m,6,:,:,:),shift= 1,dim=1))
-
-       tmp(m,15,:,:,:)= (cshift(tmp(m,5,:,:,:),shift= 1,dim=2))
-       tmp(m,16,:,:,:)= (cshift(tmp(m,5,:,:,:),shift=-1,dim=2))
-       tmp(m,17,:,:,:)= (cshift(tmp(m,6,:,:,:),shift=-1,dim=2))
-       tmp(m,18,:,:,:)= (cshift(tmp(m,6,:,:,:),shift= 1,dim=2))
-    enddo
-
-    fluidfluid = (cshift(walls, shift= 1, dim=1) + cshift(walls, shift=-1, dim=1) + walls)
-    do i=info%xs,info%xe 
-       do j=info%ys,info%ye 
-          do k=info%zs,info%ze
-             if (fluidfluid(i,j,k).eq.0) then
-                ! where i'm fluid and fluid on both sides of me
-                do n=1,6
-                   Fx(1,i,j,k)=Fx(1,i,j,k)+tmp(2,n,i,j,k)*cix(n)*constants%g
-                   Fx(1,i,j,k)=Fx(1,i,j,k)+tmp(1,n,i,j,k)*cix(n)*constants%g11
-                   Fx(2,i,j,k)=Fx(2,i,j,k)+tmp(1,n,i,j,k)*cix(n)*constants%g
-                   Fx(2,i,j,k)=Fx(2,i,j,k)+tmp(2,n,i,j,k)*cix(n)*constants%g22
-                enddo
-                do n=7,18
-                   Fx(1,i,j,k)=Fx(1,i,j,k)+tmp(2,n,i,j,k)*cix(n)*constants%g*0.5
-                   Fx(1,i,j,k)=Fx(1,i,j,k)+tmp(1,n,i,j,k)*cix(n)*constants%g11*0.5
-                   Fx(2,i,j,k)=Fx(2,i,j,k)+tmp(1,n,i,j,k)*cix(n)*constants%g*0.5
-                   Fx(2,i,j,k)=Fx(2,i,j,k)+tmp(2,n,i,j,k)*cix(n)*constants%g22*0.5
-                enddo
+    do i=1,info%gxyzl
+       if (walls(i).eq.0) then
+          do d=1,info%dim
+             if (fluidfluid(d,i).eq.0) then
+             do n=1,2*info%dim
+                forces(1,d,i) = forces(1,d,i) &
+                     - rho(1,i)*tmp(2,n,i)*info%ci_int(n,d)*constants%g
+                forces(1,d,i) = forces(1,d,i) &
+                     - rho(1,i)*tmp(1,n,i)*info%ci_int(n,d)*constants%g11
+                forces(2,d,i) = forces(2,d,i) &
+                     - rho(2,i)*tmp(1,n,i)*info%ci_int(n,d)*constants%g
+                forces(2,d,i) = forces(2,d,i) &
+                     - rho(2,i)*tmp(2,n,i)*info%ci_int(n,d)*constants%g22
+             enddo
+             do n=2*info%dim+1,info%b
+                forces(1,d,i) = forces(1,d,i) &
+                     - rho(1,i)*tmp(2,n,i)*info%ci_int(n,d)*constants%g*0.5
+                forces(1,d,i) = forces(1,d,i) &
+                     - rho(1,i)*tmp(1,n,i)*info%ci_int(n,d)*constants%g11*0.5
+                forces(2,d,i) = forces(2,d,i) &
+                     - rho(2,i)*tmp(1,n,i)*info%ci_int(n,d)*constants%g*0.5
+                forces(2,d,i) = forces(2,d,i) &
+                     - rho(2,i)*tmp(2,n,i)*info%ci_int(n,d)*constants%g22*0.5
+             enddo
              end if
           end do
-       end do
+       end if
     end do
-
-    fluidfluid = cshift(walls, shift= 1, dim=2) + cshift(walls, shift=-1, dim=2) + walls
-
-    do i=info%xs,info%xe 
-       do j=info%ys,info%ye 
-          do k=info%zs,info%ze
-             if (fluidfluid(i,j,k).eq.0) then
-                ! where i'm fluid and fluid on both sides of me
-                do n=1,6
-                   Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(2,n,i,j,k)*ciy(n)*constants%g
-                   Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(1,n,i,j,k)*ciy(n)*constants%g11
-                   Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(1,n,i,j,k)*ciy(n)*constants%g
-                   Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(2,n,i,j,k)*ciy(n)*constants%g22
-                enddo
-                do n=7,18
-                   Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(2,n,i,j,k)*ciy(n)*constants%g*0.5
-                   Fy(1,i,j,k)=Fy(1,i,j,k)+tmp(1,n,i,j,k)*ciy(n)*constants%g11*0.5
-                   Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(1,n,i,j,k)*ciy(n)*constants%g*0.5
-                   Fy(2,i,j,k)=Fy(2,i,j,k)+tmp(2,n,i,j,k)*ciy(n)*constants%g22*0.5
-                enddo
-             end if
-          end do
-       end do
-    end do
-
-    fluidfluid = cshift(walls, shift= 1, dim=3) + cshift(walls, shift=-1, dim=3) + walls
-    do i=info%xs,info%xe 
-       do j=info%ys,info%ye 
-          do k=info%zs,info%ze
-             if (fluidfluid(i,j,k).eq.0) then
-                ! where i'm fluid and fluid on both sides of me
-                do n=1,6
-                   Fz(1,i,j,k)=Fz(1,i,j,k)+tmp(2,n,i,j,k)*ciz(n)*constants%g
-                   Fz(1,i,j,k)=Fz(1,i,j,k)+tmp(1,n,i,j,k)*ciz(n)*constants%g11
-                   Fz(2,i,j,k)=Fz(2,i,j,k)+tmp(1,n,i,j,k)*ciz(n)*constants%g
-                   Fz(2,i,j,k)=Fz(2,i,j,k)+tmp(2,n,i,j,k)*ciz(n)*constants%g22
-                enddo
-                do n=7,18
-                   Fz(1,i,j,k)=Fz(1,i,j,k)+tmp(2,n,i,j,k)*ciz(n)*constants%g*0.5
-                   Fz(1,i,j,k)=Fz(1,i,j,k)+tmp(1,n,i,j,k)*ciz(n)*constants%g11*0.5
-                   Fz(2,i,j,k)=Fz(2,i,j,k)+tmp(1,n,i,j,k)*ciz(n)*constants%g*0.5
-                   Fz(2,i,j,k)=Fz(2,i,j,k)+tmp(2,n,i,j,k)*ciz(n)*constants%g22*0.5
-                enddo
-             end if
-          end do
-       end do
-    end do
-
-    Fx = -Fx*rho
-    Fy = -Fy*rho
-    Fz = -Fz*rho
-
-
-    ! this code is way more efficient than the existing code,
-    ! but we'll go by the "make it work, then make it correct,
-    ! then make it fast" approach.  Note that similar code would
-    ! have to be added for Fy,Fz
-
-    !       do i=info%xs,info%xe
-    !         do j=info%ys,info%ye
-    !           do k=info%zs,info%ze
-    !             if (walls(i,j,k).eq.0) then
-    !                 Fx(1,i,j,k)=Fx(1,i,j,k)
-    !      &              + rho(1,i+1,j,k)*cix(1)*g11
-    !      &              + rho(1,i-1,j,k)*cix(3)*g11
-    !      &              + rho(2,i+1,j,k)*cix(1)*g
-    !      &              + rho(2,i-1,j,k)*cix(3)*g
-    !      &              + rho(1,i+1,j+1,k)*cix(7)*g11*.5
-    !      &              + rho(1,i-1,j+1,k)*cix(8)*g11*.5
-    !      &              + rho(1,i-1,j-1,k)*cix(9)*g11*.5
-    !      &              + rho(1,i+1,j-1,k)*cix(10)*g11*.5
-    !      &              + rho(2,i+1,j+1,k)*cix(7)*g*.5
-    !      &              + rho(2,i-1,j+1,k)*cix(8)*g*.5
-    !      &              + rho(2,i-1,j-1,k)*cix(9)*g*.5
-    !      &              + rho(2,i+1,j-1,k)*cix(10)*g*.5
-    !      &              + rho(1,i+1,j,k+1)*cix(11)*g11*.5
-    !      &              + rho(1,i-1,j,k+1)*cix(12)*g11*.5
-    !      &              + rho(1,i-1,j,k-1)*cix(13)*g11*.5
-    !      &              + rho(1,i+1,j,k-1)*cix(14)*g11*.5
-    !      &              + rho(2,i+1,j,k+1)*cix(11)*g11*.5
-    !      &              + rho(2,i-1,j,k+1)*cix(12)*g11*.5
-    !      &              + rho(2,i-1,j,k-1)*cix(13)*g11*.5
-    !      &              + rho(2,i+1,j,k-1)*cix(14)*g11*.5
-
-    !                 Fx(2,i,j,k)=Fx(2,i,j,k)
-    !      &              + rho(2,i+1,j,k)*cix(1)*g22
-    !      &              + rho(2,i-1,j,k)*cix(3)*g22
-    !      &              + rho(1,i+1,j,k)*cix(1)*g
-    !      &              + rho(1,i-1,j,k)*cix(3)*g
-    !      &              + rho(2,i+1,j+1,k)*cix(7)*g22*.5
-    !      &              + rho(2,i-1,j+1,k)*cix(8)*g22*.5
-    !      &              + rho(2,i-1,j-1,k)*cix(9)*g22*.5
-    !      &              + rho(2,i+1,j-1,k)*cix(10)*g22*.5
-    !      &              + rho(1,i+1,j+1,k)*cix(7)*g*.5
-    !      &              + rho(1,i-1,j+1,k)*cix(8)*g*.5
-    !      &              + rho(1,i-1,j-1,k)*cix(9)*g*.5
-    !      &              + rho(1,i+1,j-1,k)*cix(10)*g*.5
-    !      &              + rho(2,i+1,j,k+1)*cix(11)*g22*.5
-    !      &              + rho(2,i-1,j,k+1)*cix(12)*g22*.5
-    !      &              + rho(2,i-1,j,k-1)*cix(13)*g22*.5
-    !      &              + rho(2,i+1,j,k-1)*cix(14)*g22*.5
-    !      &              + rho(1,i+1,j,k+1)*cix(11)*g22*.5
-    !      &              + rho(1,i-1,j,k+1)*cix(12)*g22*.5
-    !      &              + rho(1,i-1,j,k-1)*cix(13)*g22*.5
-    !      &              + rho(1,i+1,j,k-1)*cix(14)*g22*.5
-    return
   end subroutine LBMAddFluidFluidForces
 
 
   ! --- body forces on fluid
-  subroutine LBMAddBodyForces(rho,Fx,Fy,Fz,walls,info,constants)
+  subroutine LBMAddBodyForces(rho,forces,walls,info,constants)
     type(info_type) info
     type(constants_type) constants
-    PetscScalar,dimension(1:info%s,info%gxs:info%gxe, info%gys:info%gye, &
-         info%gzs:info%gze):: rho
-    PetscScalar,dimension(1:info%s, info%gxs:info%gxe, info%gys:info%gye, &
-         info%gzs:info%gze):: Fx,Fy,Fz
-    PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
-         info%gzs:info%gze):: walls
+    PetscScalar,dimension(1:info%s, 1:info%gxyzl):: rho
+    PetscScalar,dimension(1:info%s, 1:info%dim, 1:info%gxyzl):: forces
+    PetscScalar,dimension(1:info%gxyzl):: walls
 
-    integer i,j,k,m,n
+    PetscInt i,m,n,d
 
     do m=1,info%s
-       where( (walls.eq.0) )
-          Fz(m,:,:,:) = Fz(m,:,:,:) + constants%gvt(m)*constants%mm(m)*rho(m,:,:,:)
-       end where
+       do i=1,info%gxyzl
+          if (walls(i).eq.0) then
+             do d=1,info%dim
+                forces(m,d,i) = forces(m,d,i) &
+                     + constants%gvt(m,d)*constants%mm(m)*rho(m,i)
+             end do
+          end if
+       end do
     enddo
     return
   end subroutine LBMAddBodyForces
@@ -232,86 +119,131 @@ contains
   !             wrap even in the non-periodic case.  This seems
   !             save at this point, since it seems unlikely that
   !             there will be walls on one side but not the other
-  subroutine LBMAddFluidSolidForces(rho,Fx,Fy,Fz,walls,info,constants)
+  subroutine LBMAddFluidSolidForces(rho, forces, walls, info, constants)
+    use LBM_Discretization_D3Q19_module
     !     NONLOCAL IN WALLS
 
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! New code added by MLP.  This accounts for fluid-solid forces on the 
+    ! diagonals, which is not accounted for in the other version.
+ 
     ! input
     type(info_type) info
     type(constants_type) constants
-    PetscScalar,dimension(1:info%s,info%gxs:info%gxe, info%gys:info%gye, &
-         info%gzs:info%gze):: rho
-    PetscScalar,dimension(1:info%s, info%gxs:info%gxe, info%gys:info%gye, &
-         info%gzs:info%gze):: Fx,Fy,Fz
-    PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
-         info%gzs:info%gze):: walls
+    PetscScalar,dimension(1:info%s, 1:info%gxyzl):: rho
+    PetscScalar,dimension(1:info%s, 1:info%dim, 1:info%gxyzl):: forces
+    PetscScalar,dimension(1:info%gxyzl):: walls
 
     ! local
-    integer i,j,k,m,n
+    PetscInt i,m,n,d
+    PetscScalar,dimension(0:info%b,1:info%gxyzl)::tmp
+    PetscErrorCode ierr
+
+    call InfoGatherValueToDirection(info, walls, tmp)
 
     do m=1,info%s
-       where( (walls.eq.0) )
-          Fx(m,:,:,:)=Fx(m,:,:,:) - rho(m,:,:,:)*constants%gw(m) &
-               *(cshift(walls, shift= 1, dim=1) - cshift(walls, shift=-1, dim=1))
-
-          Fy(m,:,:,:)=Fy(m,:,:,:) - rho(m,:,:,:)*constants%gw(m) &
-               *(cshift(walls, shift= 1, dim=2) - cshift(walls, shift=-1, dim=2))
-
-          Fz(m,:,:,:)=Fz(m,:,:,:) - rho(m,:,:,:)*constants%gw(m) &
-               *(cshift(walls, shift= 1, dim=3) - cshift(walls, shift=-1, dim=3))
-       end where
-    enddo
-    return
+      do i=1,info%gxyzl
+        if (walls(i).eq.0) then
+           forces(m,X_DIRECTION,i) = forces(m,X_DIRECTION,i) &
+                - rho(m,i)*(tmp(EAST,i) - tmp(WEST,i))*constants%gw(m)
+           forces(m,Y_DIRECTION,i) = forces(m,Y_DIRECTION,i) &
+                - rho(m,i)*(tmp(NORTH,i) - tmp(SOUTH,i))*constants%gw(m)
+           forces(m,Z_DIRECTION,i) = forces(m,Z_DIRECTION,i) &
+                - rho(m,i)*(tmp(UP,i) - tmp(DOWN,i))*constants%gw(m)
+        end if
+      end do
+    end do
   end subroutine LBMAddFluidSolidForces
 
 
   ! --- zero out boundaries, as they affect the fi
-  subroutine LBMZeroBoundaryForces(bc_flags, Fx, Fy, Fz, bc_dim, info,constants)
+  subroutine LBMZeroBoundaryForces(bc_flags, forces, bc_dim, info,constants)
     type(info_type) info
     type(constants_type) constants
-    integer bc_dim
-    integer, dimension(6)::bc_flags ! enum for boundary conditions
-    PetscScalar,dimension(1:info%s, info%gxs:info%gxe, info%gys:info%gye, &
-         info%gzs:info%gze):: Fx,Fy,Fz
+    PetscInt bc_dim
+    PetscInt, dimension(6)::bc_flags ! enum for boundary conditions
+    PetscScalar,dimension(1:info%s, 1:info%dim, 1:info%gxyzl):: forces
 
+    if (info%dim.eq.2) then
+       call LBMZeroBoundaryForcesD2(bc_flags, forces, bc_dim, info,constants)
+    else if (info%dim.eq.3) then
+       call LBMZeroBoundaryForcesD3(bc_flags, forces, bc_dim, info,constants)
+    end if
+  end subroutine LBMZeroBoundaryForces
+
+  subroutine LBMZeroBoundaryForcesD2(bc_flags, forces, bc_dim, info,constants)
+    type(info_type) info
+    type(constants_type) constants
+    PetscInt bc_dim
+    PetscInt, dimension(6)::bc_flags ! enum for boundary conditions
+
+    PetscScalar,dimension(1:info%s, 1:info%dim, info%gxs:info%gxe, &
+         info%gys:info%gye):: forces
+    
     ! -- x
-    if ((info%xs.eq.1).and.((bc_flags(1).eq.2).or.(bc_flags(1).eq.3))) then
-       Fx(:,1,:,:) = 0
-       Fy(:,1,:,:) = 0
-       Fz(:,1,:,:) = 0
+    if ((info%xs.eq.1).and.((bc_flags(BOUNDARY_XM).eq.BC_FLUX).or.&
+         (bc_flags(BOUNDARY_XM).eq.BC_PRESSURE))) then
+       forces(:,:,1,:) = 0
     endif
 
-    if ((info%xe.eq.info%NX).and.((bc_flags(2).eq.2).or.(bc_flags(2).eq.3))) then
-       Fx(:,info%NX,:,:) = 0
-       Fy(:,info%NX,:,:) = 0
-       Fz(:,info%NX,:,:) = 0
+    if ((info%xe.eq.info%NX).and.((bc_flags(BOUNDARY_XP).eq.BC_FLUX).or. &
+         (bc_flags(BOUNDARY_XP).eq.BC_PRESSURE))) then
+       forces(:,:,info%NX,:) = 0
     endif
 
     ! -- y
-    if ((info%ys.eq.1).and.((bc_flags(3).eq.2).or.(bc_flags(3).eq.3))) then
-       Fx(:,:,1,:) = 0
-       Fy(:,:,1,:) = 0
-       Fz(:,:,1,:) = 0
+    if ((info%ys.eq.1).and.((bc_flags(BOUNDARY_YM).eq.BC_FLUX).or.&
+         (bc_flags(BOUNDARY_YM).eq.BC_PRESSURE))) then
+       forces(:,:,:,1) = 0
     endif
 
-    if ((info%ye.eq.info%NY).and.((bc_flags(4).eq.2).or.(bc_flags(4).eq.3))) then
-       Fx(:,:,info%NY,:) = 0
-       Fy(:,:,info%NY,:) = 0
-       Fz(:,:,info%NY,:) = 0
+    if ((info%ye.eq.info%NY).and.((bc_flags(BOUNDARY_YP).eq.BC_FLUX).or. &
+         (bc_flags(BOUNDARY_YP).eq.BC_PRESSURE))) then
+       forces(:,:,:,info%NY) = 0
+    endif
+
+  end subroutine LBMZeroBoundaryForcesD2
+
+  subroutine LBMZeroBoundaryForcesD3(bc_flags, forces, bc_dim, info,constants)
+    type(info_type) info
+    type(constants_type) constants
+    PetscInt bc_dim
+    PetscInt, dimension(6)::bc_flags ! enum for boundary conditions
+
+    PetscScalar,dimension(1:info%s, 1:info%dim, info%gxs:info%gxe, &
+         info%gys:info%gye, info%gzs:info%gze):: forces
+    
+    ! -- x
+    if ((info%xs.eq.1).and.((bc_flags(BOUNDARY_XM).eq.BC_FLUX).or.&
+         (bc_flags(BOUNDARY_XM).eq.BC_PRESSURE))) then
+       forces(:,:,1,:,:) = 0
+    endif
+
+    if ((info%xe.eq.info%NX).and.((bc_flags(BOUNDARY_XP).eq.BC_FLUX).or. &
+         (bc_flags(BOUNDARY_XP).eq.BC_PRESSURE))) then
+       forces(:,:,info%NX,:,:) = 0
+    endif
+
+    ! -- y
+    if ((info%ys.eq.1).and.((bc_flags(BOUNDARY_YM).eq.BC_FLUX).or.&
+         (bc_flags(BOUNDARY_YM).eq.BC_PRESSURE))) then
+       forces(:,:,:,1,:) = 0
+    endif
+
+    if ((info%ye.eq.info%NY).and.((bc_flags(BOUNDARY_YP).eq.BC_FLUX).or. &
+         (bc_flags(BOUNDARY_YP).eq.BC_PRESSURE))) then
+       forces(:,:,:,info%NY,:) = 0
     endif
 
     ! -- z
-    if ((info%zs.eq.1).and.((bc_flags(5).eq.2).or.(bc_flags(5).eq.3))) then
-       Fx(:,:,:,1) = 0
-       Fy(:,:,:,1) = 0
-       Fz(:,:,:,1) = 0
+    if ((info%zs.eq.1).and.((bc_flags(BOUNDARY_ZM).eq.BC_FLUX).or.&
+         (bc_flags(BOUNDARY_ZM).eq.BC_PRESSURE))) then
+       forces(:,:,:,:,1) = 0
     endif
 
-    if ((info%ze.eq.info%NZ).and.((bc_flags(6).eq.2).or.(bc_flags(6).eq.3))) then
-       Fx(:,:,:,info%NZ) = 0
-       Fy(:,:,:,info%NZ) = 0
-       Fz(:,:,:,info%NZ) = 0
+    if ((info%ze.eq.info%NZ).and.((bc_flags(BOUNDARY_ZP).eq.BC_FLUX).or. &
+         (bc_flags(BOUNDARY_ZP).eq.BC_PRESSURE))) then
+       forces(:,:,:,:,info%NZ) = 0
     endif
-
-    return
-  end subroutine LBMZeroBoundaryForces
+  end subroutine LBMZeroBoundaryForcesD3
 end module LBM_Forcing_module

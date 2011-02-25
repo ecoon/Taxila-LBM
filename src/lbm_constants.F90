@@ -18,19 +18,19 @@ module LBM_Constants_module
   implicit none
 
   private 
+#include "lbm_definitions.h"
 
   type, public:: constants_type
      PetscInt s
      PetscScalar g,g11,g22          ! constants for mobility forces
      PetscScalar,pointer,dimension(:):: tau  ! relaxation times
-     PetscScalar,pointer,dimension(:):: gvt  ! gravity (i.e. body forces)
+     PetscScalar,pointer,dimension(:,:):: gvt  ! gravity (i.e. body forces)
      PetscScalar,pointer,dimension(:):: gw   ! fluid-solid interaction forces
      PetscScalar,pointer,dimension(:):: mm   ! mass per number (rho = mm*n)
      PetscScalar,pointer,dimension(:):: alf   ! mass per number (rho = mm*n)
   end type constants_type
 
   public :: ConstantsCreate, &
-       ConstantsSetSizes, &
        ConstantsSetFromOptions, &
        ConstantsView, &
        ConstantsDestroy
@@ -52,16 +52,23 @@ contains
 
   end function ConstantsCreate
     
-  subroutine ConstantsSetSizes(constants, s)
+  subroutine ConstantsSetFromOptions(constants, info, options, ierr)
+    use LBM_Info_module
+    use LBM_Options_module
     type(constants_type) constants
-    PetscInt s
+    type(info_type) info
+    type(options_type) options
+    PetscErrorCode ierr
 
-    constants%s = s
-    allocate(constants%tau(1:s))
-    allocate(constants%gvt(1:s))
-    allocate(constants%gw(1:s))
-    allocate(constants%mm(1:s))
-    allocate(constants%alf(1:s))
+    PetscInt nmax
+    PetscBool flag
+
+    constants%s = info%s
+    allocate(constants%tau(1:info%s))
+    allocate(constants%gvt(1:info%s,1:info%dim))
+    allocate(constants%gw(1:info%s))
+    allocate(constants%mm(1:info%s))
+    allocate(constants%alf(1:info%s))
 
     ! defaults
     constants%tau = 1.d0
@@ -69,33 +76,42 @@ contains
     constants%gw = 0.d0
     constants%mm = 1.d0
 
-  end subroutine ConstantsSetSizes
-
-  subroutine ConstantsSetFromOptions(constants, options, ierr)
-    use LBM_Options_module
-    type(constants_type) constants
-    type(options_type) options
-    PetscErrorCode ierr
-
-    PetscInt nmax
-    PetscBool flag
-
-    if (constants%s > 1) then
+    if (info%s > 1) then
        call PetscOptionsGetReal(options%my_prefix, '-g', constants%g, flag, ierr)
        call PetscOptionsGetReal(options%my_prefix, '-g11', constants%g11, flag, ierr)
        call PetscOptionsGetReal(options%my_prefix, '-g22', constants%g22, flag, ierr)
     end if
 
     nmax = constants%s
-    call PetscOptionsGetRealArray(options%my_prefix, '-tau', constants%tau, nmax, flag, ierr)
-    nmax = constants%s
-    call PetscOptionsGetRealArray(options%my_prefix, '-gvt', constants%gvt, nmax, flag, ierr)
-    nmax = constants%s
-    call PetscOptionsGetRealArray(options%my_prefix, '-gw', constants%gw, nmax, flag, ierr)
-    nmax = constants%s
-    call PetscOptionsGetRealArray(options%my_prefix, '-mm', constants%mm, nmax, flag, ierr)
+    call PetscOptionsGetRealArray(options%my_prefix, '-tau', constants%tau, nmax, &
+         flag, ierr)
 
-    constants%alf = 1.-0.555555555/constants%mm
+    nmax = constants%s
+    call PetscOptionsGetRealArray(options%my_prefix, '-gvt_x', &
+         constants%gvt(:,X_DIRECTION), nmax, flag, ierr)
+    nmax = constants%s
+    call PetscOptionsGetRealArray(options%my_prefix, '-gvt_y', &
+         constants%gvt(:,Y_DIRECTION), nmax, flag, ierr)
+
+    if (info%dim > 2) then
+       nmax = constants%s
+       call PetscOptionsGetRealArray(options%my_prefix, '-gvt_z', &
+            constants%gvt(:,Z_DIRECTION), nmax, flag, ierr)
+       if (.not.flag) then
+          nmax = constants%s
+          call PetscOptionsGetRealArray(options%my_prefix, '-gvt', &
+               constants%gvt(:,Z_DIRECTION), nmax, flag, ierr)
+       end if
+    end if
+
+    nmax = constants%s
+    call PetscOptionsGetRealArray(options%my_prefix, '-gw', constants%gw, nmax, &
+         flag, ierr)
+    nmax = constants%s
+    call PetscOptionsGetRealArray(options%my_prefix, '-mm', constants%mm, nmax, &
+         flag, ierr)
+
+    constants%alf = 1.d0-0.555555555d0/constants%mm
 
   end subroutine ConstantsSetFromOptions
   
