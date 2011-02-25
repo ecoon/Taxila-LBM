@@ -357,23 +357,23 @@ contains
 
     do m=1,info%s
       do i=info%xs,info%xe 
-        do j=info%ys,info%ye 
-          do k=info%zs,info%ze
-            if (walls(i,j,k).eq.0) then
-              do n=1,6
-                Fx(m,i,j,k)=Fx(m,i,j,k)-rho(m,i,j,k)*tmp(n,i,j,k)*cix(n)*constants%gw(m)
-                Fy(m,i,j,k)=Fy(m,i,j,k)-rho(m,i,j,k)*tmp(n,i,j,k)*ciy(n)*constants%gw(m)
-                Fz(m,i,j,k)=Fz(m,i,j,k)-rho(m,i,j,k)*tmp(n,i,j,k)*ciz(n)*constants%gw(m)
-              enddo
-              do n=7,18
-                Fx(m,i,j,k)=Fx(m,i,j,k)-rho(m,i,j,k)*tmp(n,i,j,k)*cix(n)*constants%gw(m)*0.5
-                Fy(m,i,j,k)=Fy(m,i,j,k)-rho(m,i,j,k)*tmp(n,i,j,k)*ciy(n)*constants%gw(m)*0.5
-	      	Fz(m,i,j,k)=Fz(m,i,j,k)-rho(m,i,j,k)*tmp(n,i,j,k)*ciz(n)*constants%gw(m)*0.5
-              enddo
-            end if
-            !write(*,*) Fz(1,i,j,k),Fz(2,i,j,k)
-          end do
-        end do
+      do j=info%ys,info%ye 
+      do k=info%zs,info%ze
+         if (walls(i,j,k).eq.0) then
+            do n=1,6
+               Fx(m,i,j,k)=Fx(m,i,j,k)-rho(m,i,j,k)*tmp(n,i,j,k)*cix(n)*constants%gw(m)
+               Fy(m,i,j,k)=Fy(m,i,j,k)-rho(m,i,j,k)*tmp(n,i,j,k)*ciy(n)*constants%gw(m)
+               Fz(m,i,j,k)=Fz(m,i,j,k)-rho(m,i,j,k)*tmp(n,i,j,k)*ciz(n)*constants%gw(m)
+            enddo
+            do n=7,18
+               Fx(m,i,j,k)=Fx(m,i,j,k)-rho(m,i,j,k)*tmp(n,i,j,k)*cix(n)*constants%gw(m)*0.5
+               Fy(m,i,j,k)=Fy(m,i,j,k)-rho(m,i,j,k)*tmp(n,i,j,k)*ciy(n)*constants%gw(m)*0.5
+               Fz(m,i,j,k)=Fz(m,i,j,k)-rho(m,i,j,k)*tmp(n,i,j,k)*ciz(n)*constants%gw(m)*0.5
+            enddo
+         end if
+         !write(*,*) Fz(1,i,j,k),Fz(2,i,j,k)
+      end do
+      end do
       end do
     end do
 
