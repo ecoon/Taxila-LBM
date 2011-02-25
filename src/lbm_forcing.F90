@@ -45,24 +45,15 @@ contains
     ! local
     PetscInt i,j,k,m,n,d
     PetscScalar,dimension(1:info%s, 0:info%b, 1:info%gxyzl)::tmp
-    PetscScalar,dimension(0:info%b, 1:info%gxyzl)::tmpwalls
-    PetscScalar,dimension(1:info%dim, 1:info%gxyzl)::fluidfluid
     PetscErrorCode ierr
 
     do m=1,info%s
        call InfoGatherValueToDirection(info, rho(m,:), tmp(m,:,:))
     end do
-    call InfoGatherValueToDirection(info, walls, tmpwalls)
-
-    ! hack, this breaks in general
-    fluidfluid(X_DIRECTION,:) = tmpwalls(EAST,:) + tmpwalls(WEST,:) + tmpwalls(ORIGIN,:)
-    fluidfluid(Y_DIRECTION,:) = tmpwalls(NORTH,:) + tmpwalls(SOUTH,:) + tmpwalls(ORIGIN,:)
-    fluidfluid(Z_DIRECTION,:) = tmpwalls(UP,:) + tmpwalls(DOWN,:) + tmpwalls(ORIGIN,:)
 
     do i=1,info%gxyzl
        if (walls(i).eq.0) then
           do d=1,info%dim
-             if (fluidfluid(d,i).eq.0) then
              do n=1,2*info%dim
                 forces(1,d,i) = forces(1,d,i) &
                      - rho(1,i)*tmp(2,n,i)*info%ci_int(n,d)*constants%g
@@ -83,7 +74,6 @@ contains
                 forces(2,d,i) = forces(2,d,i) &
                      - rho(2,i)*tmp(2,n,i)*info%ci_int(n,d)*constants%g22*0.5
              enddo
-             end if
           end do
        end if
     end do
@@ -144,12 +134,16 @@ contains
     do m=1,info%s
       do i=1,info%gxyzl
         if (walls(i).eq.0) then
-           forces(m,X_DIRECTION,i) = forces(m,X_DIRECTION,i) &
-                - rho(m,i)*(tmp(EAST,i) - tmp(WEST,i))*constants%gw(m)
-           forces(m,Y_DIRECTION,i) = forces(m,Y_DIRECTION,i) &
-                - rho(m,i)*(tmp(NORTH,i) - tmp(SOUTH,i))*constants%gw(m)
-           forces(m,Z_DIRECTION,i) = forces(m,Z_DIRECTION,i) &
-                - rho(m,i)*(tmp(UP,i) - tmp(DOWN,i))*constants%gw(m)
+          do d=1,info%dim
+            do n=1,2*info%dim
+               forces(m,d,i) = forces(m,d,i) &
+                    - rho(m,i)*tmp(n,i)*info%ci_int(n,d)*constants%gw(m)
+            enddo
+            do n=2*info%dim+1,info%b
+               forces(m,d,i) = forces(m,d,i) &
+                    - rho(m,i)*tmp(n,i)*info%ci_int(n,d)*constants%gw(m)*0.5
+            enddo
+          end do
         end if
       end do
     end do
