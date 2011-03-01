@@ -112,6 +112,15 @@ contains
           end do
        end do
     end do
+    
+    where(walls(:,:,:).eq.1)
+      Fx(1,:,:,:) = 0.0
+      Fy(1,:,:,:) = 0.0
+      Fz(1,:,:,:) = 0.0
+      Fx(2,:,:,:) = 0.0
+      Fy(2,:,:,:) = 0.0
+      Fz(2,:,:,:) = 0.0
+    end where
 
 !!$    !fluidfluid = cshift(walls, shift= 1, dim=2) + cshift(walls, shift=-1, dim=2) + walls
 !!$    do i=info%xs,info%xe 
@@ -331,7 +340,7 @@ contains
     integer i,j,k,m,n
     PetscScalar,dimension(0:info%b,info%gxs:info%gxe, &
          info%gys:info%gye,info%gzs:info%gze)::tmp
-        
+            
     tmp(1,:,:,:)= (cshift(walls(:,:,:),shift= 1,dim=1))
     tmp(2,:,:,:)= (cshift(walls(:,:,:),shift= 1,dim=2))
     tmp(3,:,:,:)= (cshift(walls(:,:,:),shift=-1,dim=1))
@@ -354,7 +363,7 @@ contains
     tmp(17,:,:,:)= (cshift(tmp(6,:,:,:),shift=-1,dim=2))
     tmp(18,:,:,:)= (cshift(tmp(6,:,:,:),shift= 1,dim=2))
 
-
+    
     do m=1,info%s
       do i=info%xs,info%xe 
         do j=info%ys,info%ye 
@@ -371,18 +380,11 @@ contains
 	      	Fz(m,i,j,k)=Fz(m,i,j,k)-rho(m,i,j,k)*tmp(n,i,j,k)*ciz(n)*constants%gw(m)*0.5
               enddo
             end if
-            !write(*,*) Fz(1,i,j,k),Fz(2,i,j,k)
           end do
         end do
       end do
     end do
 
-     
-!!$    write(*,*) i-1,j-1,k-1
-!!$    write(*,*) Fx(1,i-1,j-1,k-1),Fx(2,i-1,j-1,k-1)
-!!$    write(*,*) Fy(1,i-1,j-1,k-1),Fy(2,i-1,j-1,k-1)
-!!$    write(*,*) Fz(1,i-1,j-1,k-1),Fz(2,i-1,j-1,k-1)
-!!$    write(*,*) tmp(1,i-1,j-1,k-1)
     return
   end subroutine LBMAddFluidSolidForces
 
