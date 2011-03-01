@@ -21,15 +21,15 @@ contains
     
     select case(info%discretization)
     case(D3Q19_DISCRETIZATION)
-       call LBMEquilf_D3Q19(feq, rho, ue, alf, info)
+       call LBMEquilfD3Q19(feq, rho, ue, alf, info)
     case(D2Q9_DISCRETIZATION)
-       call LBMEquilf_D2Q9(feq, rho, ue, alf, info)
+       call LBMEquilfD2Q9(feq, rho, ue, alf, info)
     case DEFAULT
        SETERRQ(1, 1, 'invalid discretization in LBM', ierr)
     end select
   end subroutine LBMEquilf
     
-  subroutine LBMEquilf_D3Q19(feq, rho, ue, alf, info)
+  subroutine LBMEquilfD3Q19(feq, rho, ue, alf, info)
     use LBM_Discretization_D3Q19_module
     
     type(info_type) info
@@ -54,9 +54,9 @@ contains
     end do
     
     return
-  end subroutine LBMEquilf_D3Q19
+  end subroutine LBMEquilfD3Q19
 
-  subroutine LBMEquilf_D2Q9(feq, rho, ue, alf, info)
+  subroutine LBMEquilfD2Q9(feq, rho, ue, alf, info)
     use LBM_Discretization_D2Q9_module
     
     type(info_type) info
@@ -80,5 +80,5 @@ contains
        feq(i)=((1.-alf)/20.+tmp/12.+tmp*tmp/8.-usqr/24.)*rho
     end do
     return
-  end subroutine LBMEquilf_D2Q9
+  end subroutine LBMEquilfD2Q9
 end module LBM_Equilibrium_module

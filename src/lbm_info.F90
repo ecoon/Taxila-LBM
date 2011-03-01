@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   25 February 2011
-!!!       at:            09:01:16 MST
+!!!     last modified:   28 February 2011
+!!!       at:            17:38:09 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -87,6 +87,10 @@
       info%id = -1
       info%nproc = -1
 
+      info%nproc_x = -1
+      info%nproc_y = -1
+      info%nproc_z = -1
+
       info%options_prefix = ''
 
       nullify(info%periodic)
@@ -141,6 +145,18 @@
       allocate(info%gridsize(info%dim))
       allocate(info%periodic(info%dim))
       info%periodic = PETSC_FALSE
+      
+      ! nullify z-things for a 2D DA
+      if (info%dim.eq.2) then
+         info%zs = PETSC_NULL_INTEGER
+         info%ze = PETSC_NULL_INTEGER
+         info%zl = 1
+         info%NZ = 1
+         info%gzs = PETSC_NULL_INTEGER
+         info%gze = PETSC_NULL_INTEGER
+         info%gzl = 1
+         info%nproc_z = PETSC_NULL_INTEGER
+      end if
 
       call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_x', &
            info%periodic(1), flag,ierr)

@@ -112,6 +112,5 @@ contains
     ci(:,2) = ciy
     ci(:,3) = ciz
   end subroutine LBMDiscretizationSetup
-
 end module LBM_Discretization_D3Q19_module
 

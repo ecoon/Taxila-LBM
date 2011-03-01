@@ -170,6 +170,7 @@
       character(len=MAXSTRINGLENGTH) coordfile
       PetscViewer viewer
       PetscScalar zero
+      PetscInt periodicity
         
       call mpi_comm_rank(lbm%comm,lbm%info%id,ierr)
       call mpi_comm_size(lbm%comm,lbm%info%nproc, ierr)
@@ -188,13 +189,15 @@
            PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_one, ierr)
       CHKERRQ(ierr)
       call PetscObjectSetName(lbm%da_one, trim(lbm%name)//'DA_one_dof', ierr)
+!      call DMView(lbm%da_one, PETSC_VIEWER_STDOUT_WORLD, ierr)
 
-!      call DMView(lbm%da_one, PETSC_VIEWER_STDOUT_WORLD,  ierr)
       call DMDAGetCorners(lbm%da_one, xs, ys, zs, lbm%info%xl, lbm%info%yl, lbm%info%zl, ierr)
-      call DMDAGetGhostCorners(lbm%da_one, gxs, gys, gzs, lbm%info%gxl, lbm%info%gyl, lbm%info%gzl, ierr)
-      call DMDAGetInfo(lbm%da_one, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
-           PETSC_NULL_INTEGER, lbm%info%nproc_x, lbm%info%nproc_y, lbm%info%nproc_z, &
-           PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, ierr)
+      call DMDAGetGhostCorners(lbm%da_one, gxs, gys, gzs, lbm%info%gxl, lbm%info%gyl, &
+           lbm%info%gzl, ierr)
+      call DMDAGetInfo(lbm%da_one, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
+           PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%info%nproc_x, &
+           lbm%info%nproc_y, lbm%info%nproc_z, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
+           PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, ierr)
       allocate(ownership_x(1:lbm%info%nproc_x))
       allocate(ownership_y(1:lbm%info%nproc_y))
       allocate(ownership_z(1:lbm%info%nproc_z))
@@ -205,21 +208,25 @@
 
       ! set lbm%info including corners
       lbm%info%xs = xs+1
-      lbm%info%ys = ys+1
-      lbm%info%zs = zs+1
       lbm%info%gxs = gxs+1
+      lbm%info%xe = lbm%info%xs+lbm%info%xl-1
+      lbm%info%gxe = lbm%info%gxs+lbm%info%gxl-1
+
+      lbm%info%ys = ys+1
       lbm%info%gys = gys+1
-      lbm%info%gzs = gzs+1
+      lbm%info%ye = lbm%info%ys+lbm%info%yl-1
+      lbm%info%gye = lbm%info%gys+lbm%info%gyl-1
+
+      if (lbm%info%dim > 2) then
+         lbm%info%zs = zs+1
+         lbm%info%gzs = gzs+1
+         lbm%info%ze = lbm%info%zs+lbm%info%zl-1
+         lbm%info%gze = lbm%info%gzs+lbm%info%gzl-1
+      end if
 
       lbm%info%xyzl = lbm%info%xl*lbm%info%yl*lbm%info%zl
       lbm%info%gxyzl = lbm%info%gxl*lbm%info%gyl*lbm%info%gzl
 
-      lbm%info%xe = lbm%info%xs+lbm%info%xl-1
-      lbm%info%ye = lbm%info%ys+lbm%info%yl-1
-      lbm%info%ze = lbm%info%zs+lbm%info%zl-1
-      lbm%info%gxe = lbm%info%gxs+lbm%info%gxl-1
-      lbm%info%gye = lbm%info%gys+lbm%info%gyl-1
-      lbm%info%gze = lbm%info%gzs+lbm%info%gzl-1
 
       call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
            lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
@@ -526,19 +533,13 @@
             if (.not.bcs_done(lbm%bc%flags(lcv_sides))) then
                select case (lbm%bc%flags(lcv_sides))
                case (BC_PSEUDOPERIODIC)         ! pseudo-periodic
-                  call BCPseudoperiodic(lbm%bc, lbm%fi_a, lbm%walls_a, &
-                       lbm%bc%xm_a, lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, &
-                       lbm%bc%zm_a, lbm%bc%zp_a, lbm%info)
+                  call BCPseudoperiodic(lbm%bc, lbm%fi_a, lbm%walls_a, lbm%info)
 
                case (BC_FLUX)         ! flux
-                  call BCFlux(lbm%bc, lbm%fi_a, lbm%walls_a, &
-                       lbm%bc%xm_a, lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, &
-                       lbm%bc%zm_a, lbm%bc%zp_a, lbm%info)
+                  call BCFlux(lbm%bc, lbm%fi_a, lbm%walls_a, lbm%info)
 
                case (BC_PRESSURE)         ! pressure
-                  call BCPressure(lbm%bc, lbm%fi_a, lbm%walls_a, &
-                       lbm%bc%xm_a, lbm%bc%xp_a, lbm%bc%ym_a, lbm%bc%yp_a, &
-                       lbm%bc%zm_a, lbm%bc%zp_a, lbm%info)
+                  call BCPressure(lbm%bc, lbm%fi_a, lbm%walls_a, lbm%info)
                end select
                bcs_done(lbm%bc%flags(lcv_sides)) = .TRUE. ! only do each bc type once
             endif
