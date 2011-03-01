@@ -90,7 +90,13 @@ if __name__ == '__main__':
                 print ' ',vecname+'%03d.dat'%i,'failed, norm:', numpy.linalg.norm((truedata - testdata).ravel())
 
                 from matplotlib import pyplot as plt
-                plt.imshow((testdata)[:,:,1,0],origin='lower')
+                plt.figure()
+                ndofs = testdata.shape[-1]
+                for m in range(ndofs):
+                    plt.subplot(ndofs,1,m)
+                    plt.imshow((testdata-truedata)[0,:,:,m],origin='lower')
+                    plt.colorbar()
+                plt.title(vecname+'%03d'%i)
                 plt.show()
 
             else:

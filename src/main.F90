@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
-!!!     last modified:   02 February 2011
-!!!       at:            10:50:20 MST
+!!!     last modified:   28 February 2011
+!!!       at:            10:46:28 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -16,7 +16,7 @@
 #include "finclude/petscvecdef.h"
 #include "finclude/petscdmdef.h"
 
-  program main
+  program MAIN
     use petsc
     use LBM_Options_module
     use LBM_BC_module

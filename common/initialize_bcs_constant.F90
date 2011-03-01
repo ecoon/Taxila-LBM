@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            17:30:22 MST
-!!!     last modified:   02 February 2011
-!!!       at:            15:38:48 MST
+!!!     last modified:   25 February 2011
+!!!       at:            09:17:00 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -15,12 +15,15 @@
 #include "finclude/petscsysdef.h"
 
 ! initializes the BCs from options to be a general constant flux/pressure bc
-  subroutine initialize_bcs(xm_bcvals, xp_bcvals, ym_bcvals, yp_bcvals, &
-       zm_bcvals, zp_bcvals, bc_dim, info)
+  subroutine initialize_bcs(bc_flags, xm_bcvals, xp_bcvals, ym_bcvals, & 
+       yp_bcvals, zm_bcvals, zp_bcvals, bc_dim, info)
     use petsc
     use LBM_Info_module
     implicit none
-    
+
+#include "lbm_definitions.h"    
+    PetscInt, dimension(6):: bc_flags ! enum for boundary conditions
+
     type(info_type) info
     PetscScalar,dimension(bc_dim, info%ys:info%ye, info%zs:info%ze):: xm_bcvals, xp_bcvals
     PetscScalar,dimension(bc_dim, info%xs:info%xe, info%zs:info%ze):: ym_bcvals, yp_bcvals
@@ -47,24 +50,24 @@
     ! get options
     pressure_xm = .FALSE.
     pressure_xp = .FALSE.
-    poise_xm = .FALSE.
-    poise_xp = .FALSE.
-    flux_xm = .TRUE.
-    flux_xp = .TRUE.
-
     pressure_ym = .FALSE.
     pressure_yp = .FALSE.
-    poise_ym = .FALSE.
-    poise_yp = .FALSE.
-    flux_ym = .TRUE.
-    flux_yp = .TRUE.
-
     pressure_zm = .FALSE.
     pressure_zp = .FALSE.
+
+    flux_xm = .FALSE.
+    flux_xp = .FALSE.
+    flux_ym = .FALSE.
+    flux_yp = .FALSE.
+    flux_zm = .FALSE.
+    flux_zp = .FALSE.
+
+    poise_xm = .FALSE.
+    poise_xp = .FALSE.
+    poise_ym = .FALSE.
+    poise_yp = .FALSE.
     poise_zm = .FALSE.
     poise_zp = .FALSE.
-    flux_zm = .TRUE.
-    flux_zp = .TRUE.
 
     xp3_ave = 3.8e-3
     xm3_ave = 3.8e-3
@@ -87,151 +90,130 @@
     zp3_ave_p = 0.d0
     zm3_ave_p = 0.d0
 
-    ! i/o for x boundary
-    ! check if pressure
-    call PetscOptionsGetBool(info%options_prefix,'-bc_pressure_xm', pressure_xm, flag, ierr)
-    if (pressure_xm) flux_xm = .FALSE.
-    call PetscOptionsGetBool(info%options_prefix,'-bc_pressure_xp', pressure_xp, flag, ierr)
-    if (pressure_xp) flux_xp = .FALSE.
-
-    ! check if flux
-    call PetscOptionsGetBool(info%options_prefix,'-bc_flux_xm', flux_xm, flag, ierr)
-    if (flux_xm) pressure_xm = .FALSE.
-    call PetscOptionsGetBool(info%options_prefix,'-bc_flux_xp', flux_xp, flag, ierr)
-    if (flux_xp) pressure_xp = .FALSE.
-
-    ! check if poiseuille flux
-    call PetscOptionsGetBool(info%options_prefix,'-bc_flux_xm_poiseuille', poise_xm, flag, ierr)
-    if (poise_xm) then
+    ! get average values on minus edge
+    if (bc_flags(BOUNDARY_XM).eq.BC_FLUX) then
+       ! check if poiseuille flux
        flux_xm = .TRUE.
-       pressure_xm = .FALSE.
+       call PetscOptionsGetBool(info%options_prefix,'-bc_flux_xm_poiseuille', &
+            poise_xm, flag, ierr)
+       call PetscOptionsGetReal(info%options_prefix,'-bc_flux_xm_avg', xm3_ave, &
+            flag, ierr)
+       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+        
+    else if (bc_flags(BOUNDARY_XM).eq.BC_PRESSURE) then
+       pressure_xm = .TRUE.
+       do m=1,info%s
+          call PetscOptionsGetReal(info%options_prefix,'-bc_pressure_xm_phase'//char(m+48),&
+               xm3_ave_p(m), flag, ierr)
+          if ((info%s.eq.1).and. .not.flag) call PetscOptionsGetReal(info%options_prefix,&
+               '-bc_pressure_xm', xm3_ave_p(1), flag, ierr)
+          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+       end do
     endif
-    call PetscOptionsGetBool(info%options_prefix,'-bc_flux_xp_poiseuille', poise_xp, flag, ierr)
-    if (poise_xp) then
+
+    ! get average values on minus edge
+    if (bc_flags(BOUNDARY_XP).eq.BC_FLUX) then
+       ! check if poiseuille flux
        flux_xp = .TRUE.
-       pressure_xp = .FALSE.
+       call PetscOptionsGetBool(info%options_prefix,'-bc_flux_xp_poiseuille', &
+            poise_xp, flag, ierr)
+       call PetscOptionsGetReal(info%options_prefix,'-bc_flux_xp_avg', xp3_ave, &
+            flag, ierr)
+       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+        
+    else if (bc_flags(BOUNDARY_XP).eq.BC_PRESSURE) then
+       pressure_xp = .TRUE.
+       do m=1,info%s
+          call PetscOptionsGetReal(info%options_prefix,'-bc_pressure_xp_phase'//char(m+48),&
+               xp3_ave_p(m), flag, ierr)
+          if ((info%s.eq.1).and. .not.flag) call PetscOptionsGetReal(info%options_prefix,&
+               '-bc_pressure_xp', xp3_ave_p(1), flag, ierr)
+          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+       end do
     endif
 
     ! get average values on minus edge
-    if (flux_xm) then
-       call PetscOptionsGetReal(info%options_prefix,'-bc_flux_xm_avg', xm3_ave, flag, ierr)
-    else
-       do m=1,info%s
-          call PetscOptionsGetReal(info%options_prefix,'-bc_pressure_xm_phase'//char(m+48), xm3_ave_p(m), flag, ierr)
-       end do
-       if ((info%s.eq.1).and. .not.flag) then
-          call PetscOptionsGetReal(info%options_prefix,'-bc_pressure_xm', xm3_ave_p(1), flag, ierr)          
-       end if
-    endif
-
-    ! get average values on plus edge
-    if (flux_xp) then
-       call PetscOptionsGetReal(info%options_prefix,'-bc_flux_xp_avg', xp3_ave, flag, ierr)
-    else
-       do m=1,info%s
-          call PetscOptionsGetReal(info%options_prefix,'-bc_pressure_xp_phase'//char(m+48), xp3_ave_p(m), flag, ierr)
-       end do
-       if ((info%s.eq.1).and. .not.flag) then
-          call PetscOptionsGetReal(info%options_prefix,'-bc_pressure_xp', xp3_ave_p(1), flag, ierr)          
-       end if
-    endif
-
-    ! i/o for y boundary
-    ! check if pressure
-    call PetscOptionsGetBool(info%options_prefix,'-bc_pressure_ym', pressure_ym, flag, ierr)
-    if (pressure_ym) flux_ym = .FALSE.
-    call PetscOptionsGetBool(info%options_prefix,'-bc_pressure_yp', pressure_yp, flag, ierr)
-    if (pressure_yp) flux_yp = .FALSE.
-
-    ! check if flux
-    call PetscOptionsGetBool(info%options_prefix,'-bc_flux_ym', flux_ym, flag, ierr)
-    if (flux_ym) pressure_ym = .FALSE.
-    call PetscOptionsGetBool(info%options_prefix,'-bc_flux_yp', flux_yp, flag, ierr)
-    if (flux_yp) pressure_yp = .FALSE.
-
-    ! check if poiseuille flux
-    call PetscOptionsGetBool(info%options_prefix,'-bc_flux_ym_poiseuille', poise_ym, flag, ierr)
-    if (poise_ym) then
+    if (bc_flags(BOUNDARY_YM).eq.BC_FLUX) then
+       ! check if poiseuille flux
        flux_ym = .TRUE.
-       pressure_ym = .FALSE.
+       call PetscOptionsGetBool(info%options_prefix,'-bc_flux_ym_poiseuille', &
+            poise_ym, flag, ierr)
+       call PetscOptionsGetReal(info%options_prefix,'-bc_flux_ym_avg', ym3_ave, &
+            flag, ierr)
+       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+        
+    else if (bc_flags(BOUNDARY_YM).eq.BC_PRESSURE) then
+       pressure_ym = .TRUE.
+       do m=1,info%s
+          call PetscOptionsGetReal(info%options_prefix,'-bc_pressure_ym_phase'//char(m+48),&
+               ym3_ave_p(m), flag, ierr)
+          if ((info%s.eq.1).and. .not.flag) call PetscOptionsGetReal(info%options_prefix,&
+               '-bc_pressure_ym', ym3_ave_p(1), flag, ierr)
+          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+       end do
     endif
-    call PetscOptionsGetBool(info%options_prefix,'-bc_flux_yp_poiseuille', poise_yp, flag, ierr)
-    if (poise_yp) then
+
+    ! get average values on minus edge
+    if (bc_flags(BOUNDARY_YP).eq.BC_FLUX) then
        flux_yp = .TRUE.
-       pressure_yp = .FALSE.
+       ! check if poiseuille flux
+       call PetscOptionsGetBool(info%options_prefix,'-bc_flux_yp_poiseuille', &
+            poise_yp, flag, ierr)
+       call PetscOptionsGetReal(info%options_prefix,'-bc_flux_yp_avg', yp3_ave, &
+            flag, ierr)
+       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+        
+    else if (bc_flags(BOUNDARY_YP).eq.BC_PRESSURE) then
+       pressure_yp = .TRUE.
+       do m=1,info%s
+          call PetscOptionsGetReal(info%options_prefix,'-bc_pressure_yp_phase'//char(m+48),&
+               yp3_ave_p(m), flag, ierr)
+          if ((info%s.eq.1).and. .not.flag) call PetscOptionsGetReal(info%options_prefix,&
+               '-bc_pressure_yp', yp3_ave_p(1), flag, ierr)
+          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+       end do
     endif
 
     ! get average values on minus edge
-    if (flux_ym) then
-       call PetscOptionsGetReal(info%options_prefix,'-bc_flux_ym_avg', ym3_ave, flag, ierr)
-    else
-       do m=1,info%s
-          call PetscOptionsGetReal(info%options_prefix,'-bc_pressure_ym_phase'//char(m+48), ym3_ave_p(m), flag, ierr)
-       end do
-       if ((info%s.eq.1).and. .not.flag) then
-          call PetscOptionsGetReal(info%options_prefix,'-bc_pressure_ym', ym3_ave_p(1), flag, ierr)          
-       end if
-    endif
-
-    ! get average values on plus edge
-    if (flux_yp) then
-       call PetscOptionsGetReal(info%options_prefix,'-bc_flux_yp_avg', yp3_ave, flag, ierr)
-    else
-       do m=1,info%s
-          call PetscOptionsGetReal(info%options_prefix,'-bc_pressure_yp_phase'//char(m+48), yp3_ave_p(m), flag, ierr)
-       end do
-       if ((info%s.eq.1).and. .not.flag) then
-          call PetscOptionsGetReal(info%options_prefix,'-bc_pressure_yp', yp3_ave_p(1), flag, ierr)          
-       end if
-    endif
-
-    ! i/o for z boundary
-    ! check if pressure
-    call PetscOptionsGetBool(info%options_prefix,'-bc_pressure_zm', pressure_zm, flag, ierr)
-    if (pressure_zm) flux_zm = .FALSE.
-    call PetscOptionsGetBool(info%options_prefix,'-bc_pressure_zp', pressure_zp, flag, ierr)
-    if (pressure_zp) flux_zp = .FALSE.
-
-    ! check if flux
-    call PetscOptionsGetBool(info%options_prefix,'-bc_flux_zm', flux_zm, flag, ierr)
-    if (flux_zm) pressure_zm = .FALSE.
-    call PetscOptionsGetBool(info%options_prefix,'-bc_flux_zp', flux_zp, flag, ierr)
-    if (flux_zp) pressure_zp = .FALSE.
-
-    ! check if poiseuille flux
-    call PetscOptionsGetBool(info%options_prefix,'-bc_flux_zm_poiseuille', poise_zm, flag, ierr)
-    if (poise_zm) then
+    if (bc_flags(BOUNDARY_ZM).eq.BC_FLUX) then
        flux_zm = .TRUE.
-       pressure_zm = .FALSE.
-    endif
-    call PetscOptionsGetBool(info%options_prefix,'-bc_flux_zp_poiseuille', poise_zp, flag, ierr)
-    if (poise_zp) then
-       flux_zp = .TRUE.
-       pressure_zp = .FALSE.
+       ! check if poiseuille flux
+       call PetscOptionsGetBool(info%options_prefix,'-bc_flux_zm_poiseuille', &
+            poise_zm, flag, ierr)
+       call PetscOptionsGetReal(info%options_prefix,'-bc_flux_zm_avg', zm3_ave, &
+            flag, ierr)
+       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+        
+    else if (bc_flags(BOUNDARY_ZM).eq.BC_PRESSURE) then
+       pressure_zm = .TRUE.
+       do m=1,info%s
+          call PetscOptionsGetReal(info%options_prefix,'-bc_pressure_zm_phase'//char(m+48),&
+               zm3_ave_p(m), flag, ierr)
+          if ((info%s.eq.1).and. .not.flag) call PetscOptionsGetReal(info%options_prefix,&
+               '-bc_pressure_zm', zm3_ave_p(1), flag, ierr)
+          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+       end do
     endif
 
     ! get average values on minus edge
-    if (flux_zm) then
-       call PetscOptionsGetReal(info%options_prefix,'-bc_flux_zm_avg', zm3_ave, flag, ierr)
-    else
+    if (bc_flags(BOUNDARY_ZP).eq.BC_FLUX) then
+       flux_zp = .TRUE.
+       ! check if poiseuille flux
+       call PetscOptionsGetBool(info%options_prefix,'-bc_flux_zp_poiseuille', &
+            poise_zp, flag, ierr)
+       call PetscOptionsGetReal(info%options_prefix,'-bc_flux_zp_avg', zp3_ave, &
+            flag, ierr)
+       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+        
+    else if (bc_flags(BOUNDARY_ZP).eq.BC_PRESSURE) then
+       pressure_zp = .TRUE.
        do m=1,info%s
-          call PetscOptionsGetReal(info%options_prefix,'-bc_pressure_zm_phase'//char(m+48), zm3_ave_p(m), flag, ierr)
+          call PetscOptionsGetReal(info%options_prefix,'-bc_pressure_zp_phase'//char(m+48),&
+               zp3_ave_p(m), flag, ierr)
+          if ((info%s.eq.1).and. .not.flag) call PetscOptionsGetReal(info%options_prefix,&
+               '-bc_pressure_zp', zp3_ave_p(1), flag, ierr)
+          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
        end do
-       if ((info%s.eq.1).and. .not.flag) then
-          call PetscOptionsGetReal(info%options_prefix,'-bc_pressure_zm', zm3_ave_p(1), flag, ierr)          
-       end if
-    endif
-
-    ! get average values on plus edge
-    if (flux_zp) then
-       call PetscOptionsGetReal(info%options_prefix,'-bc_flux_zp_avg', zp3_ave, flag, ierr)
-    else
-       do m=1,info%s
-          call PetscOptionsGetReal(info%options_prefix,'-bc_pressure_zp_phase'//char(m+48), zp3_ave_p(m), flag, ierr)
-       end do
-       if ((info%s.eq.1).and. .not.flag) then
-          call PetscOptionsGetReal(info%options_prefix,'-bc_pressure_zp', zp3_ave_p(1), flag, ierr)          
-       end if
     endif
 
 
@@ -250,7 +232,7 @@
                 xm_bcvals(1,j,k) = 4.*xm3_max/(info%NY-2.)**2*(j-1.5)*(info%NY-0.5-j)
              enddo
           enddo
-       else
+       else if (flux_xm) then
           xm_bcvals(1,:,:) = xm3_ave
        endif
     end if
@@ -270,7 +252,7 @@
                 xp_bcvals(1,j,k) = 4.*xp3_max/(info%NY-2.)**2*(j-1.5)*(info%NY-0.5-j)
              enddo
           enddo
-       else
+       else if (flux_xp) then
           xp_bcvals(1,:,:) = xp3_ave
        endif
     end if
@@ -290,7 +272,7 @@
                 ym_bcvals(2,i,k) = 4.*ym3_max/(info%NX-2.)**2*(i-1.5)*(info%NX-0.5-i)
              enddo
           enddo
-       else
+       else if (flux_ym) then
           ym_bcvals(2,:,:) = ym3_ave
        endif
     end if
@@ -310,7 +292,7 @@
                 yp_bcvals(2,i,k) = 4.*yp3_max/(info%NX-2.)**2*(i-1.5)*(info%NX-0.5-i)
              enddo
           enddo
-       else
+       else if (flux_yp) then
           yp_bcvals(2,:,:) = yp3_ave
        endif
     end if
@@ -329,7 +311,7 @@
                 zm_bcvals(3,i,j) = 4.*zm3_max/(info%NY-2.)**2*(j-1.5)*(info%NY-0.5-j)
              enddo
           enddo
-       else
+       else if (flux_zm) then
           zm_bcvals(3,:,:) = zm3_ave
        endif
     end if
@@ -348,7 +330,7 @@
                 zp_bcvals(3,i,j) = 4.*zp3_max/(info%NY-2.)**2*(j-1.5)*(info%NY-0.5-j)
              enddo
           enddo
-       else
+       else if (flux_zp) then
           zp_bcvals(3,:,:) = zp3_ave
        endif
     end if

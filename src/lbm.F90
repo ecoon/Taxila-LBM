@@ -65,9 +65,9 @@
        PetscScalar,pointer:: fi_a(:)
        PetscScalar,pointer:: rhot_a(:)
 
-       PetscScalar,pointer,dimension(:,:,:,:):: ux,uy,uz
-       PetscScalar,pointer,dimension(:,:,:,:):: uxe,uye,uze
-       PetscScalar,pointer,dimension(:,:,:,:):: Fx,Fy,Fz
+       PetscScalar,pointer,dimension(:,:,:):: vel
+       PetscScalar,pointer,dimension(:,:,:):: vel_eq
+       PetscScalar,pointer,dimension(:,:,:):: forces
        character(len=MAXSTRINGLENGTH) name       
     end type lbm_type
 
@@ -134,17 +134,9 @@
       nullify(lbm%fi_a)
       nullify(lbm%rhot_a)
 
-      nullify(lbm%ux)
-      nullify(lbm%uy)
-      nullify(lbm%uz)
-
-      nullify(lbm%uxe)
-      nullify(lbm%uye)
-      nullify(lbm%uze)
-
-      nullify(lbm%Fx)
-      nullify(lbm%Fy)
-      nullify(lbm%Fz)
+      nullify(lbm%vel)
+      nullify(lbm%vel_eq)
+      nullify(lbm%forces)
 
       lbm%name = ''
     end function LBMCreate_Comm
@@ -258,8 +250,7 @@
       deallocate(ownership_z)
 
       ! set up constants, bcs, periodicity
-      call ConstantsSetSizes(lbm%constants, lbm%info%s)
-      call ConstantsSetFromOptions(lbm%constants, options, ierr)
+      call ConstantsSetFromOptions(lbm%constants, lbm%info, options, ierr)
       call BCSetFromOptions(lbm%bc, lbm%info, options, ierr)
 
       ! coordinates
@@ -289,35 +280,13 @@
 
 
       ! allocate, associate workspace
-      allocate(lbm%ux(1:lbm%info%s,lbm%info%gxs:lbm%info%gxe, &
-           lbm%info%gys:lbm%info%gye,lbm%info%gzs:lbm%info%gze))
-      allocate(lbm%uy(1:lbm%info%s,lbm%info%gxs:lbm%info%gxe, &
-           lbm%info%gys:lbm%info%gye,lbm%info%gzs:lbm%info%gze))
-      allocate(lbm%uz(1:lbm%info%s,lbm%info%gxs:lbm%info%gxe, &
-           lbm%info%gys:lbm%info%gye,lbm%info%gzs:lbm%info%gze))
-      lbm%ux = 0
-      lbm%uy = 0
-      lbm%uz = 0
+      allocate(lbm%vel(1:lbm%info%s, 1:lbm%info%dim, 1:lbm%info%gxyzl))
+      allocate(lbm%vel_eq(1:lbm%info%s, 1:lbm%info%dim, 1:lbm%info%gxyzl))
+      allocate(lbm%forces(1:lbm%info%s, 1:lbm%info%dim, 1:lbm%info%gxyzl))
 
-      allocate(lbm%uxe(1:lbm%info%s,lbm%info%gxs:lbm%info%gxe, &
-           lbm%info%gys:lbm%info%gye,lbm%info%gzs:lbm%info%gze))
-      allocate(lbm%uye(1:lbm%info%s,lbm%info%gxs:lbm%info%gxe, &
-           lbm%info%gys:lbm%info%gye,lbm%info%gzs:lbm%info%gze))
-      allocate(lbm%uze(1:lbm%info%s,lbm%info%gxs:lbm%info%gxe, &
-           lbm%info%gys:lbm%info%gye,lbm%info%gzs:lbm%info%gze))
-      lbm%uxe = 0
-      lbm%uye = 0
-      lbm%uze = 0
-
-      allocate(lbm%Fx(1:lbm%info%s,lbm%info%gxs:lbm%info%gxe, &
-           lbm%info%gys:lbm%info%gye,lbm%info%gzs:lbm%info%gze))
-      allocate(lbm%Fy(1:lbm%info%s,lbm%info%gxs:lbm%info%gxe, &
-           lbm%info%gys:lbm%info%gye,lbm%info%gzs:lbm%info%gze))
-      allocate(lbm%Fz(1:lbm%info%s,lbm%info%gxs:lbm%info%gxe, &
-           lbm%info%gys:lbm%info%gye,lbm%info%gzs:lbm%info%gze))
-      lbm%Fx = 0
-      lbm%Fy = 0
-      lbm%Fz = 0
+      lbm%vel = 0
+      lbm%vel_eq = 0
+      lbm%forces = 0
 
       ! get vectors
       call DMCreateLocalVector(lbm%da_one, lbm%prs, ierr)
@@ -386,15 +355,9 @@
       if (lbm%rho_g /= 0) call VecDestroy(lbm%rho_g,ierr)
       if (lbm%walls_g /= 0) call VecDestroy(lbm%walls_g,ierr)
 
-      if (associated(lbm%ux)) deallocate(lbm%ux)
-      if (associated(lbm%uy)) deallocate(lbm%uy)
-      if (associated(lbm%uz)) deallocate(lbm%uz)
-      if (associated(lbm%uxe)) deallocate(lbm%uxe)
-      if (associated(lbm%uye)) deallocate(lbm%uye)
-      if (associated(lbm%uze)) deallocate(lbm%uze)
-      if (associated(lbm%Fx)) deallocate(lbm%Fx)
-      if (associated(lbm%Fy)) deallocate(lbm%Fy)
-      if (associated(lbm%Fz)) deallocate(lbm%Fz)
+      if (associated(lbm%vel)) deallocate(lbm%vel)
+      if (associated(lbm%vel_eq)) deallocate(lbm%vel_eq)
+      if (associated(lbm%forces)) deallocate(lbm%forces)
 
       if (lbm%da_one /= 0) call DMDestroy(lbm%da_one, ierr)
       if (lbm%da_s /= 0) call DMDestroy(lbm%da_s, ierr)
@@ -514,9 +477,9 @@
          call DMDAVecGetArrayF90(lbm%da_flow, lbm%ut, lbm%ut_a, ierr)
          
          ! update values for zero time i/o
-         call LBMUpdateMoments(lbm%fi_a,lbm%rho_a, lbm%ux,lbm%uy,lbm%uz,lbm%walls_a, lbm%info)
-         call LBMUpdateDiagnostics(lbm%rho_a, lbm%ux, lbm%uy, lbm%uz, lbm%walls_a, lbm%ut_a, &
-              lbm%rhot_a, lbm%prs_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%info, lbm%constants)
+         call LBMUpdateMoments(lbm%fi_a,lbm%rho_a, lbm%vel, lbm%walls_a, lbm%info)
+         call LBMUpdateDiagnostics(lbm%rho_a, lbm%vel, lbm%walls_a, lbm%ut_a, &
+              lbm%rhot_a, lbm%prs_a, lbm%forces, lbm%info, lbm%constants)
          
          ! --  --  restore arrays
          call DMDAVecRestoreArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
@@ -581,7 +544,7 @@
             endif
          enddo
 
-         call LBMUpdateMoments(lbm%fi_a,lbm%rho_a, lbm%ux,lbm%uy,lbm%uz,lbm%walls_a, lbm%info)
+         call LBMUpdateMoments(lbm%fi_a,lbm%rho_a, lbm%vel, lbm%walls_a, lbm%info)
 
 !         call TimingEnd(timer2)
 !         timername = 'communication'
@@ -599,24 +562,23 @@
 
 
          !calculate forces
-         lbm%Fx=0.
-         lbm%Fy=0.
-         lbm%Fz=0.
+         lbm%forces=0.d0
 
          if (lbm%info%s > 1) then
             if ((lbm%constants%g /= 0.0d0).or.(lbm%constants%g11 /= 0.0d0).or. &
                  (lbm%constants%g22 /= 0.0d0)) then
-               call LBMAddFluidFluidForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, &
+               call LBMAddFluidFluidForces(lbm%rho_a, lbm%forces, &
                     lbm%walls_a, lbm%info, lbm%constants)
             end if
 
             if ((lbm%constants%gw(1) /= 0.0d0).or.(lbm%constants%gw(2) /= 0.0d0)) then
-               call LBMAddFluidSolidForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, &
+               call LBMAddFluidSolidForces(lbm%rho_a, lbm%forces, &
                     lbm%walls_a, lbm%info, lbm%constants)
             end if
          endif
-         call LBMAddBodyForces(lbm%rho_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%walls_a, lbm%info, lbm%constants)
-         call LBMZeroBoundaryForces(lbm%bc%flags, lbm%Fx, lbm%Fy, lbm%Fz, lbm%info%dim, lbm%info, lbm%constants)
+         call LBMAddBodyForces(lbm%rho_a, lbm%forces, lbm%walls_a, lbm%info, lbm%constants)
+         call LBMZeroBoundaryForces(lbm%bc%flags, lbm%forces, lbm%info%dim, &
+              lbm%info, lbm%constants)
 
 !         call TimingEnd(timer2)
 !         call TimingEnd(timer3)
@@ -624,14 +586,14 @@
 !         timer2 => TimingCreate(lbm%comm, timername)
 
          ! calculate u_equilibrium
-         call LBMUpdateUEquilibrium(lbm%fi_a, lbm%rho_a, lbm%ux, lbm%uy, lbm%uz, lbm%walls_a, &
-              lbm%uxe, lbm%uye, lbm%uze, lbm%rhot_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%info, lbm%constants)
+         call LBMUpdateUEquilibrium(lbm%fi_a, lbm%rho_a, lbm%vel, lbm%walls_a, &
+              lbm%vel_eq, lbm%rhot_a, lbm%forces, lbm%info, lbm%constants)
 !         call TimingEnd(timer2)
 !         timername = 'collision'
 !         timer2 => TimingCreate(lbm%comm, timername)
 
          ! collision
-         call LBMCollision(lbm%fi_a, lbm%rho_a, lbm%uxe, lbm%uye, lbm%uze, lbm%walls_a, &
+         call LBMCollision(lbm%fi_a, lbm%rho_a, lbm%vel_eq, lbm%walls_a, &
               lbm%info, lbm%constants)
 !         call TimingEnd(timer2)
 
@@ -643,8 +605,8 @@
          ! check for output?
          if(mod(lcv_step,kwrite).eq.0) then
             ! --  --  update diagnostics
-            call LBMUpdateDiagnostics(lbm%rho_a, lbm%ux, lbm%uy, lbm%uz, lbm%walls_a, lbm%ut_a, &
-                 lbm%rhot_a, lbm%prs_a, lbm%Fx, lbm%Fy, lbm%Fz, lbm%info, lbm%constants)
+            call LBMUpdateDiagnostics(lbm%rho_a, lbm%vel, lbm%walls_a, lbm%ut_a, &
+                 lbm%rhot_a, lbm%prs_a, lbm%forces, lbm%info, lbm%constants)
 
             ! --  --  restore arrays
             call DMDAVecRestoreArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
@@ -746,14 +708,12 @@
     subroutine LBMInitializeState(lbm, init_subroutine)
       type(lbm_type) lbm
       !      interface
-      !         subroutine init_subroutine(fi, rho, ux, uy, uz, walls, info)
+      !         subroutine init_subroutine(fi, rho, vel, walls, info)
       !           use LBM_Info_module
       !           type(info_type) info
       !           PetscScalar fi(:)
       !           PetscScalar rho(:)
-      !           PetscScalar ux(:,:,:,:)
-      !           PetscScalar uy(:,:,:,:)
-      !           PetscScalar uz(:,:,:,:)
+      !           PetscScalar vel(:,:,:,:,:)
       !           PetscScalar walls(:)
       !         end subroutine init_subroutine
       !      end interface
@@ -762,7 +722,7 @@
       call DMDAVecGetArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
       call DMDAVecGetArrayF90(lbm%da_sb, lbm%fi, lbm%fi_a, ierr)
       call DMDAVecGetArrayF90(lbm%da_s, lbm%rho, lbm%rho_a, ierr)
-      call init_subroutine(lbm%fi_a, lbm%rho_a, lbm%ux, lbm%uy, lbm%uz, lbm%walls_a, lbm%info, lbm%constants)
+      call init_subroutine(lbm%fi_a, lbm%rho_a, lbm%vel, lbm%walls_a, lbm%info, lbm%constants)
       call DMDAVecRestoreArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
       call DMDAVecRestoreArrayF90(lbm%da_sb, lbm%fi, lbm%fi_a, ierr)
       call DMDAVecRestoreArrayF90(lbm%da_s, lbm%rho, lbm%rho_a, ierr)
@@ -794,70 +754,6 @@
       
       corners = lbm%info%corners
     end subroutine LBMGetCorners
-
-    subroutine LBMPrintAFew(rho, fi, walls, uxe, uye, uze, info)
-      type(info_type) info
-      PetscScalar,dimension(1:info%s,info%gxs:info%gxe,info%gys:info%gye,info%gzs:info%gze)::rho
-      PetscScalar,dimension(1:info%s,0:info%b,info%gxs:info%gxe,info%gys:info%gye, info%gzs:info%gze)::fi
-      PetscScalar,dimension(info%gxs:info%gxe,info%gys:info%gye,info%gzs:info%gze)::walls
-      PetscScalar,dimension(1:info%s,info%gxs:info%gxe,info%gys:info%gye,info%gzs:info%gze)::uxe,uye,uze
-
-      ! write(*,*) 'walls check:'
-      ! write(*,*) 'walls(1,0,13):', walls(2,1,14)
-      ! write(*,*) 'walls(1,1,13):', walls(2,2,14)
-      ! write(*,*) 'walls(1,NY,13):', walls(2,16,14)
-      ! write(*,*) 'walls(1,NY-1,13):', walls(2,15,14)
-
-      ! write(*,*) 'walls(1,0,13):', walls(1,1,14)
-      ! write(*,*) 'walls(1,1,13):', walls(1,2,14)
-      ! write(*,*) 'walls(1,NY,13):', walls(1,16,14)
-      ! write(*,*) 'walls(1,NY-1,13):', walls(1,15,14)
-
-      ! write(*,*) 'walls(1,0,13):', walls(3,1,14)
-      ! write(*,*) 'walls(1,1,13):', walls(3,2,14)
-      ! write(*,*) 'walls(1,NY,13):', walls(3,16,14)
-      ! write(*,*) 'walls(1,NY-1,13):', walls(3,15,14)
-
-      if (info%id.eq.0) then
-         write(*,*) '---------------------------------------'
-         write(*,*) 'output: rho(0,0,8,10):', rho(1,1,2,11)
-         write(*,*) 'output: uxe(0,1,8,10):', uxe(1,1,2,11)
-         write(*,*) 'output: uye(0,1,8,10):', uye(1,1,2,11)
-         write(*,*) 'output: uze(0,1,8,10):', uze(1,1,2,11)
-         write(*,*) 'output: fi(0,0,0,8,10):', fi(1,0,1,2,11)
-         write(*,*) 'output: fi(0,1,0,8,10):', fi(1,2,1,2,11)
-         write(*,*) 'output: fi(0,5,0,8,10):', fi(1,4,1,2,11)
-      endif
-      if (info%id.eq.info%nproc-1) then
-         write(*,*) '---------------------------------------'
-         print *, 'walls:', walls(1,25,99)
-         print *, 'walls:', walls(2,25,99)
-         print *, 'walls:', walls(3,25,99)
-         write(*,*) 'output: walls(0,8,72):', walls(1,26,99)
-         write(*,*) 'output: walls(0,8,72):', walls(1,25,99)
-         write(*,*) 'output: rho(0,0,8,72):', rho(1,1,25,99)
-         write(*,*) 'output: rho(0,0,8,72):', rho(2,1,25,99)
-         write(*,*) 'output: rho(0,0,8,72):', rho(1,1,23,99)
-         write(*,*) 'output: rho(0,0,8,72):', rho(1,1,25,99)
-         write(*,*) 'output: uxe(0,1,8,72):', uxe(1,1,25,99)
-         write(*,*) 'output: uye(0,1,8,72):', uye(1,1,25,99)
-         write(*,*) 'output: uze(0,1,8,72):', uze(1,1,25,99)
-         write(*,*) 'output: fi(0,0,0,8,72):', fi(1,0,1,25,99)
-         write(*,*) 'output: fi(0,1,0,8,72):', fi(1,2,1,25,99)
-         write(*,*) 'output: fi(0,5,0,8,72):', fi(1,4,1,25,99)
-         write(*,*) '---------------------------------------'
-         write(*,*) 'output: rho(0,0,8,90):', rho(1,1,2,91)
-         write(*,*) 'output: rho(1,0,8,90):', rho(2,1,2,91)
-         write(*,*) 'output: uxe(0,1,8,90):', uxe(1,1,2,91)
-         write(*,*) 'output: uye(0,1,8,90):', uye(1,1,2,91)
-         write(*,*) 'output: uze(0,1,8,90):', uze(1,1,2,91)
-         write(*,*) 'output: fi(0,0,0,8,90):', fi(1,0,1,2,91)
-         write(*,*) 'output: fi(0,1,0,8,90):', fi(1,2,1,2,91)
-         write(*,*) 'output: fi(0,5,0,8,90):', fi(1,4,1,2,91)
-         write(*,*) '========================================'
-      endif
-      return
-    end subroutine LBMPrintAFew
 
   subroutine LBMOutput(lbm, istep, kwrite)
     ! input variables
@@ -971,6 +867,5 @@
     call VecLoad(lbm%prs_g, viewer, ierr)
     call PetscViewerDestroy(viewer,ierr)
   end subroutine LBMInput
-
 end module LBM_module
 
