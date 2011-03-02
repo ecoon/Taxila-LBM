@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         16 December 2010
 !!!       on:            14:14:04 MST
-!!!     last modified:   14 January 2011
-!!!       at:            16:59:16 MST
+!!!     last modified:   01 March 2011
+!!!       at:            13:26:28 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -20,6 +20,8 @@
 program geometry
   use petsc
   implicit none
+
+#include "lbm_definitions.h"
 
   PetscInt NX, NY, NZ
   PetscScalar,pointer,dimension(:,:,:):: walls
