@@ -32,7 +32,6 @@ contains
   ! --- Fluid-fluid interaction forces, from
   ! ---  (Kang 2002 Eq. 6)
   subroutine LBMAddFluidFluidForces(rho, forces, walls, info, constants)
-    use LBM_Discretization_D3Q19_module
     !     NONLOCAL IN RHO
 
     ! input
@@ -110,7 +109,6 @@ contains
   !             save at this point, since it seems unlikely that
   !             there will be walls on one side but not the other
   subroutine LBMAddFluidSolidForces(rho, forces, walls, info, constants)
-    use LBM_Discretization_D3Q19_module
     !     NONLOCAL IN WALLS
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
