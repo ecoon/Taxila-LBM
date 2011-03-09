@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         08 December 2010
 !!!       on:            14:35:16 MST
-!!!     last modified:   25 February 2011
-!!!       at:            15:09:27 MST
+!!!     last modified:   09 March 2011
+!!!       at:            08:57:10 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -32,13 +32,13 @@
     end type timing_type
     
     public :: TimingCreate, &
+         TimingDestroy, &
          TimingEnd, &
          TimingEndPerUnit
 
   contains
 
     function TimingCreate(comm, name) result(timing)
-      implicit none
       MPI_Comm comm
       type(timing_type),pointer:: timing
       character(len=MAXWORDLENGTH) name
@@ -52,8 +52,12 @@
       call system_clock (timing%time_start, timing%rate, timing%max)
     end function TimingCreate
 
+    subroutine TimingDestroy(timing)
+      type(timing_type),pointer:: timing
+      deallocate(timing)
+    end subroutine TimingDestroy
+
     subroutine TimingEnd(timing)
-      implicit none
       type(timing_type) timing
       integer id, nprocs
       integer ierr
@@ -74,7 +78,6 @@
     subroutine TimingEndPerUnit(timing, numunits, unitname)
       ! same as TimingEnd, this just divides by a factor of the
       ! number of units, for instance the number of timesteps
-      implicit none
       type(timing_type) timing
       integer id, nprocs
       integer ierr
