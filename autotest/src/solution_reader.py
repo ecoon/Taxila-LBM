@@ -6,7 +6,7 @@
 ###     created:         25 January 2011
 ###       on:            10:53:33 MST
 ###     last modified:   10 March 2011
-###       at:            10:13:52 MST
+###       at:            12:47:21 MST
 ###     URL:             http://www.ldeo.columbia.edu/~ecoon/
 ###     email:           ecoon _at_ lanl.gov
 ###  
@@ -34,11 +34,12 @@ class SolutionReader(object):
         from petsc4py import PETSc
         self._prefix = prefix
         self._opts = PETSc.Options(prefix)
-        if self._opts.getString('discretization') == 'd2q9':
+        self._discretization = self._opts.getString('discretization', default='d3q19')
+        if  self._discretization == 'd2q9':
             self._size = (self._opts.getInt('NX'), self._opts.getInt('NY'))
             self._dim = 2
             print 'got d2q9'
-        elif self._opts.getString('discretization') == 'd3q19':
+        elif self._discretization == 'd3q19':
             self._size = (self._opts.getInt('NX'), self._opts.getInt('NY'),
                           self._opts.getInt('NZ'))
             self._dim = 3
