@@ -183,7 +183,28 @@
       lbm%dm_index_to_ndof(NFLOWDOF) = lbm%info%dim
 
       ! create DAs
-      call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
+      periodicity = DMDA_NONPERIODIC
+      if (lbm%info%periodic(X_DIRECTION)) then
+         periodicity = IOR(periodicity,DMDA_XPERIODIC)
+      else
+         periodicity = IOR(periodicity,DMDA_XGHOSTED)
+      end if
+
+      if (lbm%info%periodic(Y_DIRECTION)) then
+         periodicity = IOR(periodicity,DMDA_YPERIODIC)
+      else
+         periodicity = IOR(periodicity,DMDA_YGHOSTED)
+      end if
+
+      if (lbm%info%dim > 2) then
+         if (lbm%info%periodic(Z_DIRECTION)) then
+            periodicity = IOR(periodicity,DMDA_ZPERIODIC)
+         else
+            periodicity = IOR(periodicity,DMDA_ZGHOSTED)
+         end if
+      end if
+
+      call DMDACreate3d(lbm%comm, periodicity, DMDA_STENCIL_BOX, &
            lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
            PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, lbm%dm_index_to_ndof(ONEDOF), 1, &
            PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_one, ierr)
@@ -227,8 +248,7 @@
       lbm%info%xyzl = lbm%info%xl*lbm%info%yl*lbm%info%zl
       lbm%info%gxyzl = lbm%info%gxl*lbm%info%gyl*lbm%info%gzl
 
-
-      call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
+      call DMDACreate3d(lbm%comm, periodicity, DMDA_STENCIL_BOX, &
            lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
            lbm%info%nproc_x, lbm%info%nproc_y, lbm%info%nproc_z, &
            lbm%dm_index_to_ndof(NPHASEDOF), 1, &
@@ -236,7 +256,7 @@
            lbm%da_s, ierr)
       call PetscObjectSetName(lbm%da_s, trim(lbm%name)//'DA_NPHASE', ierr)
 
-      call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
+      call DMDACreate3d(lbm%comm, periodicity, DMDA_STENCIL_BOX, &
            lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
            lbm%info%nproc_x, lbm%info%nproc_y, lbm%info%nproc_z, &
            lbm%dm_index_to_ndof(NPHASEXBDOF), 1, &
@@ -244,7 +264,7 @@
            lbm%da_sb, ierr)
       call PetscObjectSetName(lbm%da_sb, trim(lbm%name)//'DA_fi', ierr)
 
-      call DMDACreate3d(lbm%comm, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, &
+      call DMDACreate3d(lbm%comm, periodicity, DMDA_STENCIL_BOX, &
            lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
            lbm%info%nproc_x, lbm%info%nproc_y, lbm%info%nproc_z, &
            lbm%dm_index_to_ndof(NFLOWDOF), 1, &
@@ -387,56 +407,60 @@
       PetscScalar newcoord_y
       PetscScalar newcoord_z
 
-      ! note, because DAs are all periodic, it really screws up the corners in a 
-      ! uniform coordinates DA.  We must adjust these in the nonperiodic cases.
+      ! uniform coordinates DA
       if (.not.lbm%info%periodic(X_DIRECTION)) then
-         deltacoord = (corners(X_DIRECTION,2) - corners(X_DIRECTION,1))/dble(lbm%info%NX-1)
-         newcoord_x = corners(X_DIRECTION,2) + deltacoord
-         lbm%info%gridsize(X_DIRECTION) = deltacoord
+         lbm%info%gridsize(X_DIRECTION) = (corners(X_DIRECTION,2) - &
+              corners(X_DIRECTION,1))/dble(lbm%info%NX-1)
       else
-         newcoord_x = corners(X_DIRECTION,2)
          lbm%info%gridsize(X_DIRECTION) = (corners(X_DIRECTION,2) - &
               corners(X_DIRECTION,1))/dble(lbm%info%NX)
       endif
 
       if (.not.lbm%info%periodic(Y_DIRECTION)) then
-         deltacoord = (corners(Y_DIRECTION,2) - corners(Y_DIRECTION,1))/(lbm%info%NY-1)
-         newcoord_y = corners(Y_DIRECTION,2) + deltacoord
-         lbm%info%gridsize(Y_DIRECTION) = deltacoord
+         lbm%info%gridsize(Y_DIRECTION) = (corners(Y_DIRECTION,2) - &
+              corners(Y_DIRECTION,1))/dble(lbm%info%NY-1)
       else
-         newcoord_y = corners(Y_DIRECTION,2)
          lbm%info%gridsize(Y_DIRECTION) = (corners(Y_DIRECTION,2) - &
               corners(Y_DIRECTION,1))/dble(lbm%info%NY)
       endif
 
       if (lbm%info%dim > 2) then
          if (.not.lbm%info%periodic(Z_DIRECTION)) then
-            deltacoord = (corners(Z_DIRECTION,2) - corners(Z_DIRECTION,1))/(lbm%info%NZ-1)
-            newcoord_z = corners(Z_DIRECTION,2) + deltacoord
-            lbm%info%gridsize(Z_DIRECTION) = deltacoord
+            lbm%info%gridsize(Z_DIRECTION) = (corners(Z_DIRECTION,2) - &
+                 corners(Z_DIRECTION,1))/dble(lbm%info%NZ-1)
          else
-            newcoord_z = corners(Z_DIRECTION,2)
             lbm%info%gridsize(Z_DIRECTION) = (corners(Z_DIRECTION,2) - &
                  corners(Z_DIRECTION,1))/dble(lbm%info%NZ)
          endif
 
-         call DMDASetUniformCoordinates(lbm%da_one, corners(X_DIRECTION,1), newcoord_x, &
-              corners(Y_DIRECTION,1), newcoord_y, corners(Z_DIRECTION,1), newcoord_z, ierr)
-         call DMDASetUniformCoordinates(lbm%da_s, corners(X_DIRECTION,1), newcoord_x, &
-              corners(Y_DIRECTION,1), newcoord_y, corners(Z_DIRECTION,1), newcoord_z, ierr)
-         call DMDASetUniformCoordinates(lbm%da_sb, corners(X_DIRECTION,1), newcoord_x, &
-              corners(Y_DIRECTION,1), newcoord_y, corners(Z_DIRECTION,1), newcoord_z, ierr)
-         call DMDASetUniformCoordinates(lbm%da_flow, corners(X_DIRECTION,1), newcoord_x, &
-              corners(Y_DIRECTION,1), newcoord_y, corners(Z_DIRECTION,1), newcoord_z, ierr)
+         call DMDASetUniformCoordinates(lbm%da_one, corners(X_DIRECTION,1), &
+              corners(X_DIRECTION, 2), corners(Y_DIRECTION,1), corners(Y_DIRECTION, 2), &
+              corners(Z_DIRECTION,1), corners(Z_DIRECTION, 2), ierr)
+         call DMDASetUniformCoordinates(lbm%da_s, corners(X_DIRECTION,1), &
+              corners(X_DIRECTION, 2), corners(Y_DIRECTION,1), corners(Y_DIRECTION, 2), &
+              corners(Z_DIRECTION,1), corners(Z_DIRECTION, 2), ierr)
+         call DMDASetUniformCoordinates(lbm%da_sb, corners(X_DIRECTION,1), &
+              corners(X_DIRECTION, 2), corners(Y_DIRECTION,1), corners(Y_DIRECTION, 2), &
+              corners(Z_DIRECTION,1), corners(Z_DIRECTION, 2), ierr)
+         call DMDASetUniformCoordinates(lbm%da_flow, corners(X_DIRECTION,1), &
+              corners(X_DIRECTION, 2), corners(Y_DIRECTION,1), corners(Y_DIRECTION, 2), &
+              corners(Z_DIRECTION,1), corners(Z_DIRECTION, 2), ierr)
       else 
-         call DMDASetUniformCoordinates(lbm%da_one, corners(X_DIRECTION,1), newcoord_x, &
-              corners(Y_DIRECTION,1), newcoord_y, PETSC_NULL_SCALAR, PETSC_NULL_SCALAR, ierr)
-         call DMDASetUniformCoordinates(lbm%da_s, corners(X_DIRECTION,1), newcoord_x, &
-              corners(Y_DIRECTION,1), newcoord_y, PETSC_NULL_SCALAR, PETSC_NULL_SCALAR, ierr)
-         call DMDASetUniformCoordinates(lbm%da_sb, corners(X_DIRECTION,1), newcoord_x, &
-              corners(Y_DIRECTION,1), newcoord_y, PETSC_NULL_SCALAR, PETSC_NULL_SCALAR, ierr)
-         call DMDASetUniformCoordinates(lbm%da_flow, corners(X_DIRECTION,1), newcoord_x, &
-              corners(Y_DIRECTION,1), newcoord_y, PETSC_NULL_SCALAR, PETSC_NULL_SCALAR, ierr)
+         call DMDASetUniformCoordinates(lbm%da_one, corners(X_DIRECTION,1), &
+              corners(X_DIRECTION, 2), corners(Y_DIRECTION,1), corners(Y_DIRECTION, 2), &
+              PETSC_NULL_SCALAR, PETSC_NULL_SCALAR, ierr)
+
+         call DMDASetUniformCoordinates(lbm%da_s, corners(X_DIRECTION,1), &
+              corners(X_DIRECTION, 2), corners(Y_DIRECTION,1), corners(Y_DIRECTION, 2), &
+              PETSC_NULL_SCALAR, PETSC_NULL_SCALAR, ierr)
+
+         call DMDASetUniformCoordinates(lbm%da_sb, corners(X_DIRECTION,1), &
+              corners(X_DIRECTION, 2), corners(Y_DIRECTION,1), corners(Y_DIRECTION, 2), &
+              PETSC_NULL_SCALAR, PETSC_NULL_SCALAR, ierr)
+
+         call DMDASetUniformCoordinates(lbm%da_flow, corners(X_DIRECTION,1), &
+              corners(X_DIRECTION, 2), corners(Y_DIRECTION,1), corners(Y_DIRECTION, 2), &
+              PETSC_NULL_SCALAR, PETSC_NULL_SCALAR, ierr)
       end if
 
       CHKERRQ(ierr)
