@@ -390,6 +390,10 @@
       if (lbm%da_s /= 0) call DMDestroy(lbm%da_s, ierr)
       if (lbm%da_sb /= 0) call DMDestroy(lbm%da_sb, ierr)
       if (lbm%da_flow /= 0) call DMDestroy(lbm%da_flow, ierr)
+      deallocate(lbm%da_one)
+      deallocate(lbm%da_s)
+      deallocate(lbm%da_sb)
+      deallocate(lbm%da_flow)
 
       call BCDestroy(lbm%bc, ierr)
       call InfoDestroy(lbm%info, ierr)
@@ -657,6 +661,7 @@
 
       timerunits = 'timestep'
       call TimingEndPerUnit(timer1, (kstep-istep+1), timerunits)
+      call TimingDestroy(timer1)
 
       ! restore arrays in prep for communication
       call BCRestoreArrays(lbm%bc, ierr)
