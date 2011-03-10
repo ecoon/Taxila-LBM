@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   28 February 2011
-!!!       at:            17:38:09 MST
+!!!     last modified:   10 March 2011
+!!!       at:            10:58:10 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -159,12 +159,12 @@
       end if
 
       call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_x', &
-           info%periodic(1), flag,ierr)
+           info%periodic(X_DIRECTION), flag,ierr)
       call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_y', &
-           info%periodic(2), flag,ierr)
+           info%periodic(Y_DIRECTION), flag,ierr)
       if (info%dim > 2) then
          call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_z', &
-              info%periodic(3), flag,ierr)
+              info%periodic(Z_DIRECTION), flag,ierr)
       end if
       
     end subroutine InfoSetFromOptions
