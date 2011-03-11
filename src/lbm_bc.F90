@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   28 February 2011
-!!!       at:            15:50:33 MST
+!!!     last modified:   11 March 2011
+!!!       at:            15:52:35 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -1134,7 +1134,7 @@ contains
        do j=info%ys,info%ye
           i = 1
           if (walls(i,j).eq.0) then
-!             call BCPressureApplyD2Q9(bc, fi(:,:,i,j), xm_vals(:,j), directions, info)
+             call BCPressureApplyD2Q9(bc, fi(:,:,i,j), xm_vals(:,j), directions, info)
           end if
        end do
     endif
@@ -1146,7 +1146,7 @@ contains
        do j=info%ys,info%ye
           i = info%NX
           if (walls(i,j).eq.0) then
-!             call BCPressureApplyD2Q9(bc, fi(:,:,i,j), xp_vals(:,j), directions, info)
+             call BCPressureApplyD2Q9(bc, fi(:,:,i,j), xp_vals(:,j), directions, info)
           end if
        end do
     endif
@@ -1158,8 +1158,8 @@ contains
        do i=info%xs,info%xe
           j = 1
           if (walls(i,j).eq.0) then
-!             call BCPressureApplyD2Q9(bc, fi(:,:,i,j), ym_vals(:,i), &
-!                  directions, info)
+             call BCPressureApplyD2Q9(bc, fi(:,:,i,j), ym_vals(:,i), &
+                  directions, info)
           end if
        end do
     endif
@@ -1171,8 +1171,8 @@ contains
        do i=info%xs,info%xe
           j = info%NY
           if (walls(i,j).eq.0) then
-!             call BCPressureApplyD2Q9(bc, fi(:,:,i,j), yp_vals(:,i), &
-!                  directions, info)
+             call BCPressureApplyD2Q9(bc, fi(:,:,i,j), yp_vals(:,i), &
+                  directions, info)
           end if
        end do
     endif
@@ -1201,7 +1201,8 @@ contains
        do j=info%ys,info%ye
           i = 1
           if (walls(i,j).eq.0) then
-!             call BCFluxApplyD2Q9(bc, fi(:,:,i,j), xm_vals(:,j), directions, info)
+             call BCFluxApplyD2Q9(bc, fi(:,:,i,j), xm_vals(:,j), &
+                  directions, cardinals, info)
           end if
        end do
     endif
@@ -1213,7 +1214,8 @@ contains
        do j=info%ys,info%ye
           i = info%NX
           if (walls(i,j).eq.0) then
-!             call BCFluxApplyD2Q9(bc, fi(:,:,i,j), xp_vals(:,j), directions, info)
+             call BCFluxApplyD2Q9(bc, fi(:,:,i,j), xp_vals(:,j), &
+                  directions, cardinals, info)
           end if
        end do
     endif
@@ -1225,8 +1227,8 @@ contains
        do i=info%xs,info%xe
           j = 1
           if (walls(i,j).eq.0) then
-!             call BCFluxApplyD2Q9(bc, fi(:,:,i,j), ym_vals(:,i), &
-!                  directions, info)
+             call BCFluxApplyD2Q9(bc, fi(:,:,i,j), ym_vals(:,i), &
+                  directions, cardinals, info)
           end if
        end do
     endif
@@ -1238,8 +1240,8 @@ contains
        do i=info%xs,info%xe
           j = info%NY
           if (walls(i,j).eq.0) then
-!             call BCFluxApplyD2Q9(bc, fi(:,:,i,j), yp_vals(:,i), &
-!                  directions, info)
+             call BCFluxApplyD2Q9(bc, fi(:,:,i,j), yp_vals(:,i), &
+                  directions, cardinals, info)
           end if
        end do
     endif
@@ -1255,7 +1257,7 @@ contains
     PetscInt i
     
     select case(boundary)
-    case (BOUNDARY_XM)
+    case (BOUNDARY_XP)
        ! identity mapping
        do i=0,discretization_directions
           directions(i) = i
@@ -1263,7 +1265,7 @@ contains
        cardinals(CARDINAL_NORMAL) = X_DIRECTION
        cardinals(CARDINAL_CROSS) = Y_DIRECTION
 
-    case (BOUNDARY_XP)
+    case (BOUNDARY_XM)
        ! inverted mapping around the origin
        directions(ORIGIN) = ORIGIN
        directions(EAST) = WEST
@@ -1278,7 +1280,7 @@ contains
        cardinals(CARDINAL_NORMAL) = X_DIRECTION
        cardinals(CARDINAL_CROSS) = Y_DIRECTION
 
-    case (BOUNDARY_YM)
+    case (BOUNDARY_YP)
        ! map x -> y
        directions(ORIGIN) = ORIGIN
        directions(EAST) = NORTH
@@ -1293,7 +1295,7 @@ contains
        cardinals(CARDINAL_NORMAL) = Y_DIRECTION
        cardinals(CARDINAL_CROSS) = X_DIRECTION
 
-    case (BOUNDARY_YP)
+    case (BOUNDARY_YM)
        ! map x -> y
        directions(ORIGIN) = ORIGIN
        directions(EAST) = SOUTH
