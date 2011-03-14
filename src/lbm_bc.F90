@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   11 March 2011
-!!!       at:            15:52:35 MST
+!!!     last modified:   14 March 2011
+!!!       at:            17:45:54 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -105,7 +105,7 @@ contains
     PetscScalar,dimension(1:info%s):: zp3_ave_p, zm3_ave_p
 
     ! dimension 
-    bc%dim = MAX(info%dim, info%s)
+    bc%dim = MAX(info%ndims, info%s)
 
     ! now make the boundary vecs/arrays
     ! x boundaries
@@ -146,7 +146,7 @@ contains
     call VecSetBlockSize(bc%yp, bc%dim, ierr)
     call PetscObjectSetName(bc%yp, 'yp_bc', ierr)
     
-    if (info%dim > 2) then
+    if (info%ndims > 2) then
        ! z boundaries
        if (info%zs.eq.1) then
           locn = info%xl*info%yl*bc%dim
@@ -246,7 +246,7 @@ contains
        bc%flags(BOUNDARY_YP) = BC_PERIODIC
     end if
 
-    if (info%dim > 2) then
+    if (info%ndims > 2) then
        ! zm boundary
        bcvalue = PETSC_FALSE
        call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_zm', bcvalue, flag, ierr)
@@ -343,11 +343,11 @@ contains
     type(bc_type) bc
     type(info_type) info
     
-    PetscScalar,dimension(1:info%s, 0:info%b, 1:info%gxyzl):: fi
+    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, 1:info%gxyzl):: fi
     PetscScalar,dimension(1:info%gxyzl):: walls
     PetscErrorCode ierr
 
-    select case(info%discretization)
+    select case(info%flow_disc%name)
     case(D3Q19_DISCRETIZATION)
        call BCPressureD3Q19(bc, fi, walls, bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, &
             bc%zm_a, bc%zp_a, info)
@@ -362,11 +362,11 @@ contains
     type(bc_type) bc
     type(info_type) info
     
-    PetscScalar,dimension(1:info%s, 0:info%b, 1:info%gxyzl):: fi
+    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, 1:info%gxyzl):: fi
     PetscScalar,dimension(1:info%gxyzl):: walls
     PetscErrorCode ierr
 
-    select case(info%discretization)
+    select case(info%flow_disc%name)
     case(D3Q19_DISCRETIZATION)
        call BCFluxD3Q19(bc, fi, walls, bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, &
             bc%zm_a, bc%zp_a, info)
@@ -381,11 +381,11 @@ contains
     type(bc_type) bc
     type(info_type) info
     
-    PetscScalar,dimension(1:info%s, 0:info%b, 1:info%gxyzl):: fi
+    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, 1:info%gxyzl):: fi
     PetscScalar,dimension(1:info%gxyzl):: walls
     PetscErrorCode ierr
 
-    select case(info%discretization)
+    select case(info%flow_disc%name)
     case(D3Q19_DISCRETIZATION)
        call BCPseudoperiodicD3Q19(bc, fi, walls, bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, &
             bc%zm_a, bc%zp_a, info)
@@ -402,7 +402,7 @@ contains
     type(bc_type) bc
     type(info_type) info
 
-    PetscScalar,dimension(1:info%s, 0:info%b, info%gxs:info%gxe, &
+    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, info%gxs:info%gxe, &
          info%gys:info%gye, info%gzs:info%gze):: fi
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
          info%gzs:info%gze):: walls
@@ -411,8 +411,8 @@ contains
     PetscScalar,dimension(bc%dim,info%xs:info%xe,info%ys:info%ye):: zm_vals, zp_vals
 
     PetscInt i,j,k
-    PetscInt directions(0:info%b)
-    PetscInt cardinals(1:info%dim)
+    PetscInt directions(0:info%flow_disc%b)
+    PetscInt cardinals(1:info%ndims)
 
     directions(:) = 0
     ! XM BOUNDARY
@@ -512,13 +512,13 @@ contains
 
     type(bc_type) bc
     type(info_type) info
-    PetscInt,intent(in),dimension(0:info%b):: directions
-    PetscScalar,intent(inout),dimension(1:info%s, 0:info%b):: fi
+    PetscInt,intent(in),dimension(0:info%flow_disc%b):: directions
+    PetscScalar,intent(inout),dimension(1:info%s, 0:info%flow_disc%b):: fi
     PetscScalar,intent(in),dimension(bc%dim):: pvals
 
 !    PetscScalar utmp, vtmp
     PetscScalar wtmp
-    PetscScalar,dimension(0:info%b)::ftmp
+    PetscScalar,dimension(0:info%flow_disc%b)::ftmp
     integer m
     
 !    utmp = 0
@@ -613,7 +613,7 @@ contains
     type(bc_type) bc
     type(info_type) info
 
-    PetscScalar,dimension(1:info%s, 0:info%b, info%gxs:info%gxe, &
+    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, info%gxs:info%gxe, &
          info%gys:info%gye, info%gzs:info%gze):: fi
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
          info%gzs:info%gze):: walls
@@ -622,8 +622,8 @@ contains
     PetscScalar,dimension(bc%dim,info%xs:info%xe,info%ys:info%ye):: zm_vals, zp_vals
 
     PetscInt i,j,k
-    PetscInt directions(0:info%b)
-    PetscInt cardinals(1:info%dim)
+    PetscInt directions(0:info%flow_disc%b)
+    PetscInt cardinals(1:info%ndims)
 
     directions(:) = 0
     cardinals(:) = 0
@@ -730,13 +730,13 @@ contains
     type(bc_type) bc
     type(info_type) info
 
-    PetscScalar,intent(inout),dimension(1:info%s, 0:info%b):: fi
+    PetscScalar,intent(inout),dimension(1:info%s, 0:info%flow_disc%b):: fi
     PetscScalar,intent(in),dimension(bc%dim):: fvals
-    PetscInt,intent(in),dimension(0:info%b):: directions
-    PetscInt,intent(in),dimension(1:info%dim):: cardinals
+    PetscInt,intent(in),dimension(0:info%flow_disc%b):: directions
+    PetscInt,intent(in),dimension(1:info%ndims):: cardinals
 
     PetscScalar rhotmp
-    PetscScalar,dimension(0:info%b)::ftmp
+    PetscScalar,dimension(0:info%flow_disc%b)::ftmp
     PetscInt m
 
     ftmp = 0.0
@@ -981,7 +981,7 @@ contains
     type(bc_type) bc
     type(info_type) info
 
-    PetscScalar,dimension(1:info%s, 0:info%b, info%gxs:info%gxe, &
+    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, info%gxs:info%gxe, &
          info%gys:info%gye, info%gzs:info%gze):: fi
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
          info%gzs:info%gze):: walls
@@ -1118,14 +1118,14 @@ contains
     type(bc_type) bc
     type(info_type) info
 
-    PetscScalar,dimension(1:info%s, 0:info%b, info%gxs:info%gxe, info%gys:info%gye):: fi
+    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, info%gxs:info%gxe, info%gys:info%gye):: fi
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye):: walls
     PetscScalar,dimension(bc%dim,info%ys:info%ye):: xm_vals, xp_vals
     PetscScalar,dimension(bc%dim,info%xs:info%xe):: ym_vals, yp_vals
 
     PetscInt i,j
-    PetscInt directions(0:info%b)
-    PetscInt cardinals(1:info%dim)
+    PetscInt directions(0:info%flow_disc%b)
+    PetscInt cardinals(1:info%ndims)
 
     directions(:) = 0
     ! XM BOUNDARY
@@ -1185,14 +1185,14 @@ contains
     type(bc_type) bc
     type(info_type) info
 
-    PetscScalar,dimension(1:info%s, 0:info%b, info%gxs:info%gxe, info%gys:info%gye):: fi
+    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, info%gxs:info%gxe, info%gys:info%gye):: fi
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye):: walls
     PetscScalar,dimension(bc%dim,info%ys:info%ye):: xm_vals, xp_vals
     PetscScalar,dimension(bc%dim,info%xs:info%xe):: ym_vals, yp_vals
 
     PetscInt i,j
-    PetscInt directions(0:info%b)
-    PetscInt cardinals(1:info%dim)
+    PetscInt directions(0:info%flow_disc%b)
+    PetscInt cardinals(1:info%ndims)
 
     directions(:) = 0
     ! XM BOUNDARY
@@ -1321,13 +1321,13 @@ contains
     type(bc_type) bc
     type(info_type) info
 
-    PetscScalar,intent(inout),dimension(1:info%s, 0:info%b):: fi
+    PetscScalar,intent(inout),dimension(1:info%s, 0:info%flow_disc%b):: fi
     PetscScalar,intent(in),dimension(bc%dim):: fvals
-    PetscInt,intent(in),dimension(0:info%b):: directions
-    PetscInt,intent(in),dimension(1:info%dim):: cardinals
+    PetscInt,intent(in),dimension(0:info%flow_disc%b):: directions
+    PetscInt,intent(in),dimension(1:info%ndims):: cardinals
 
     PetscScalar rhotmp
-    PetscScalar,dimension(0:info%b)::ftmp
+    PetscScalar,dimension(0:info%flow_disc%b)::ftmp
     PetscInt m
 
     ftmp = 0.0
@@ -1378,13 +1378,13 @@ contains
 
     type(bc_type) bc
     type(info_type) info
-    PetscInt,intent(in),dimension(0:info%b):: directions
-    PetscScalar,intent(inout),dimension(1:info%s, 0:info%b):: fi
+    PetscInt,intent(in),dimension(0:info%flow_disc%b):: directions
+    PetscScalar,intent(inout),dimension(1:info%s, 0:info%flow_disc%b):: fi
     PetscScalar,intent(in),dimension(bc%dim):: pvals
 
 !    PetscScalar utmp
     PetscScalar vtmp
-    PetscScalar,dimension(0:info%b)::ftmp
+    PetscScalar,dimension(0:info%flow_disc%b)::ftmp
     integer m
     
 !    utmp = 0

@@ -27,7 +27,7 @@ module LBM_Constants_module
      PetscScalar,pointer,dimension(:,:):: gvt  ! gravity (i.e. body forces)
      PetscScalar,pointer,dimension(:):: gw   ! fluid-solid interaction forces
      PetscScalar,pointer,dimension(:):: mm   ! mass per number (rho = mm*n)
-     PetscScalar,pointer,dimension(:):: c_s2   ! sound speed squared
+     PetscScalar c_s2   ! sound speed squared
      PetscScalar,pointer,dimension(:):: d_k   ! mass per number (rho = mm*n)
   end type constants_type
 
@@ -44,12 +44,12 @@ contains
     constants%g = 0
     constants%g11 = 0
     constants%g22 = 0
+    constants%c_s2 = 0
 
     nullify(constants%tau)
     nullify(constants%gvt)
     nullify(constants%gw)
     nullify(constants%mm)
-    nullify(constants%c_s2)
     nullify(constants%d_k)
 
   end function ConstantsCreate
@@ -67,10 +67,9 @@ contains
 
     constants%s = info%s
     allocate(constants%tau(1:info%s))
-    allocate(constants%gvt(1:info%s,1:info%dim))
+    allocate(constants%gvt(1:info%s,1:info%ndims))
     allocate(constants%gw(1:info%s))
     allocate(constants%mm(1:info%s))
-    allocate(constants%c_s2(1:info%s))
     allocate(constants%d_k(1:info%s))
 
     ! defaults
@@ -97,7 +96,7 @@ contains
     call PetscOptionsGetRealArray(options%my_prefix, '-gvt_y', &
          constants%gvt(:,Y_DIRECTION), nmax, flag, ierr)
 
-    if (info%dim > 2) then
+    if (info%ndims > 2) then
        nmax = constants%s
        call PetscOptionsGetRealArray(options%my_prefix, '-gvt_z', &
             constants%gvt(:,Z_DIRECTION), nmax, flag, ierr)
@@ -114,14 +113,6 @@ contains
     nmax = constants%s
     call PetscOptionsGetRealArray(options%my_prefix, '-mm', constants%mm, nmax, &
          flag, ierr)
-
-    select case(info%discretization)
-    case(D3Q19_DISCRETIZATION)
-       constants%d_k = 1.d0/3.d0
-    case(D2Q9_DISCRETIZATION)
-       constants%d_k = 1.d0-0.555555555d0/constants%mm
-    end select
-
   end subroutine ConstantsSetFromOptions
   
   subroutine ConstantsView(constants)
@@ -147,8 +138,6 @@ contains
     if (associated(constants%gvt)) deallocate(constants%gvt)
     if (associated(constants%gw)) deallocate(constants%gw)
     if (associated(constants%mm)) deallocate(constants%mm)
-    if (associated(constants%c_s2)) deallocate(constants%c_s2)
-    
   end subroutine ConstantsDestroy
 end module LBM_Constants_module
   
