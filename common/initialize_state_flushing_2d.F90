@@ -26,13 +26,13 @@
     ! input variables
     type(info_type) info
     type(constants_type) constants
-    PetscScalar,dimension(1:info%s,0:info%b, &
+    PetscScalar,dimension(1:info%s,0:info%flow_disc%b, &
          info%gxs:info%gxe, &
          info%gys:info%gye):: fi
     PetscScalar,dimension(1:info%s, &
          info%gxs:info%gxe, &
          info%gys:info%gye):: rho
-    PetscScalar,dimension(1:info%s, 1:info%dim, &
+    PetscScalar,dimension(1:info%s, 1:info%ndims, &
          info%gxs:info%gxe, &
          info%gys:info%gye):: u
     PetscScalar,dimension(info%gxs:info%gxe, &
@@ -100,7 +100,7 @@
        do j=info%ys,info%ye
           do m=1,info%s
              call LBMEquilf(fi(m,:,i,j),rho(m,i,j),u(m,:,i,j), &
-                  constants%alf(m), info)
+                  info, constants)
           enddo
        enddo
     enddo
