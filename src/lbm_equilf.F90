@@ -29,56 +29,50 @@ contains
     end select
   end subroutine LBMEquilf
     
-  subroutine LBMEquilfD3Q19(feq, rho, ue, alf, info)
+  subroutine LBMEquilfD3Q19(feq, rho, ue, constants, info)
     use LBM_Discretization_D3Q19_module
+    use LBM_Constants_module
     
     type(info_type) info
+    type(constants_type) constants
     PetscScalar,dimension(0:info%b)::feq
-    PetscScalar rho, alf
+    PetscScalar rho
     PetscScalar,dimension(1:info%dim):: ue
     
     PetscScalar usqr,tmp
     PetscInt i
     
     usqr = SUM(ue*ue, 1)
-    feq(0)=(1./3.-0.5*usqr)*rho
     
-    do i=1,info%dim*2
+    do i=0,info%b
        tmp = SUM(ci(i,:)*ue, 1)
-       feq(i)=(1./18.+tmp/6.+tmp*tmp/4.-usqr/12.)*rho
-    end do
-      
-    do i=info%dim*2+1,info%b
-       tmp = SUM(ci(i,:)*ue, 1)
-       feq(i)=(1./36.+tmp/12.+tmp*tmp/8.-usqr/24.)*rho
+       feq(i)= weights(i)*rho* &
+            (1 + tmp/constants%c_s2 + tmp*tmp/(2.d0*constants%c_s2*constants&c_s2) - usqr/(2.d0*constants%c_s2))
     end do
     
     return
   end subroutine LBMEquilfD3Q19
 
-  subroutine LBMEquilfD2Q9(feq, rho, ue, alf, info)
+  subroutine LBMEquilfD2Q9(feq, rho, ue, constants, info)
     use LBM_Discretization_D2Q9_module
     
     type(info_type) info
+    type(constants_type) constants
     PetscScalar,dimension(0:info%b)::feq
-    PetscScalar rho, alf
+    PetscScalar rho
     PetscScalar,dimension(1:info%dim):: ue
     
     PetscScalar usqr,tmp
     PetscInt i
     
     usqr = SUM(ue*ue, 1)
-    feq(0)= (alf-2./3.*usqr)*rho
-
-    do i=1,info%dim*2
+    
+    do i=0,info%b
        tmp = SUM(ci(i,:)*ue, 1)
-       feq(i)=((1.-alf)/5.+tmp/3.+tmp*tmp/2.-usqr/6.)*rho
+       feq(i)= weights(i)*rho* &
+            (1 + tmp/constants%c_s2 + tmp*tmp/(2.d0*constants%c_s2*constants&c_s2) - usqr/(2.d0*constants%c_s2))
     end do
     
-    do i=info%dim*2+1,info%b
-       tmp = SUM(ci(i,:)*ue, 1)
-       feq(i)=((1.-alf)/20.+tmp/12.+tmp*tmp/8.-usqr/24.)*rho
-    end do
     return
   end subroutine LBMEquilfD2Q9
 end module LBM_Equilibrium_module
