@@ -179,8 +179,8 @@
 
       lbm%dm_index_to_ndof(ONEDOF) = 1
       lbm%dm_index_to_ndof(NPHASEDOF) = lbm%info%s
-      lbm%dm_index_to_ndof(NPHASEXBDOF) = lbm%info%s*(lbm%info%b+1)
-      lbm%dm_index_to_ndof(NFLOWDOF) = lbm%info%dim
+      lbm%dm_index_to_ndof(NPHASEXBDOF) = lbm%info%s*(lbm%info%flow_disc%b+1)
+      lbm%dm_index_to_ndof(NFLOWDOF) = lbm%info%ndims
 
       ! create DAs
       periodicity = DMDA_NONPERIODIC
@@ -196,7 +196,7 @@
          periodicity = IOR(periodicity,DMDA_YGHOSTED)
       end if
 
-      if (lbm%info%dim > 2) then
+      if (lbm%info%ndims > 2) then
          if (lbm%info%periodic(Z_DIRECTION)) then
             periodicity = IOR(periodicity,DMDA_ZPERIODIC)
          else
@@ -238,7 +238,7 @@
       lbm%info%ye = lbm%info%ys+lbm%info%yl-1
       lbm%info%gye = lbm%info%gys+lbm%info%gyl-1
 
-      if (lbm%info%dim > 2) then
+      if (lbm%info%ndims > 2) then
          lbm%info%zs = zs+1
          lbm%info%gzs = gzs+1
          lbm%info%ze = lbm%info%zs+lbm%info%zl-1
@@ -284,12 +284,12 @@
       tmpcorners = 0.d0
       corners = 0.d0
 
-      nmax = lbm%info%dim
+      nmax = lbm%info%ndims
       call PetscOptionsGetRealArray(options%my_prefix, '-corner0', tmpcorners, nmax, flag, ierr)
       if (flag) corners(:,1) = tmpcorners
 
       tmpcorners = 0.d0
-      nmax = lbm%info%dim
+      nmax = lbm%info%ndims
       call PetscOptionsGetRealArray(options%my_prefix, '-corner1', tmpcorners, nmax, flag2, ierr)
       if (flag2) corners(:,2) = tmpcorners
 
@@ -307,9 +307,9 @@
 
 
       ! allocate, associate workspace
-      allocate(lbm%vel(1:lbm%info%s, 1:lbm%info%dim, 1:lbm%info%gxyzl))
-      allocate(lbm%vel_eq(1:lbm%info%s, 1:lbm%info%dim, 1:lbm%info%gxyzl))
-      allocate(lbm%forces(1:lbm%info%s, 1:lbm%info%dim, 1:lbm%info%gxyzl))
+      allocate(lbm%vel(1:lbm%info%s, 1:lbm%info%ndims, 1:lbm%info%gxyzl))
+      allocate(lbm%vel_eq(1:lbm%info%s, 1:lbm%info%ndims, 1:lbm%info%gxyzl))
+      allocate(lbm%forces(1:lbm%info%s, 1:lbm%info%ndims, 1:lbm%info%gxyzl))
 
       lbm%vel = 0
       lbm%vel_eq = 0
@@ -404,7 +404,7 @@
     ! --- do things
     subroutine LBMSetDomain(lbm, corners)
       type(lbm_type) lbm
-      PetscScalar,dimension(lbm%info%dim,2):: corners
+      PetscScalar,dimension(lbm%info%ndims,2):: corners
       PetscErrorCode ierr
       PetscScalar deltacoord
       PetscScalar newcoord_x
@@ -428,7 +428,7 @@
               corners(Y_DIRECTION,1))/dble(lbm%info%NY)
       endif
 
-      if (lbm%info%dim > 2) then
+      if (lbm%info%ndims > 2) then
          if (.not.lbm%info%periodic(Z_DIRECTION)) then
             lbm%info%gridsize(Z_DIRECTION) = (corners(Z_DIRECTION,2) - &
                  corners(Z_DIRECTION,1))/dble(lbm%info%NZ-1)
@@ -606,7 +606,7 @@
             end if
          endif
          call LBMAddBodyForces(lbm%rho_a, lbm%forces, lbm%walls_a, lbm%info, lbm%constants)
-         call LBMZeroBoundaryForces(lbm%bc%flags, lbm%forces, lbm%info%dim, &
+         call LBMZeroBoundaryForces(lbm%bc%flags, lbm%forces, lbm%info%ndims, &
               lbm%info, lbm%constants)
 
 !         call TimingEnd(timer2)
