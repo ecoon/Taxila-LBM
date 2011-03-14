@@ -104,6 +104,12 @@ module LBM_Discretization_D3Q19_module
               -1.d0, &
               -1.d0/)
 
+  PetscScalar,parameter,dimension(0:discretization_directions):: &
+       weights = (/ 1.d0/3.d0, &
+       1.d0/18.d0, 1.d0/18.d0, 1.d0/18.d0, 1.d0/18.d0, 1.d0/18.d0, 1.d0/18.d0, &
+       1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, &
+       1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0/)
+
   PetscScalar,dimension(0:discretization_directions, 1:discretization_dims):: ci
 
 contains
