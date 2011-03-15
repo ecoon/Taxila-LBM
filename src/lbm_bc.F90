@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   14 March 2011
-!!!       at:            17:45:54 MDT
+!!!     last modified:   15 March 2011
+!!!       at:            17:41:51 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -508,7 +508,7 @@ contains
   end subroutine BCPressureD3Q19
 
   subroutine BCPressureApplyD3Q19(bc, fi, pvals, directions, info)
-    use LBM_Discretization_D3Q19_module
+    use LBM_Discretization_Directions_D3Q19_module
 
     type(bc_type) bc
     type(info_type) info
@@ -725,7 +725,7 @@ contains
   end subroutine BCFluxD3Q19
   
   subroutine BCFluxApplyD3Q19(bc, fi, fvals, directions, cardinals, info)
-    use LBM_Discretization_D3Q19_module
+    use LBM_Discretization_Directions_D3Q19_module
 
     type(bc_type) bc
     type(info_type) info
@@ -825,7 +825,7 @@ contains
   end subroutine BCFluxApplyD3Q19
 
   subroutine BCSetLocalDirectionsD3Q19(boundary, directions, cardinals)
-    use LBM_Discretization_D3Q19_module
+    use LBM_Discretization_Directions_D3Q19_module
     PetscInt,intent(in):: boundary
     PetscInt,intent(out),dimension(0:discretization_directions) :: directions
     PetscInt,intent(out),dimension(1:discretization_dims) :: cardinals
@@ -1249,7 +1249,7 @@ contains
   end subroutine BCFluxD2Q9
 
   subroutine BCSetLocalDirectionsD2Q9(boundary, directions, cardinals)
-    use LBM_Discretization_D2Q9_module
+    use LBM_Discretization_Directions_D2Q9_module
     PetscInt,intent(in):: boundary
     PetscInt,intent(out),dimension(0:discretization_directions) :: directions
     PetscInt,intent(out),dimension(1:discretization_dims) :: cardinals
@@ -1316,7 +1316,7 @@ contains
 !!!!! MY 2D Blux BC Additions !!!!!
 
   subroutine BCFluxApplyD2Q9(bc, fi, fvals, directions, cardinals, info)
-    use LBM_Discretization_D2Q9_module
+    use LBM_Discretization_Directions_D2Q9_module
 
     type(bc_type) bc
     type(info_type) info
@@ -1374,7 +1374,7 @@ contains
 
   
   subroutine BCPressureApplyD2Q9(bc, fi, pvals, directions, info)
-    use LBM_Discretization_D2Q9_module
+    use LBM_Discretization_Directions_D2Q9_module
 
     type(bc_type) bc
     type(info_type) info

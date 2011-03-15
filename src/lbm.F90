@@ -20,8 +20,9 @@
   module LBM_module
     use petsc
     use Timing_module
-    use LBM_Info_module
     use LBM_Constants_module
+    use LBM_Discretization_module
+    use LBM_Info_module
     use LBM_BC_module
     use LBM_Options_module
     implicit none
@@ -107,7 +108,7 @@
       lbm%da_s = 0
       lbm%da_sb = 0
       lbm%da_flow = 0
-      lbm%info => InfoCreate()
+      lbm%info => InfoCreate(comm)
       lbm%bc => BCCreate()
       lbm%options => OptionsCreate(comm)
       lbm%constants => ConstantsCreate()
@@ -176,6 +177,8 @@
       call mpi_comm_size(lbm%comm,lbm%info%nproc, ierr)
 
       call InfoSetFromOptions(lbm%info, options, ierr)
+      call ConstantsSetFromOptions(lbm%constants, options, ierr)
+      call DiscretizationSetupConstants(lbm%info%flow_disc, lbm%constants)
 
       lbm%dm_index_to_ndof(ONEDOF) = 1
       lbm%dm_index_to_ndof(NPHASEDOF) = lbm%info%s
@@ -269,7 +272,6 @@
       deallocate(ownership_z)
 
       ! set up constants, bcs, periodicity
-      call ConstantsSetFromOptions(lbm%constants, lbm%info, options, ierr)
       call BCSetFromOptions(lbm%bc, lbm%info, options, ierr)
 
       ! coordinates
