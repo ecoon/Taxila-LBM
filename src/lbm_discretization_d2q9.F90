@@ -43,11 +43,11 @@ contains
     disc%name = D2Q9_DISCRETIZATION
     disc%ndims = discretization_dims
     disc%b = discretization_directions
-    allocate(disc%ci(1:disc%ndims,0:disc%b))
+    allocate(disc%ci(0:disc%b,1:disc%ndims))
     allocate(disc%weights(0:disc%b))
 
-    disc%ci(X_DIRECTION,:) = (/ 0, 1, 0,-1, 0, 1,-1,-1, 1/)
-    disc%ci(Y_DIRECTION,:) = (/ 0, 0, 1, 0,-1, 1, 1,-1,-1/)
+    disc%ci(:,X_DIRECTION) = (/ 0, 1, 0,-1, 0, 1,-1,-1, 1/)
+    disc%ci(:,Y_DIRECTION) = (/ 0, 0, 1, 0,-1, 1, 1,-1,-1/)
 
     disc%weights = (/ 4.d0/9.d0, &
        1.d0/9.d0,  1.d0/9.d0,  1.d0/9.d0,  1.d0/9.d0, &
