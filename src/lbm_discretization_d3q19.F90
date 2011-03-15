@@ -14,14 +14,9 @@
 #define PETSC_USE_FORTRAN_MODULES 1
 #include "finclude/petscsysdef.h"
   
-module LBM_Discretization_D3Q19_module
-  use LBM_Discretization_module
+module LBM_Discretization_Directions_D3Q19_module
   implicit none
 
-  private
-#include "lbm_definitions.h"
-
-  ! directions
   PetscInt, parameter, public :: ORIGIN = 0
   PetscInt, parameter, public :: EAST = 1
   PetscInt, parameter, public :: NORTH = 2
@@ -44,6 +39,15 @@ module LBM_Discretization_D3Q19_module
 
   PetscInt, public, parameter :: discretization_dims = 3
   PetscInt, public, parameter :: discretization_directions = 18
+end module LBM_Discretization_Directions_D3Q19_module
+
+module LBM_Discretization_D3Q19_module
+  use LBM_Discretization_Type_module
+  use LBM_Discretization_Directions_D3Q19_module
+  implicit none
+
+  private
+#include "lbm_definitions.h"
 
   public:: DiscretizationSetup_D3Q19
 
@@ -68,5 +72,14 @@ contains
        1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, &
        1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0/)
   end subroutine DiscretizationSetup_D3Q19
+
+  subroutine DiscretizationSetupConstants_D3Q19(disc, constants)
+    use LBM_Constants_module
+    type(discretization_type) disc
+    type(constants_type) constants
+    
+    constants%alpha_0 = constants%d_k
+    constants%alpha_1 = -1.d0/2.d0
+  end subroutine DiscretizationSetupConstants_D3Q19
 end module LBM_Discretization_D3Q19_module
 

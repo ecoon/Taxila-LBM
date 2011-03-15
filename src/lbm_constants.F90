@@ -28,7 +28,9 @@ module LBM_Constants_module
      PetscScalar,pointer,dimension(:):: gw   ! fluid-solid interaction forces
      PetscScalar,pointer,dimension(:):: mm   ! mass per number (rho = mm*n)
      PetscScalar c_s2   ! sound speed squared
-     PetscScalar,pointer,dimension(:):: d_k   ! mass per number (rho = mm*n)
+     PetscScalar,pointer,dimension(:):: d_k   ! 
+     PetscScalar,pointer,dimension(:):: alpha_0   ! 
+     PetscScalar alpha_1
   end type constants_type
 
   public :: ConstantsCreate, &
@@ -51,26 +53,26 @@ contains
     nullify(constants%gw)
     nullify(constants%mm)
     nullify(constants%d_k)
-
+    nullify(constants%alpha_0)
   end function ConstantsCreate
     
-  subroutine ConstantsSetFromOptions(constants, info, options, ierr)
-    use LBM_Info_module
+  subroutine ConstantsSetFromOptions(constants, options, ierr)
     use LBM_Options_module
+    
     type(constants_type) constants
-    type(info_type) info
     type(options_type) options
     PetscErrorCode ierr
 
     PetscInt nmax
     PetscBool flag
 
-    constants%s = info%s
-    allocate(constants%tau(1:info%s))
-    allocate(constants%gvt(1:info%s,1:info%ndims))
-    allocate(constants%gw(1:info%s))
-    allocate(constants%mm(1:info%s))
-    allocate(constants%d_k(1:info%s))
+    constants%s = options%nphases
+    allocate(constants%tau(1:options%nphases))
+    allocate(constants%gvt(1:options%nphases,1:options%ndims))
+    allocate(constants%gw(1:options%nphases))
+    allocate(constants%mm(1:options%nphases))
+    allocate(constants%d_k(1:options%nphases))
+    allocate(constants%alpha_0(1:options%nphases))
 
     ! defaults
     constants%tau = 1.d0
@@ -79,7 +81,7 @@ contains
     constants%mm = 1.d0
     constants%c_s2 = 1.d0/3.d0
 
-    if (info%s > 1) then
+    if (options%nphases > 1) then
        call PetscOptionsGetReal(options%my_prefix, '-g', constants%g, flag, ierr)
        call PetscOptionsGetReal(options%my_prefix, '-g11', constants%g11, flag, ierr)
        call PetscOptionsGetReal(options%my_prefix, '-g22', constants%g22, flag, ierr)
@@ -96,7 +98,7 @@ contains
     call PetscOptionsGetRealArray(options%my_prefix, '-gvt_y', &
          constants%gvt(:,Y_DIRECTION), nmax, flag, ierr)
 
-    if (info%ndims > 2) then
+    if (options%ndims > 2) then
        nmax = constants%s
        call PetscOptionsGetRealArray(options%my_prefix, '-gvt_z', &
             constants%gvt(:,Z_DIRECTION), nmax, flag, ierr)
@@ -113,6 +115,7 @@ contains
     nmax = constants%s
     call PetscOptionsGetRealArray(options%my_prefix, '-mm', constants%mm, nmax, &
          flag, ierr)
+    constants%d_k = 1.d0 - 2.d0/(3.d0*constants%mm)
   end subroutine ConstantsSetFromOptions
   
   subroutine ConstantsView(constants)
@@ -138,6 +141,8 @@ contains
     if (associated(constants%gvt)) deallocate(constants%gvt)
     if (associated(constants%gw)) deallocate(constants%gw)
     if (associated(constants%mm)) deallocate(constants%mm)
+    if (associated(constants%d_k)) deallocate(constants%d_k)
+    if (associated(constants%alpha_0)) deallocate(constants%alpha_0)
   end subroutine ConstantsDestroy
 end module LBM_Constants_module
   

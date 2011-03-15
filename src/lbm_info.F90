@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   14 March 2011
-!!!       at:            17:55:42 MDT
+!!!     last modified:   15 March 2011
+!!!       at:            17:41:05 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -17,6 +17,7 @@
 
   module LBM_Info_module
     use petsc
+    use LBM_Discretization_Type_module
     use LBM_Discretization_module
     implicit none
 
@@ -24,6 +25,7 @@
 #include "lbm_definitions.h"
 
     type, public:: info_type
+       MPI_Comm comm
        PetscInt xs,xe,xl,gxs,gxe,gxl
        PetscInt ys,ye,yl,gys,gye,gyl
        PetscInt zs,ze,zl,gzs,gze,gzl
@@ -49,10 +51,11 @@
          InfoGatherValueToDirection
 
   contains
-    function InfoCreate() result(info)
+    function InfoCreate(comm) result(info)
+      MPI_Comm comm
       type(info_type),pointer:: info
       allocate(info)
-
+      info%comm = comm
       info%xs = -1
       info%xe = -1
       info%xl = -1
@@ -109,8 +112,6 @@
 
       PetscBool flag
       character(len=MAXWORDLENGTH):: discretization
-      character(len=MAXWORDLENGTH):: test_discretization
-      PetscInt tmp_dim
       
       info%options_prefix = options%my_prefix
 
@@ -123,47 +124,14 @@
       call PetscOptionsGetInt(options%my_prefix,'-ny',info%NY,flag,ierr)
       call PetscOptionsGetInt(options%my_prefix,'-nz',info%NZ,flag,ierr)
 
-      ! set the flow discretization
-      call PetscOptionsGetString(options%my_prefix, '-discretization', &
-           discretization, flag, ierr)
-      if (.not.flag) then
-         call PetscOptionsGetString(options%my_prefix, '-flow_discretization', &
-              discretization, flag, ierr)
-      end if
-      if (.not.flag) discretization = 'D3Q19'
+      info%flow_disc => DiscretizationCreate(info%comm)
+      call DiscretizationSetup(info%flow_disc, discretization)
+      info%ndims = info%flow_disc%ndims
 
-      test_discretization = 'd3q19'
-      if (StringCompareIgnoreCase(discretization, test_discretization, 6)) then
-         call InfoSetDiscretizationD3Q19(info, info%flow_disc)
-      endif
-      
-      test_discretization = 'd2q9'
-      if (StringCompareIgnoreCase(discretization, test_discretization, 5)) then
-         call InfoSetDiscretizationD2Q9(info, info%flow_disc)
-      end if
-      
-      ! make sure we have an answer
-      if (.not.associated(info%flow_disc)) SETERRQ(1, 1, 'Invalid Discretization', ierr)
-      tmp_dim = info%ndims
-      
-      ! set the tran discretization
-      call PetscOptionsGetString(options%my_prefix, '-transport_discretization', &
-           discretization, flag, ierr)
-
-      if (flag) then
-         test_discretization = 'd3q19'
-         if (StringCompareIgnoreCase(discretization, test_discretization, 6)) then
-            call InfoSetDiscretizationD3Q19(info, info%tran_disc)
-         endif
-
-         test_discretization = 'd2q9'
-         if (StringCompareIgnoreCase(discretization, test_discretization, 5)) then
-            call InfoSetDiscretizationD2Q9(info, info%tran_disc)
-         end if
-         
-         ! make sure we have an answer
-         if (.not.associated(info%tran_disc)) SETERRQ(1, 1, 'Invalid Discretization', ierr)
-         if (tmp_dim /= info%ndims) SETERRQ(1,1,"Discretization dimensions don't match", ierr)
+      info%tran_disc => DiscretizationCreate(info%comm)
+      call DiscretizationSetup(info%tran_disc, discretization)
+      if (info%ndims /= info%tran_disc%ndims) then
+         SETERRQ(1,1,"Discretization dimensions don't match", ierr)
       end if
 
       ! set up the grid
@@ -194,26 +162,6 @@
       end if
       
     end subroutine InfoSetFromOptions
-
-    subroutine InfoSetDiscretizationD3Q19(info, disc)
-      use LBM_Discretization_D3Q19_module
-      type(info_type) info
-      type(discretization_type),pointer:: disc
-
-      allocate(disc)
-      call DiscretizationSetup_D3Q19(disc)
-      info%ndims = disc%ndims
-    end subroutine InfoSetDiscretizationD3Q19
-
-    subroutine InfoSetDiscretizationD2Q9(info, disc)
-      use LBM_Discretization_D2Q9_module
-      type(info_type) info
-      type(discretization_type),pointer:: disc
-
-      allocate(disc)
-      call DiscretizationSetup_D2Q9(disc)
-      info%ndims = disc%ndims
-    end subroutine InfoSetDiscretizationD2Q9
 
     subroutine InfoView(info)
       type(info_type) info
