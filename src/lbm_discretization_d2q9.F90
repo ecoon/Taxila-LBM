@@ -13,13 +13,9 @@
 !!!==================================================================
 #define PETSC_USE_FORTRAN_MODULES 1
 #include "finclude/petscsysdef.h"
-  
-module LBM_Discretization_D2Q9_module
-  use LBM_Discretization_module
-  implicit none
 
-  private
-#include "lbm_definitions.h"
+module LBM_Discretization_Directions_D2Q9_module
+  implicit none
   
   ! discretization-specific enum directions
   PetscInt, public, parameter :: ORIGIN = 0
@@ -34,6 +30,15 @@ module LBM_Discretization_D2Q9_module
 
   PetscInt, public, parameter :: discretization_dims = 2
   PetscInt, public, parameter :: discretization_directions = 8
+end module LBM_Discretization_Directions_D2Q9_module
+  
+module LBM_Discretization_D2Q9_module
+  use LBM_Discretization_Type_module
+  use LBM_Discretization_Directions_D2Q9_module
+  implicit none
+
+  private
+#include "lbm_definitions.h"
 
   public:: DiscretizationSetup_D2Q9
 
@@ -53,5 +58,14 @@ contains
        1.d0/9.d0,  1.d0/9.d0,  1.d0/9.d0,  1.d0/9.d0, &
        1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0 /)
   end subroutine DiscretizationSetup_D2Q9
+
+  subroutine DiscretizationSetupConstants_D2Q9(disc, constants)
+    use LBM_Constants_module
+    type(discretization_type) disc
+    type(constants_type) constants
+    
+    constants%alpha_0 = (1.d0 + constants%d_k*5.d0)/6.d0
+    constants%alpha_1 = -2.d0/3.d0
+  end subroutine DiscretizationSetupConstants_D2Q9
 end module LBM_Discretization_D2Q9_module
 
