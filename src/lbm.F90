@@ -170,7 +170,7 @@
       character(len=MAXSTRINGLENGTH) coordfile
       PetscViewer viewer
       PetscScalar zero
-      PetscInt periodicity
+      PetscInt,dimension(3):: btype
         
       call mpi_comm_rank(lbm%comm,lbm%info%id,ierr)
       call mpi_comm_size(lbm%comm,lbm%info%nproc, ierr)
@@ -183,28 +183,17 @@
       lbm%dm_index_to_ndof(NFLOWDOF) = lbm%info%ndims
 
       ! create DAs
-      periodicity = DMDA_NONPERIODIC
-      if (lbm%info%periodic(X_DIRECTION)) then
-         periodicity = IOR(periodicity,DMDA_XPERIODIC)
-      else
-         periodicity = IOR(periodicity,DMDA_XGHOSTED)
-      end if
-
-      if (lbm%info%periodic(Y_DIRECTION)) then
-         periodicity = IOR(periodicity,DMDA_YPERIODIC)
-      else
-         periodicity = IOR(periodicity,DMDA_YGHOSTED)
-      end if
-
+      btype(:) = DMDA_BOUNDARY_GHOSTED
+      if (lbm%info%periodic(X_DIRECTION)) btype(X_DIRECTION) = DMDA_BOUNDARY_PERIODIC
+      if (lbm%info%periodic(Y_DIRECTION)) btype(Y_DIRECTION) = DMDA_BOUNDARY_PERIODIC
       if (lbm%info%ndims > 2) then
-         if (lbm%info%periodic(Z_DIRECTION)) then
-            periodicity = IOR(periodicity,DMDA_ZPERIODIC)
-         else
-            periodicity = IOR(periodicity,DMDA_ZGHOSTED)
-         end if
+         if (lbm%info%periodic(Z_DIRECTION)) btype(Z_DIRECTION) = DMDA_BOUNDARY_PERIODIC
+      else
+         btype(Z_DIRECTION) = PETSC_NULL_INTEGER
       end if
 
-      call DMDACreate3d(lbm%comm, periodicity, DMDA_STENCIL_BOX, &
+      call DMDACreate3d(lbm%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
+           btype(Z_DIRECTION), DMDA_STENCIL_BOX, &
            lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
            PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, lbm%dm_index_to_ndof(ONEDOF), 1, &
            PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_one, ierr)
@@ -218,7 +207,7 @@
       call DMDAGetInfo(lbm%da_one, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
            PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%info%nproc_x, &
            lbm%info%nproc_y, lbm%info%nproc_z, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
-           PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, ierr)
+           PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, ierr)
       allocate(ownership_x(1:lbm%info%nproc_x))
       allocate(ownership_y(1:lbm%info%nproc_y))
       allocate(ownership_z(1:lbm%info%nproc_z))
@@ -248,7 +237,8 @@
       lbm%info%xyzl = lbm%info%xl*lbm%info%yl*lbm%info%zl
       lbm%info%gxyzl = lbm%info%gxl*lbm%info%gyl*lbm%info%gzl
 
-      call DMDACreate3d(lbm%comm, periodicity, DMDA_STENCIL_BOX, &
+      call DMDACreate3d(lbm%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
+           btype(Z_DIRECTION), DMDA_STENCIL_BOX, &
            lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
            lbm%info%nproc_x, lbm%info%nproc_y, lbm%info%nproc_z, &
            lbm%dm_index_to_ndof(NPHASEDOF), 1, &
@@ -256,7 +246,8 @@
            lbm%da_s, ierr)
       call PetscObjectSetName(lbm%da_s, trim(lbm%name)//'DA_NPHASE', ierr)
 
-      call DMDACreate3d(lbm%comm, periodicity, DMDA_STENCIL_BOX, &
+      call DMDACreate3d(lbm%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
+           btype(Z_DIRECTION), DMDA_STENCIL_BOX, &
            lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
            lbm%info%nproc_x, lbm%info%nproc_y, lbm%info%nproc_z, &
            lbm%dm_index_to_ndof(NPHASEXBDOF), 1, &
@@ -264,7 +255,8 @@
            lbm%da_sb, ierr)
       call PetscObjectSetName(lbm%da_sb, trim(lbm%name)//'DA_fi', ierr)
 
-      call DMDACreate3d(lbm%comm, periodicity, DMDA_STENCIL_BOX, &
+      call DMDACreate3d(lbm%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
+           btype(Z_DIRECTION), DMDA_STENCIL_BOX, &
            lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
            lbm%info%nproc_x, lbm%info%nproc_y, lbm%info%nproc_z, &
            lbm%dm_index_to_ndof(NFLOWDOF), 1, &
@@ -512,7 +504,9 @@
          call DMDAVecGetArrayF90(lbm%da_flow, lbm%ut, lbm%ut_a, ierr)
          
          ! update values for zero time i/o
-         call LBMUpdateMoments(lbm%fi_a,lbm%rho_a, lbm%vel, lbm%walls_a, lbm%info)
+         call LBMUpdateMoments(lbm%fi_a, lbm%rho_a, lbm%vel, lbm%walls_a, lbm%info)
+         call LBMUpdateUEquilibrium(lbm%fi_a, lbm%rho_a, lbm%vel, lbm%walls_a, &
+              lbm%vel_eq, lbm%rhot_a, lbm%forces, lbm%info, lbm%constants)
          call LBMUpdateDiagnostics(lbm%rho_a, lbm%vel, lbm%walls_a, lbm%ut_a, &
               lbm%rhot_a, lbm%prs_a, lbm%forces, lbm%info, lbm%constants)
          
@@ -540,7 +534,6 @@
       call DMDAVecGetArrayF90(lbm%da_flow, lbm%ut, lbm%ut_a, ierr)
 
       call BCGetArrays(lbm%bc, ierr)
-
 
       timername = trim(lbm%name)//'Simulation'
       timer1 => TimingCreate(lbm%comm, timername)

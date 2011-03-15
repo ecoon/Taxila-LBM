@@ -6,8 +6,8 @@
 ###     version:         
 ###     created:         28 January 2011
 ###       on:            10:57:45 MST
-###     last modified:   03 February 2011
-###       at:            11:50:01 MST
+###     last modified:   15 March 2011
+###       at:            11:42:11 MDT
 ###     URL:             http://www.ldeo.columbia.edu/~ecoon/
 ###     email:           ecoon _at_ lanl.gov
 ###  
@@ -32,7 +32,7 @@ if __name__ == '__main__':
                     dest='prefix', default='',
                     help='optional PETSc file prefix')
     opts.add_option('-e', '--eps',
-                    dest='eps', default='1.e-7')
+                    dest='eps', default='1.e-5')
     opts.add_option('--rotate',
                     action='store_true', dest='rotate', default=False)
     opts.add_option('--double-rotate',
@@ -85,9 +85,9 @@ if __name__ == '__main__':
 
             print truedata.shape
             print testdata.shape
-            if numpy.linalg.norm((truedata - testdata).ravel()) > eps:
+            if numpy.linalg.norm((truedata - testdata).ravel(),ord=numpy.inf) > eps:
                 ecode = 1
-                print ' ',vecname+'%03d.dat'%i,'failed, norm:', numpy.linalg.norm((truedata - testdata).ravel())
+                print ' ',vecname+'%03d.dat'%i,'failed, L_inf norm:', numpy.linalg.norm((truedata - testdata).ravel(),ord=numpy.inf)
 
                 from matplotlib import pyplot as plt
                 plt.figure()
