@@ -13,52 +13,60 @@
 !!!==================================================================
 #define PETSC_USE_FORTRAN_MODULES 1
 #include "finclude/petscsysdef.h"
-  
-module LBM_Discretization_D2Q9_module
+
+module LBM_Discretization_Directions_D2Q9_module
   implicit none
   
-  PetscInt, parameter :: discretization_dims = 2
-  PetscInt, parameter :: discretization_directions = 8
+  ! discretization-specific enum directions
+  PetscInt, public, parameter :: ORIGIN = 0
+  PetscInt, public, parameter :: EAST = 1
+  PetscInt, public, parameter :: NORTH = 2
+  PetscInt, public, parameter :: WEST = 3
+  PetscInt, public, parameter :: SOUTH = 4
+  PetscInt, public, parameter :: NORTHEAST = 5
+  PetscInt, public, parameter :: NORTHWEST = 6
+  PetscInt, public, parameter :: SOUTHWEST = 7
+  PetscInt, public, parameter :: SOUTHEAST = 8
 
-  ! directions
-  PetscInt, parameter :: ORIGIN = 0
-  PetscInt, parameter :: EAST = 1
-  PetscInt, parameter :: NORTH = 2
-  PetscInt, parameter :: WEST = 3
-  PetscInt, parameter :: SOUTH = 4
-  PetscInt, parameter :: NORTHEAST = 5
-  PetscInt, parameter :: NORTHWEST = 6
-  PetscInt, parameter :: SOUTHWEST = 7
-  PetscInt, parameter :: SOUTHEAST = 8
-
-  PetscScalar,parameter,dimension(0:discretization_directions):: &
-       cix = (/ 0.d0, & 
-                1.d0, &
-                0.d0, &
-               -1.d0, &
-                0.d0, &
-                1.d0, &
-               -1.d0, &
-               -1.d0, &
-                1.d0/)
-  PetscScalar,parameter,dimension(0:discretization_directions):: &
-       ciy = (/ 0.d0, &
-                0.d0, &
-                1.d0, &
-                0.d0, &
-               -1.d0, &
-                1.d0, &
-                1.d0, &
-               -1.d0, &
-               -1.d0/)
+  PetscInt, public, parameter :: discretization_dims = 2
+  PetscInt, public, parameter :: discretization_directions = 8
+end module LBM_Discretization_Directions_D2Q9_module
   
-  PetscScalar,dimension(0:discretization_directions, 1:discretization_dims):: ci
+module LBM_Discretization_D2Q9_module
+  use LBM_Discretization_Type_module
+  use LBM_Discretization_Directions_D2Q9_module
+  implicit none
+
+  private
+#include "lbm_definitions.h"
+
+  public:: DiscretizationSetUp_D2Q9, &
+       DiscretizationSetUpConstants_D2Q9
 
 contains
-  subroutine LBMDiscretizationSetup()
-    ci(:,1) = cix
-    ci(:,2) = ciy
-  end subroutine LBMDiscretizationSetup
- 
+  subroutine DiscretizationSetUp_D2Q9(disc)
+    type(discretization_type) disc
+    disc%name = D2Q9_DISCRETIZATION
+    disc%ndims = discretization_dims
+    disc%b = discretization_directions
+    allocate(disc%ci(0:disc%b,1:disc%ndims))
+    allocate(disc%weights(0:disc%b))
+
+    disc%ci(:,X_DIRECTION) = (/ 0, 1, 0,-1, 0, 1,-1,-1, 1/)
+    disc%ci(:,Y_DIRECTION) = (/ 0, 0, 1, 0,-1, 1, 1,-1,-1/)
+
+    disc%weights = (/ 4.d0/9.d0, &
+       1.d0/9.d0,  1.d0/9.d0,  1.d0/9.d0,  1.d0/9.d0, &
+       1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0 /)
+  end subroutine DiscretizationSetUp_D2Q9
+
+  subroutine DiscretizationSetUpConstants_D2Q9(disc, constants)
+    use LBM_Constants_module
+    type(discretization_type) disc
+    type(constants_type) constants
+    
+    constants%alpha_0 = (1.d0 + constants%d_k*5.d0)/6.d0
+    constants%alpha_1 = -2.d0/3.d0
+  end subroutine DiscretizationSetUpConstants_D2Q9
 end module LBM_Discretization_D2Q9_module
 

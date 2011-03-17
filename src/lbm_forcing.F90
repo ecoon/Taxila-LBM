@@ -38,12 +38,12 @@ contains
     type(info_type) info
     type(constants_type) constants
     PetscScalar,dimension(1:info%s, 1:info%gxyzl):: rho
-    PetscScalar,dimension(1:info%s, 1:info%dim, 1:info%gxyzl):: forces
+    PetscScalar,dimension(1:info%s, 1:info%ndims, 1:info%gxyzl):: forces
     PetscScalar,dimension(1:info%gxyzl):: walls
 
     ! local
     PetscInt i,j,k,m,n,d
-    PetscScalar,dimension(1:info%s, 0:info%b, 1:info%gxyzl)::tmp
+    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, 1:info%gxyzl)::tmp
     PetscErrorCode ierr
 
     do m=1,info%s
@@ -52,26 +52,26 @@ contains
 
     do i=1,info%gxyzl
        if (walls(i).eq.0) then
-          do d=1,info%dim
-             do n=1,2*info%dim
+          do d=1,info%ndims
+             do n=1,2*info%ndims
                 forces(1,d,i) = forces(1,d,i) &
-                     - rho(1,i)*tmp(2,n,i)*info%ci_int(n,d)*constants%g
+                     - rho(1,i)*tmp(2,n,i)*info%flow_disc%ci(n,d)*constants%g
                 forces(1,d,i) = forces(1,d,i) &
-                     - rho(1,i)*tmp(1,n,i)*info%ci_int(n,d)*constants%g11
+                     - rho(1,i)*tmp(1,n,i)*info%flow_disc%ci(n,d)*constants%g11
                 forces(2,d,i) = forces(2,d,i) &
-                     - rho(2,i)*tmp(1,n,i)*info%ci_int(n,d)*constants%g
+                     - rho(2,i)*tmp(1,n,i)*info%flow_disc%ci(n,d)*constants%g
                 forces(2,d,i) = forces(2,d,i) &
-                     - rho(2,i)*tmp(2,n,i)*info%ci_int(n,d)*constants%g22
+                     - rho(2,i)*tmp(2,n,i)*info%flow_disc%ci(n,d)*constants%g22
              enddo
-             do n=2*info%dim+1,info%b
+             do n=2*info%ndims+1,info%flow_disc%b
                 forces(1,d,i) = forces(1,d,i) &
-                     - rho(1,i)*tmp(2,n,i)*info%ci_int(n,d)*constants%g*0.5
+                     - rho(1,i)*tmp(2,n,i)*info%flow_disc%ci(n,d)*constants%g*0.5
                 forces(1,d,i) = forces(1,d,i) &
-                     - rho(1,i)*tmp(1,n,i)*info%ci_int(n,d)*constants%g11*0.5
+                     - rho(1,i)*tmp(1,n,i)*info%flow_disc%ci(n,d)*constants%g11*0.5
                 forces(2,d,i) = forces(2,d,i) &
-                     - rho(2,i)*tmp(1,n,i)*info%ci_int(n,d)*constants%g*0.5
+                     - rho(2,i)*tmp(1,n,i)*info%flow_disc%ci(n,d)*constants%g*0.5
                 forces(2,d,i) = forces(2,d,i) &
-                     - rho(2,i)*tmp(2,n,i)*info%ci_int(n,d)*constants%g22*0.5
+                     - rho(2,i)*tmp(2,n,i)*info%flow_disc%ci(n,d)*constants%g22*0.5
              enddo
           end do
        end if
@@ -84,7 +84,7 @@ contains
     type(info_type) info
     type(constants_type) constants
     PetscScalar,dimension(1:info%s, 1:info%gxyzl):: rho
-    PetscScalar,dimension(1:info%s, 1:info%dim, 1:info%gxyzl):: forces
+    PetscScalar,dimension(1:info%s, 1:info%ndims, 1:info%gxyzl):: forces
     PetscScalar,dimension(1:info%gxyzl):: walls
 
     PetscInt i,m,n,d
@@ -92,7 +92,7 @@ contains
     do m=1,info%s
        do i=1,info%gxyzl
           if (walls(i).eq.0) then
-             do d=1,info%dim
+             do d=1,info%ndims
                 forces(m,d,i) = forces(m,d,i) &
                      + constants%gvt(m,d)*constants%mm(m)*rho(m,i)
              end do
@@ -119,12 +119,12 @@ contains
     type(info_type) info
     type(constants_type) constants
     PetscScalar,dimension(1:info%s, 1:info%gxyzl):: rho
-    PetscScalar,dimension(1:info%s, 1:info%dim, 1:info%gxyzl):: forces
+    PetscScalar,dimension(1:info%s, 1:info%ndims, 1:info%gxyzl):: forces
     PetscScalar,dimension(1:info%gxyzl):: walls
 
     ! local
     PetscInt i,m,n,d
-    PetscScalar,dimension(0:info%b,1:info%gxyzl)::tmp
+    PetscScalar,dimension(0:info%flow_disc%b,1:info%gxyzl)::tmp
     PetscErrorCode ierr
 
     call InfoGatherValueToDirection(info, walls, tmp)
@@ -132,14 +132,14 @@ contains
     do m=1,info%s
       do i=1,info%gxyzl
         if (walls(i).eq.0) then
-          do d=1,info%dim
-            do n=1,2*info%dim
+          do d=1,info%ndims
+            do n=1,2*info%ndims
                forces(m,d,i) = forces(m,d,i) &
-                    - rho(m,i)*tmp(n,i)*info%ci_int(n,d)*constants%gw(m)
+                    - rho(m,i)*tmp(n,i)*info%flow_disc%ci(n,d)*constants%gw(m)
             enddo
-            do n=2*info%dim+1,info%b
+            do n=2*info%ndims+1,info%flow_disc%b
                forces(m,d,i) = forces(m,d,i) &
-                    - rho(m,i)*tmp(n,i)*info%ci_int(n,d)*constants%gw(m)*0.5
+                    - rho(m,i)*tmp(n,i)*info%flow_disc%ci(n,d)*constants%gw(m)*0.5
             enddo
           end do
         end if
@@ -154,11 +154,11 @@ contains
     type(constants_type) constants
     PetscInt bc_dim
     PetscInt, dimension(6)::bc_flags ! enum for boundary conditions
-    PetscScalar,dimension(1:info%s, 1:info%dim, 1:info%gxyzl):: forces
+    PetscScalar,dimension(1:info%s, 1:info%ndims, 1:info%gxyzl):: forces
 
-    if (info%dim.eq.2) then
+    if (info%ndims.eq.2) then
        call LBMZeroBoundaryForcesD2(bc_flags, forces, bc_dim, info,constants)
-    else if (info%dim.eq.3) then
+    else if (info%ndims.eq.3) then
        call LBMZeroBoundaryForcesD3(bc_flags, forces, bc_dim, info,constants)
     end if
   end subroutine LBMZeroBoundaryForces
@@ -169,7 +169,7 @@ contains
     PetscInt bc_dim
     PetscInt, dimension(6)::bc_flags ! enum for boundary conditions
 
-    PetscScalar,dimension(1:info%s, 1:info%dim, info%gxs:info%gxe, &
+    PetscScalar,dimension(1:info%s, 1:info%ndims, info%gxs:info%gxe, &
          info%gys:info%gye):: forces
     
     ! -- x
@@ -202,7 +202,7 @@ contains
     PetscInt bc_dim
     PetscInt, dimension(6)::bc_flags ! enum for boundary conditions
 
-    PetscScalar,dimension(1:info%s, 1:info%dim, info%gxs:info%gxe, &
+    PetscScalar,dimension(1:info%s, 1:info%ndims, info%gxs:info%gxe, &
          info%gys:info%gye, info%gzs:info%gze):: forces
     
     ! -- x

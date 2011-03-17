@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   28 February 2011
-!!!       at:            17:38:09 MST
+!!!     last modified:   17 March 2011
+!!!       at:            09:48:45 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -17,12 +17,15 @@
 
   module LBM_Info_module
     use petsc
+    use LBM_Discretization_Type_module
+    use LBM_Discretization_module
     implicit none
 
     private
 #include "lbm_definitions.h"
 
     type, public:: info_type
+       MPI_Comm comm
        PetscInt xs,xe,xl,gxs,gxe,gxl
        PetscInt ys,ye,yl,gys,gye,gyl
        PetscInt zs,ze,zl,gzs,gze,gzl
@@ -31,14 +34,14 @@
        PetscInt nproc_x, nproc_y, nproc_z
        PetscInt id, nproc
        PetscInt s
-       PetscInt b
-       PetscInt dim
-       PetscInt discretization
+       PetscInt ndims
        PetscBool,pointer:: periodic(:)
        PetscReal,pointer:: gridsize(:)
        PetscReal,pointer:: corners(:,:)
        character(len=MAXWORDLENGTH):: options_prefix
-       PetscInt,pointer:: ci_int(:,:)
+       type(discretization_type),pointer :: flow_disc
+       type(discretization_type),pointer :: tran_disc
+
     end type info_type
     
     public :: InfoCreate, &
@@ -48,10 +51,11 @@
          InfoGatherValueToDirection
 
   contains
-    function InfoCreate() result(info)
+    function InfoCreate(comm) result(info)
+      MPI_Comm comm
       type(info_type),pointer:: info
       allocate(info)
-
+      info%comm = comm
       info%xs = -1
       info%xe = -1
       info%xl = -1
@@ -80,9 +84,9 @@
       info%NZ = -1
 
       info%s = -1
-      info%b = -1
-      info%dim = -1
-      info%discretization = NULL_DISCRETIZATION
+      info%ndims = -1
+      nullify(info%flow_disc)
+      nullify(info%tran_disc)
 
       info%id = -1
       info%nproc = -1
@@ -96,7 +100,6 @@
       nullify(info%periodic)
       nullify(info%gridsize)
       nullify(info%corners)
-      nullify(info%ci_int)
     end function InfoCreate
 
     subroutine InfoSetFromOptions(info, options, ierr)
@@ -108,9 +111,6 @@
       PetscErrorCode ierr
 
       PetscBool flag
-      character(len=MAXWORDLENGTH):: discretization
-      character(len=MAXWORDLENGTH):: test_discretization
-      
       info%options_prefix = options%my_prefix
 
       ! grab sizes
@@ -121,33 +121,24 @@
       call PetscOptionsGetInt(options%my_prefix,'-nx',info%NX,flag,ierr)
       call PetscOptionsGetInt(options%my_prefix,'-ny',info%NY,flag,ierr)
       call PetscOptionsGetInt(options%my_prefix,'-nz',info%NZ,flag,ierr)
+      info%ndims = options%ndims
 
-      call PetscOptionsGetString(options%my_prefix, '-discretization', &
-           discretization, flag, ierr)
-      if (.not.flag) discretization = 'D3Q19'
+      info%flow_disc => DiscretizationCreate(info%comm)
+      call DiscretizationSetUp(info%flow_disc, options%flow_disc)
 
-      test_discretization = 'd3q19'
-      if (StringCompareIgnoreCase(discretization, test_discretization, 6)) then
-         call InfoSetDiscretizationD3Q19(info)
-      endif
-      
-      test_discretization = 'd2q9'
-      if (StringCompareIgnoreCase(discretization, test_discretization, 5)) then
-         call InfoSetDiscretizationD2Q9(info)
+      if (options%tran_disc /= NULL_DISCRETIZATION) then
+         info%tran_disc => DiscretizationCreate(info%comm)
+         call DiscretizationSetUp(info%tran_disc, options%tran_disc)
       end if
 
-      ! make sure we have an answer
-      if (info%discretization .eq. NULL_DISCRETIZATION) &
-           SETERRQ(1, 1, 'Invalid Discretization', ierr)
-
       ! set up the grid
-      allocate(info%corners(info%dim,2))
-      allocate(info%gridsize(info%dim))
-      allocate(info%periodic(info%dim))
+      allocate(info%corners(info%ndims,2))
+      allocate(info%gridsize(info%ndims))
+      allocate(info%periodic(info%ndims))
       info%periodic = PETSC_FALSE
       
       ! nullify z-things for a 2D DA
-      if (info%dim.eq.2) then
+      if (info%ndims.eq.2) then
          info%zs = PETSC_NULL_INTEGER
          info%ze = PETSC_NULL_INTEGER
          info%zl = 1
@@ -159,51 +150,15 @@
       end if
 
       call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_x', &
-           info%periodic(1), flag,ierr)
+           info%periodic(X_DIRECTION), flag,ierr)
       call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_y', &
-           info%periodic(2), flag,ierr)
-      if (info%dim > 2) then
+           info%periodic(Y_DIRECTION), flag,ierr)
+      if (info%ndims > 2) then
          call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_z', &
-              info%periodic(3), flag,ierr)
+              info%periodic(Z_DIRECTION), flag,ierr)
       end if
       
     end subroutine InfoSetFromOptions
-
-    subroutine InfoSetDiscretizationD3Q19(info)
-      use LBM_Discretization_D3Q19_module
-      type(info_type) info
-      PetscInt i,j
-
-      info%discretization = D3Q19_DISCRETIZATION
-      info%dim = discretization_dims
-      info%b = discretization_directions
-      call LBMDiscretizationSetup()
-      allocate(info%ci_int(0:info%b, info%dim))
-
-      do i=0,info%b
-         do j=1,info%dim
-            info%ci_int(i,j) = IDNINT(ci(i,j))
-         end do
-      end do
-    end subroutine InfoSetDiscretizationD3Q19
-
-    subroutine InfoSetDiscretizationD2Q9(info)
-      use LBM_Discretization_D2Q9_module
-      type(info_type) info
-      PetscInt i,j
-      
-      info%discretization = D2Q9_DISCRETIZATION
-      info%dim = discretization_dims
-      info%b = discretization_directions
-      call LBMDiscretizationSetup()
-      allocate(info%ci_int(0:info%b, info%dim))
-
-      do i=0,info%b
-         do j=1,info%dim
-            info%ci_int(i,j) = IDNINT(ci(i,j))
-         end do
-      end do
-    end subroutine InfoSetDiscretizationD2Q9
 
     subroutine InfoView(info)
       type(info_type) info
@@ -215,19 +170,22 @@
       type(info_type) info
       PetscErrorCode ierr
 
-      deallocate(info%corners)
-      deallocate(info%gridsize)
+      if (associated(info%flow_disc)) call DiscretizationDestroy(info%flow_disc, ierr)
+      if (associated(info%tran_disc)) call DiscretizationDestroy(info%tran_disc, ierr)
+      if (associated(info%corners)) deallocate(info%corners)
+      if (associated(info%gridsize)) deallocate(info%gridsize)
+      if (associated(info%periodic)) deallocate(info%periodic)
     end subroutine InfoDestroy
 
     subroutine InfoGatherValueToDirection(info, val, out)
       type(info_type) info
       PetscScalar,intent(in),dimension(1:info%gxyzl):: val
-      PetscScalar,intent(out),dimension(0:info%b, 1:info%gxyzl):: out
+      PetscScalar,intent(out),dimension(0:info%flow_disc%b, 1:info%gxyzl):: out
       PetscErrorCode ierr
 
-      if (info%dim.eq.2) then
+      if (info%ndims.eq.2) then
          call InfoGatherValueToDirection2D(info, val, out)
-      else if (info%dim.eq.3) then
+      else if (info%ndims.eq.3) then
          call InfoGatherValueToDirection3D(info, val, out)
       else 
          SETERRQ(1, 1, 'invalid ndims in LBM', ierr)
@@ -239,14 +197,16 @@
       type(info_type) info
       PetscScalar,intent(in),dimension(info%gxs:info%gxe, &
            info%gys:info%gye):: val
-      PetscScalar,intent(out),dimension(0:info%b, &
+      PetscScalar,intent(out),dimension(0:info%flow_disc%b, &
            info%gxs:info%gxe, info%gys:info%gye):: out
 
       PetscInt n
-      do n=0,info%b
+      do n=0,info%flow_disc%b
          out(n,info%xs:info%xe,info%ys:info%ye) = val( &
-              info%xs+info%ci_int(n,X_DIRECTION):info%xe+info%ci_int(n,X_DIRECTION), &
-              info%ys+info%ci_int(n,Y_DIRECTION):info%ye+info%ci_int(n,Y_DIRECTION))
+              info%xs+info%flow_disc%ci(n,X_DIRECTION): &
+              info%xe+info%flow_disc%ci(n,X_DIRECTION), &
+              info%ys+info%flow_disc%ci(n,Y_DIRECTION): &
+              info%ye+info%flow_disc%ci(n,Y_DIRECTION))
       end do
     end subroutine InfoGatherValueToDirection2D
 
@@ -254,15 +214,18 @@
       type(info_type) info
       PetscScalar,intent(in),dimension(info%gxs:info%gxe, &
            info%gys:info%gye, info%gzs:info%gze):: val
-      PetscScalar,intent(out),dimension(0:info%b, &
+      PetscScalar,intent(out),dimension(0:info%flow_disc%b, &
            info%gxs:info%gxe, info%gys:info%gye, info%gzs:info%gze):: out
 
       PetscInt n
-      do n=0,info%b
+      do n=0,info%flow_disc%b
          out(n,info%xs:info%xe,info%ys:info%ye,info%zs:info%ze) = val( &
-              info%xs+info%ci_int(n,X_DIRECTION):info%xe+info%ci_int(n,X_DIRECTION), &
-              info%ys+info%ci_int(n,Y_DIRECTION):info%ye+info%ci_int(n,Y_DIRECTION), &
-              info%zs+info%ci_int(n,Z_DIRECTION):info%ze+info%ci_int(n,Z_DIRECTION))
+              info%xs+info%flow_disc%ci(n,X_DIRECTION): &
+              info%xe+info%flow_disc%ci(n,X_DIRECTION), &
+              info%ys+info%flow_disc%ci(n,Y_DIRECTION): &
+              info%ye+info%flow_disc%ci(n,Y_DIRECTION), &
+              info%zs+info%flow_disc%ci(n,Z_DIRECTION): &
+              info%ze+info%flow_disc%ci(n,Z_DIRECTION))
       end do
     end subroutine InfoGatherValueToDirection3D
   end module LBM_Info_module

@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   28 February 2011
-!!!       at:            15:50:33 MST
+!!!     last modified:   15 March 2011
+!!!       at:            17:41:51 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -105,7 +105,7 @@ contains
     PetscScalar,dimension(1:info%s):: zp3_ave_p, zm3_ave_p
 
     ! dimension 
-    bc%dim = MAX(info%dim, info%s)
+    bc%dim = MAX(info%ndims, info%s)
 
     ! now make the boundary vecs/arrays
     ! x boundaries
@@ -146,7 +146,7 @@ contains
     call VecSetBlockSize(bc%yp, bc%dim, ierr)
     call PetscObjectSetName(bc%yp, 'yp_bc', ierr)
     
-    if (info%dim > 2) then
+    if (info%ndims > 2) then
        ! z boundaries
        if (info%zs.eq.1) then
           locn = info%xl*info%yl*bc%dim
@@ -246,7 +246,7 @@ contains
        bc%flags(BOUNDARY_YP) = BC_PERIODIC
     end if
 
-    if (info%dim > 2) then
+    if (info%ndims > 2) then
        ! zm boundary
        bcvalue = PETSC_FALSE
        call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_zm', bcvalue, flag, ierr)
@@ -343,11 +343,11 @@ contains
     type(bc_type) bc
     type(info_type) info
     
-    PetscScalar,dimension(1:info%s, 0:info%b, 1:info%gxyzl):: fi
+    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, 1:info%gxyzl):: fi
     PetscScalar,dimension(1:info%gxyzl):: walls
     PetscErrorCode ierr
 
-    select case(info%discretization)
+    select case(info%flow_disc%name)
     case(D3Q19_DISCRETIZATION)
        call BCPressureD3Q19(bc, fi, walls, bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, &
             bc%zm_a, bc%zp_a, info)
@@ -362,11 +362,11 @@ contains
     type(bc_type) bc
     type(info_type) info
     
-    PetscScalar,dimension(1:info%s, 0:info%b, 1:info%gxyzl):: fi
+    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, 1:info%gxyzl):: fi
     PetscScalar,dimension(1:info%gxyzl):: walls
     PetscErrorCode ierr
 
-    select case(info%discretization)
+    select case(info%flow_disc%name)
     case(D3Q19_DISCRETIZATION)
        call BCFluxD3Q19(bc, fi, walls, bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, &
             bc%zm_a, bc%zp_a, info)
@@ -381,11 +381,11 @@ contains
     type(bc_type) bc
     type(info_type) info
     
-    PetscScalar,dimension(1:info%s, 0:info%b, 1:info%gxyzl):: fi
+    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, 1:info%gxyzl):: fi
     PetscScalar,dimension(1:info%gxyzl):: walls
     PetscErrorCode ierr
 
-    select case(info%discretization)
+    select case(info%flow_disc%name)
     case(D3Q19_DISCRETIZATION)
        call BCPseudoperiodicD3Q19(bc, fi, walls, bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, &
             bc%zm_a, bc%zp_a, info)
@@ -402,7 +402,7 @@ contains
     type(bc_type) bc
     type(info_type) info
 
-    PetscScalar,dimension(1:info%s, 0:info%b, info%gxs:info%gxe, &
+    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, info%gxs:info%gxe, &
          info%gys:info%gye, info%gzs:info%gze):: fi
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
          info%gzs:info%gze):: walls
@@ -411,8 +411,8 @@ contains
     PetscScalar,dimension(bc%dim,info%xs:info%xe,info%ys:info%ye):: zm_vals, zp_vals
 
     PetscInt i,j,k
-    PetscInt directions(0:info%b)
-    PetscInt cardinals(1:info%dim)
+    PetscInt directions(0:info%flow_disc%b)
+    PetscInt cardinals(1:info%ndims)
 
     directions(:) = 0
     ! XM BOUNDARY
@@ -508,17 +508,17 @@ contains
   end subroutine BCPressureD3Q19
 
   subroutine BCPressureApplyD3Q19(bc, fi, pvals, directions, info)
-    use LBM_Discretization_D3Q19_module
+    use LBM_Discretization_Directions_D3Q19_module
 
     type(bc_type) bc
     type(info_type) info
-    PetscInt,intent(in),dimension(0:info%b):: directions
-    PetscScalar,intent(inout),dimension(1:info%s, 0:info%b):: fi
+    PetscInt,intent(in),dimension(0:info%flow_disc%b):: directions
+    PetscScalar,intent(inout),dimension(1:info%s, 0:info%flow_disc%b):: fi
     PetscScalar,intent(in),dimension(bc%dim):: pvals
 
 !    PetscScalar utmp, vtmp
     PetscScalar wtmp
-    PetscScalar,dimension(0:info%b)::ftmp
+    PetscScalar,dimension(0:info%flow_disc%b)::ftmp
     integer m
     
 !    utmp = 0
@@ -613,7 +613,7 @@ contains
     type(bc_type) bc
     type(info_type) info
 
-    PetscScalar,dimension(1:info%s, 0:info%b, info%gxs:info%gxe, &
+    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, info%gxs:info%gxe, &
          info%gys:info%gye, info%gzs:info%gze):: fi
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
          info%gzs:info%gze):: walls
@@ -622,8 +622,8 @@ contains
     PetscScalar,dimension(bc%dim,info%xs:info%xe,info%ys:info%ye):: zm_vals, zp_vals
 
     PetscInt i,j,k
-    PetscInt directions(0:info%b)
-    PetscInt cardinals(1:info%dim)
+    PetscInt directions(0:info%flow_disc%b)
+    PetscInt cardinals(1:info%ndims)
 
     directions(:) = 0
     cardinals(:) = 0
@@ -725,18 +725,18 @@ contains
   end subroutine BCFluxD3Q19
   
   subroutine BCFluxApplyD3Q19(bc, fi, fvals, directions, cardinals, info)
-    use LBM_Discretization_D3Q19_module
+    use LBM_Discretization_Directions_D3Q19_module
 
     type(bc_type) bc
     type(info_type) info
 
-    PetscScalar,intent(inout),dimension(1:info%s, 0:info%b):: fi
+    PetscScalar,intent(inout),dimension(1:info%s, 0:info%flow_disc%b):: fi
     PetscScalar,intent(in),dimension(bc%dim):: fvals
-    PetscInt,intent(in),dimension(0:info%b):: directions
-    PetscInt,intent(in),dimension(1:info%dim):: cardinals
+    PetscInt,intent(in),dimension(0:info%flow_disc%b):: directions
+    PetscInt,intent(in),dimension(1:info%ndims):: cardinals
 
     PetscScalar rhotmp
-    PetscScalar,dimension(0:info%b)::ftmp
+    PetscScalar,dimension(0:info%flow_disc%b)::ftmp
     PetscInt m
 
     ftmp = 0.0
@@ -825,7 +825,7 @@ contains
   end subroutine BCFluxApplyD3Q19
 
   subroutine BCSetLocalDirectionsD3Q19(boundary, directions, cardinals)
-    use LBM_Discretization_D3Q19_module
+    use LBM_Discretization_Directions_D3Q19_module
     PetscInt,intent(in):: boundary
     PetscInt,intent(out),dimension(0:discretization_directions) :: directions
     PetscInt,intent(out),dimension(1:discretization_dims) :: cardinals
@@ -981,7 +981,7 @@ contains
     type(bc_type) bc
     type(info_type) info
 
-    PetscScalar,dimension(1:info%s, 0:info%b, info%gxs:info%gxe, &
+    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, info%gxs:info%gxe, &
          info%gys:info%gye, info%gzs:info%gze):: fi
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
          info%gzs:info%gze):: walls
@@ -1118,14 +1118,14 @@ contains
     type(bc_type) bc
     type(info_type) info
 
-    PetscScalar,dimension(1:info%s, 0:info%b, info%gxs:info%gxe, info%gys:info%gye):: fi
+    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, info%gxs:info%gxe, info%gys:info%gye):: fi
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye):: walls
     PetscScalar,dimension(bc%dim,info%ys:info%ye):: xm_vals, xp_vals
     PetscScalar,dimension(bc%dim,info%xs:info%xe):: ym_vals, yp_vals
 
     PetscInt i,j
-    PetscInt directions(0:info%b)
-    PetscInt cardinals(1:info%dim)
+    PetscInt directions(0:info%flow_disc%b)
+    PetscInt cardinals(1:info%ndims)
 
     directions(:) = 0
     ! XM BOUNDARY
@@ -1134,7 +1134,7 @@ contains
        do j=info%ys,info%ye
           i = 1
           if (walls(i,j).eq.0) then
-!             call BCPressureApplyD2Q9(bc, fi(:,:,i,j), xm_vals(:,j), directions, info)
+             call BCPressureApplyD2Q9(bc, fi(:,:,i,j), xm_vals(:,j), directions, info)
           end if
        end do
     endif
@@ -1146,7 +1146,7 @@ contains
        do j=info%ys,info%ye
           i = info%NX
           if (walls(i,j).eq.0) then
-!             call BCPressureApplyD2Q9(bc, fi(:,:,i,j), xp_vals(:,j), directions, info)
+             call BCPressureApplyD2Q9(bc, fi(:,:,i,j), xp_vals(:,j), directions, info)
           end if
        end do
     endif
@@ -1158,8 +1158,8 @@ contains
        do i=info%xs,info%xe
           j = 1
           if (walls(i,j).eq.0) then
-!             call BCPressureApplyD2Q9(bc, fi(:,:,i,j), ym_vals(:,i), &
-!                  directions, info)
+             call BCPressureApplyD2Q9(bc, fi(:,:,i,j), ym_vals(:,i), &
+                  directions, info)
           end if
        end do
     endif
@@ -1171,8 +1171,8 @@ contains
        do i=info%xs,info%xe
           j = info%NY
           if (walls(i,j).eq.0) then
-!             call BCPressureApplyD2Q9(bc, fi(:,:,i,j), yp_vals(:,i), &
-!                  directions, info)
+             call BCPressureApplyD2Q9(bc, fi(:,:,i,j), yp_vals(:,i), &
+                  directions, info)
           end if
        end do
     endif
@@ -1185,14 +1185,14 @@ contains
     type(bc_type) bc
     type(info_type) info
 
-    PetscScalar,dimension(1:info%s, 0:info%b, info%gxs:info%gxe, info%gys:info%gye):: fi
+    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, info%gxs:info%gxe, info%gys:info%gye):: fi
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye):: walls
     PetscScalar,dimension(bc%dim,info%ys:info%ye):: xm_vals, xp_vals
     PetscScalar,dimension(bc%dim,info%xs:info%xe):: ym_vals, yp_vals
 
     PetscInt i,j
-    PetscInt directions(0:info%b)
-    PetscInt cardinals(1:info%dim)
+    PetscInt directions(0:info%flow_disc%b)
+    PetscInt cardinals(1:info%ndims)
 
     directions(:) = 0
     ! XM BOUNDARY
@@ -1201,7 +1201,8 @@ contains
        do j=info%ys,info%ye
           i = 1
           if (walls(i,j).eq.0) then
-!             call BCFluxApplyD2Q9(bc, fi(:,:,i,j), xm_vals(:,j), directions, info)
+             call BCFluxApplyD2Q9(bc, fi(:,:,i,j), xm_vals(:,j), &
+                  directions, cardinals, info)
           end if
        end do
     endif
@@ -1213,7 +1214,8 @@ contains
        do j=info%ys,info%ye
           i = info%NX
           if (walls(i,j).eq.0) then
-!             call BCFluxApplyD2Q9(bc, fi(:,:,i,j), xp_vals(:,j), directions, info)
+             call BCFluxApplyD2Q9(bc, fi(:,:,i,j), xp_vals(:,j), &
+                  directions, cardinals, info)
           end if
        end do
     endif
@@ -1225,8 +1227,8 @@ contains
        do i=info%xs,info%xe
           j = 1
           if (walls(i,j).eq.0) then
-!             call BCFluxApplyD2Q9(bc, fi(:,:,i,j), ym_vals(:,i), &
-!                  directions, info)
+             call BCFluxApplyD2Q9(bc, fi(:,:,i,j), ym_vals(:,i), &
+                  directions, cardinals, info)
           end if
        end do
     endif
@@ -1238,8 +1240,8 @@ contains
        do i=info%xs,info%xe
           j = info%NY
           if (walls(i,j).eq.0) then
-!             call BCFluxApplyD2Q9(bc, fi(:,:,i,j), yp_vals(:,i), &
-!                  directions, info)
+             call BCFluxApplyD2Q9(bc, fi(:,:,i,j), yp_vals(:,i), &
+                  directions, cardinals, info)
           end if
        end do
     endif
@@ -1247,7 +1249,7 @@ contains
   end subroutine BCFluxD2Q9
 
   subroutine BCSetLocalDirectionsD2Q9(boundary, directions, cardinals)
-    use LBM_Discretization_D2Q9_module
+    use LBM_Discretization_Directions_D2Q9_module
     PetscInt,intent(in):: boundary
     PetscInt,intent(out),dimension(0:discretization_directions) :: directions
     PetscInt,intent(out),dimension(1:discretization_dims) :: cardinals
@@ -1255,7 +1257,7 @@ contains
     PetscInt i
     
     select case(boundary)
-    case (BOUNDARY_XM)
+    case (BOUNDARY_XP)
        ! identity mapping
        do i=0,discretization_directions
           directions(i) = i
@@ -1263,7 +1265,7 @@ contains
        cardinals(CARDINAL_NORMAL) = X_DIRECTION
        cardinals(CARDINAL_CROSS) = Y_DIRECTION
 
-    case (BOUNDARY_XP)
+    case (BOUNDARY_XM)
        ! inverted mapping around the origin
        directions(ORIGIN) = ORIGIN
        directions(EAST) = WEST
@@ -1278,7 +1280,7 @@ contains
        cardinals(CARDINAL_NORMAL) = X_DIRECTION
        cardinals(CARDINAL_CROSS) = Y_DIRECTION
 
-    case (BOUNDARY_YM)
+    case (BOUNDARY_YP)
        ! map x -> y
        directions(ORIGIN) = ORIGIN
        directions(EAST) = NORTH
@@ -1293,7 +1295,7 @@ contains
        cardinals(CARDINAL_NORMAL) = Y_DIRECTION
        cardinals(CARDINAL_CROSS) = X_DIRECTION
 
-    case (BOUNDARY_YP)
+    case (BOUNDARY_YM)
        ! map x -> y
        directions(ORIGIN) = ORIGIN
        directions(EAST) = SOUTH
@@ -1310,5 +1312,121 @@ contains
 
     end select
   end subroutine BCSetLocalDirectionsD2Q9
+
+!!!!! MY 2D Blux BC Additions !!!!!
+
+  subroutine BCFluxApplyD2Q9(bc, fi, fvals, directions, cardinals, info)
+    use LBM_Discretization_Directions_D2Q9_module
+
+    type(bc_type) bc
+    type(info_type) info
+
+    PetscScalar,intent(inout),dimension(1:info%s, 0:info%flow_disc%b):: fi
+    PetscScalar,intent(in),dimension(bc%dim):: fvals
+    PetscInt,intent(in),dimension(0:info%flow_disc%b):: directions
+    PetscInt,intent(in),dimension(1:info%ndims):: cardinals
+
+    PetscScalar rhotmp
+    PetscScalar,dimension(0:info%flow_disc%b)::ftmp
+    PetscInt m
+
+    ftmp = 0.0
+    rhotmp = 0.0
+
+    !!!!! Ethan, this written for the NORTH boundary.
+
+    do m=1,info%s
+       rhotmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) + fi(m,directions(WEST)) &
+            + 2.*(fi(m,directions(NORTH)) + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST))) 
+       rhotmp = rhotmp/(1. + fvals(cardinals(CARDINAL_NORMAL)))
+       
+       ! Choice should not affect the momentum significantly
+       ftmp(directions(SOUTH)) = fi(m,directions(NORTH))
+       ftmp(directions(SOUTHEAST)) = fi(m,directions(NORTHWEST))
+       ftmp(directions(SOUTHWEST)) = fi(m,directions(NORTHEAST))
+
+       fi(m,directions(SOUTH)) = 1./3.*ftmp(directions(SOUTH)) &
+            - 2./3.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
+            - 2./3.*(ftmp(directions(SOUTHEAST)) + ftmp(directions(SOUTHWEST))) &
+            + 2./3.*(fi(m,directions(NORTH)) + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST)))
+
+       fi(m,directions(SOUTHWEST)) = 1./3.*ftmp(directions(SOUTHWEST)) &
+            + 1./2.*rhotmp*fvals(cardinals(CARDINAL_CROSS)) &
+            - 1./6.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
+            + 1./2.*(fi(m,directions(EAST)) - fi(m,directions(WEST))) &
+            + 1./6.*(fi(m,directions(NORTH)) - ftmp(directions(SOUTH))) &
+            - 1./3.*(fi(m,directions(NORTHWEST)) - ftmp(directions(SOUTHEAST))) &
+            + 2./3.*fi(m,directions(NORTHEAST))
+
+       fi(m,directions(SOUTHEAST)) = 1./3.*ftmp(directions(SOUTHEAST)) &
+            - 1./2.*rhotmp*fvals(cardinals(CARDINAL_CROSS)) &
+            - 1./6.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
+            - 1./2.*(fi(m,directions(EAST)) - fi(m,directions(WEST))) &
+            + 1./6.*(fi(m,directions(NORTH)) - ftmp(directions(SOUTH))) &
+            - 1./3.*(fi(m,directions(NORTHEAST)) - ftmp(directions(SOUTHWEST))) &
+            + 2./3.*fi(m,directions(NORTHWEST)) 
+
+    enddo
+
+
+    return
+  end subroutine BCFluxApplyD2Q9
+
+  
+  subroutine BCPressureApplyD2Q9(bc, fi, pvals, directions, info)
+    use LBM_Discretization_Directions_D2Q9_module
+
+    type(bc_type) bc
+    type(info_type) info
+    PetscInt,intent(in),dimension(0:info%flow_disc%b):: directions
+    PetscScalar,intent(inout),dimension(1:info%s, 0:info%flow_disc%b):: fi
+    PetscScalar,intent(in),dimension(bc%dim):: pvals
+
+!    PetscScalar utmp
+    PetscScalar vtmp
+    PetscScalar,dimension(0:info%flow_disc%b)::ftmp
+    integer m
+    
+!    utmp = 0
+    vtmp = 0
+
+    !!!!! Ethan, this written for the NORTH boundary.
+
+    do m=1,info%s
+       ftmp = 0.0
+       vtmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) + fi(m,directions(WEST)) &
+            + 2.*(fi(m,directions(NORTH)) + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST)))
+       vtmp = vtmp/pvals(m)-1.0       
+       
+       ! Choice should not affect the momentum significantly
+       ftmp(directions(SOUTH)) = fi(m,directions(NORTH))
+       ftmp(directions(SOUTHWEST)) = fi(m,directions(NORTHEAST))
+       ftmp(directions(SOUTHEAST)) = fi(m,directions(NORTHWEST))
+              
+       fi(m,directions(SOUTH)) = 1./3.*ftmp(directions(SOUTH)) &
+            - 2./3.*pvals(m)*vtmp &
+            - 2./3.*(ftmp(directions(SOUTHWEST)) + ftmp(directions(SOUTHEAST))) &
+            + 2./3.*(fi(m,directions(NORTH)) + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST)))
+       
+       fi(m,directions(SOUTHWEST)) = 1./3.*ftmp(directions(SOUTHWEST)) &
+!            - 1./2.*pvals(m)*utmp &
+            - 1./6.*pvals(m)*vtmp &
+            + 1./2.*(fi(m,directions(EAST)) - fi(m,directions(WEST))) &
+            + 1./6.*(fi(m,directions(NORTH)) - ftmp(directions(SOUTH))) &
+            - 1./3.*(fi(m,directions(NORTHWEST)) - ftmp(directions(SOUTHEAST))) &
+            + 2./3.*fi(m,directions(NORTHEAST))
+       
+       fi(m,directions(SOUTHEAST)) = 1./3.*ftmp(directions(SOUTHEAST)) &
+!            + 1./2.*pvals(m)*utmp &
+            - 1./6.*pvals(m)*vtmp &
+            - 1./2.*(fi(m,directions(EAST)) - fi(m,directions(WEST))) &
+            + 1./6.*(fi(m,directions(NORTH)) - ftmp(directions(SOUTH))) &
+            - 1./3.*(fi(m,directions(NORTHEAST)) - ftmp(directions(SOUTHWEST))) &
+            + 2./3.*fi(m,directions(NORTHWEST))
+       
+    enddo
+    
+    return
+  end subroutine BCPressureApplyD2Q9
 
 end module LBM_BC_module
