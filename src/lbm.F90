@@ -178,7 +178,10 @@
 
       call InfoSetFromOptions(lbm%info, options, ierr)
       call ConstantsSetFromOptions(lbm%constants, options, ierr)
-      call DiscretizationSetupConstants(lbm%info%flow_disc, lbm%constants)
+      call DiscretizationSetUpConstants(lbm%info%flow_disc, lbm%constants)
+      if (options%tran_disc /= NULL_DISCRETIZATION) then
+         call DiscretizationSetUpConstants(lbm%info%tran_disc, lbm%constants)
+      end if
 
       lbm%dm_index_to_ndof(ONEDOF) = 1
       lbm%dm_index_to_ndof(NPHASEDOF) = lbm%info%s
