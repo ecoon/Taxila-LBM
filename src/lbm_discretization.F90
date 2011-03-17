@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 March 2011
 !!!       on:            16:33:56 MDT
-!!!     last modified:   15 March 2011
-!!!       at:            17:40:32 MDT
+!!!     last modified:   17 March 2011
+!!!       at:            09:42:56 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -26,7 +26,9 @@ module LBM_Discretization_module
 #include "lbm_definitions.h"
 
   public:: DiscretizationCreate, &
-       DiscretizationDestroy
+       DiscretizationDestroy, &
+       DiscretizationSetUp, &
+       DiscretizationSetUpConstants
 
 contains
   function DiscretizationCreate(comm) result(disc)
@@ -38,7 +40,6 @@ contains
     disc%name = NULL_DISCRETIZATION
     disc%ndims = -1
     disc%b = -1
-    nullify(disc%ci)
     nullify(disc%weights)
   end function DiscretizationCreate
 
@@ -50,22 +51,23 @@ contains
     if (associated(disc%weights)) deallocate(disc%weights)
   end subroutine DiscretizationDestroy
 
-  subroutine DiscretizationSetup(disc, name)
+  subroutine DiscretizationSetUp(disc, name)
     type(discretization_type) disc
     PetscInt name
+
     PetscErrorCode ierr
 
     select case(name)
     case(D3Q19_DISCRETIZATION)
-       call DiscretizationSetup_D3Q19(disc)
+       call DiscretizationSetUp_D3Q19(disc)
     case(D2Q9_DISCRETIZATION)
-       call DiscretizationSetup_D2Q9(disc)
+       call DiscretizationSetUp_D2Q9(disc)
     case DEFAULT
        if (disc%ndims < 0 ) SETERRQ(1, 1, 'Invalid Discretization', ierr)
     end select
-  end subroutine DiscretizationSetup
+  end subroutine DiscretizationSetUp
 
-  subroutine DiscretizationSetupConstants(disc, constants)
+  subroutine DiscretizationSetUpConstants(disc, constants)
     use LBM_Constants_module
     type(discretization_type) disc
     type(constants_type) constants
@@ -73,11 +75,11 @@ contains
     
     select case(disc%name)
     case(D3Q19_DISCRETIZATION)
-       call DiscretizationSetupConstants_D3Q19(disc, constants)
+       call DiscretizationSetUpConstants_D3Q19(disc, constants)
     case(D2Q9_DISCRETIZATION)
-       call DiscretizationSetupConstants_D2Q9(disc, constants)
+       call DiscretizationSetUpConstants_D2Q9(disc, constants)
     case DEFAULT
        SETERRQ(1,1,'invalid discretization in LBM',ierr)
     end select
-  end subroutine DiscretizationSetupConstants
+  end subroutine DiscretizationSetUpConstants
 end module LBM_Discretization_module
