@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   15 March 2011
-!!!       at:            17:41:05 MDT
+!!!     last modified:   17 March 2011
+!!!       at:            09:48:45 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -111,8 +111,6 @@
       PetscErrorCode ierr
 
       PetscBool flag
-      character(len=MAXWORDLENGTH):: discretization
-      
       info%options_prefix = options%my_prefix
 
       ! grab sizes
@@ -123,15 +121,14 @@
       call PetscOptionsGetInt(options%my_prefix,'-nx',info%NX,flag,ierr)
       call PetscOptionsGetInt(options%my_prefix,'-ny',info%NY,flag,ierr)
       call PetscOptionsGetInt(options%my_prefix,'-nz',info%NZ,flag,ierr)
+      info%ndims = options%ndims
 
       info%flow_disc => DiscretizationCreate(info%comm)
-      call DiscretizationSetup(info%flow_disc, discretization)
-      info%ndims = info%flow_disc%ndims
+      call DiscretizationSetUp(info%flow_disc, options%flow_disc)
 
-      info%tran_disc => DiscretizationCreate(info%comm)
-      call DiscretizationSetup(info%tran_disc, discretization)
-      if (info%ndims /= info%tran_disc%ndims) then
-         SETERRQ(1,1,"Discretization dimensions don't match", ierr)
+      if (options%tran_disc /= NULL_DISCRETIZATION) then
+         info%tran_disc => DiscretizationCreate(info%comm)
+         call DiscretizationSetUp(info%tran_disc, options%tran_disc)
       end if
 
       ! set up the grid

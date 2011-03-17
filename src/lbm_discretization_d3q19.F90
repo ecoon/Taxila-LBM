@@ -49,10 +49,11 @@ module LBM_Discretization_D3Q19_module
   private
 #include "lbm_definitions.h"
 
-  public:: DiscretizationSetup_D3Q19
+  public:: DiscretizationSetUp_D3Q19, &
+       DiscretizationSetUpConstants_D3Q19
 
 contains
-  subroutine DiscretizationSetup_D3Q19(disc)
+  subroutine DiscretizationSetUp_D3Q19(disc)
     type(discretization_type) disc
     disc%name = D3Q19_DISCRETIZATION
     disc%ndims = 3
@@ -73,13 +74,13 @@ contains
        1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0/)
   end subroutine DiscretizationSetup_D3Q19
 
-  subroutine DiscretizationSetupConstants_D3Q19(disc, constants)
+  subroutine DiscretizationSetUpConstants_D3Q19(disc, constants)
     use LBM_Constants_module
     type(discretization_type) disc
     type(constants_type) constants
     
     constants%alpha_0 = constants%d_k
     constants%alpha_1 = -1.d0/2.d0
-  end subroutine DiscretizationSetupConstants_D3Q19
+  end subroutine DiscretizationSetUpConstants_D3Q19
 end module LBM_Discretization_D3Q19_module
 
