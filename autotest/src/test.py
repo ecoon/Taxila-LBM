@@ -5,8 +5,8 @@
 ###     version:         
 ###     created:         28 January 2011
 ###       on:            09:52:47 MST
-###     last modified:   03 February 2011
-###       at:            15:22:16 MST
+###     last modified:   17 March 2011
+###       at:            10:47:19 MDT
 ###     URL:             http://www.ldeo.columbia.edu/~ecoon/
 ###     email:           ecoon _at_ lanl.gov
 ###  
@@ -167,6 +167,7 @@ def suite():
     thesuite = unittest.TestSuite()
 
     thesuite.addTest(LBMTest('bubble', '3D', '3D bubble test'))
+    thesuite.addTest(LBMTest('bubble', '3D_singledensity', '3D bubble test with mm=1'))
     thesuite.addTest(LBMTest('flushing', '3D_fluxpressure', '3D flux and pressure BC test'))
     thesuite.addTest(LBMTest('flushing', '3D_pressure', '3D pressure BC test'))
     thesuite.addTest(LBMTest('flushing', '3D_poiseuille', '3D, nonconstant bc test'))
