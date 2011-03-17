@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
-!!!     last modified:   24 February 2011
-!!!       at:            17:47:52 MST
+!!!     last modified:   17 March 2011
+!!!       at:            09:59:14 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -119,10 +119,8 @@
     do i=info%xs,info%xe
        do j=info%ys,info%ye
           do k=info%zs,info%ze
-             do m=1,info%s
-                call LBMEquilf(fi(m,:,i,j,k),rho(m,i,j,k),u(m,:,i,j,k), &
-                     info, constants)
-             enddo
+             call LBMEquilf(fi(:,:,i,j,k),rho(:,i,j,k),u(:,:,i,j,k), &
+                  info, constants)
           enddo
        enddo
     enddo

@@ -31,6 +31,7 @@ module LBM_Constants_module
      PetscScalar,pointer,dimension(:):: d_k   ! 
      PetscScalar,pointer,dimension(:):: alpha_0   ! 
      PetscScalar alpha_1
+     PetscBool mrt
   end type constants_type
 
   public :: ConstantsCreate, &
@@ -47,6 +48,7 @@ contains
     constants%g11 = 0
     constants%g22 = 0
     constants%c_s2 = 0
+    constants%mrt = .FALSE.
 
     nullify(constants%tau)
     nullify(constants%gvt)
@@ -116,6 +118,9 @@ contains
     call PetscOptionsGetRealArray(options%my_prefix, '-mm', constants%mm, nmax, &
          flag, ierr)
     constants%d_k = 1.d0 - 2.d0/(3.d0*constants%mm)
+
+    call PetscOptionsGetBool(options%my_prefix, '-flow_mrt', &
+         constants%mrt, flag, ierr)
   end subroutine ConstantsSetFromOptions
   
   subroutine ConstantsView(constants)
