@@ -31,6 +31,11 @@ module LBM_Constants_module
      PetscScalar,pointer,dimension(:):: d_k   ! 
      PetscScalar,pointer,dimension(:):: alpha_0   ! 
      PetscScalar alpha_1
+     !PetscInt,pointer:: m(:,:)            ! transformation matrix
+     !PetscInt,pointer:: mt(:,:)           ! transpose of M
+     !PetscInt,pointer:: mmt(:)            ! diagonal M dot MT matrix 
+     PetscScalar,pointer,dimension(:,:):: tau_mrt  ! diagonal relaxation matrix
+
   end type constants_type
 
   public :: ConstantsCreate, &
@@ -54,6 +59,8 @@ contains
     nullify(constants%mm)
     nullify(constants%d_k)
     nullify(constants%alpha_0)
+    nullify(constants%tau_mrt)
+
   end function ConstantsCreate
     
   subroutine ConstantsSetFromOptions(constants, options, ierr)
@@ -143,6 +150,10 @@ contains
     if (associated(constants%mm)) deallocate(constants%mm)
     if (associated(constants%d_k)) deallocate(constants%d_k)
     if (associated(constants%alpha_0)) deallocate(constants%alpha_0)
+    !if (associated(constants%m)) deallocate(constants%m)
+    !if (associated(constants%mt)) deallocate(constants%mt)
+    !if (associated(constants%mmt)) deallocate(constants%mmt)
+    if (associated(constants%tau_mrt)) deallocate(constants%tau_mrt)
   end subroutine ConstantsDestroy
 end module LBM_Constants_module
   

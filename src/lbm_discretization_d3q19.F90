@@ -62,7 +62,7 @@ contains
     allocate(disc%m(0:disc%b,0:disc%b))                 ! transformation matrix
     allocate(disc%mt(0:disc%b,0:disc%b))                ! transpose of M
     allocate(disc%mmt(0:disc%b))                        ! diagonal M dot MT matrix 
-    !allocate(disc%S(0:disc%b))                          ! diagonal relaxation matrix
+    !allocate(disc%S(0:disc%b))                         ! diagonal relaxation matrix
 
     disc%ci(:,X_DIRECTION) = (/ 0, 1, 0,-1, 0, 0, 0, 1,-1,-1, &
          1, 1,-1,-1, 1, 0, 0, 0, 0/)
