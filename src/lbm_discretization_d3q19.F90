@@ -49,8 +49,8 @@ module LBM_Discretization_D3Q19_module
   private
 #include "lbm_definitions.h"
 
-  public:: DiscretizationSetup_D3Q19
-
+  public:: DiscretizationSetup_D3Q19, &
+       DiscretizationSetupConstants_D3Q19
 contains
   subroutine DiscretizationSetup_D3Q19(disc)
     type(discretization_type) disc
