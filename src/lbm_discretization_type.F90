@@ -27,6 +27,10 @@ module LBM_Discretization_Type_module
 
      PetscInt,pointer:: ci(:,:)
      PetscScalar,pointer:: weights(:)
+     PetscInt,pointer:: m(:,:)
+     PetscInt,pointer:: mt(:,:)
+     PetscInt,pointer:: mmt(:)
+
   end type discretization_type
 
 end module LBM_Discretization_Type_module
