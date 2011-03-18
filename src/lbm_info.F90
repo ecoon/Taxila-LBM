@@ -6,7 +6,7 @@
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
 !!!     last modified:   17 March 2011
-!!!       at:            17:55:22 MDT
+!!!       at:            18:01:36 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -215,6 +215,9 @@ contains
     else
        info%gridsize(Z_DIRECTION)= 1.d0
     end if
+
+    call MPI_Comm_rank(info%comm, info%rank, ierr)
+    call MPI_Comm_size(info%comm, info%nprocs, ierr)
   end subroutine InfoSetFromOptions
 
   subroutine InfoView(info)
@@ -234,7 +237,7 @@ contains
   subroutine InfoGatherValueToDirection(info, val, out, disc)
     use LBM_Discretization_type_module
     type(info_type) info
-    type(disc_type) disc
+    type(discretization_type) disc
     PetscScalar,intent(in),dimension(1:info%gxyzl):: val
     PetscScalar,intent(out),dimension(0:disc%b, 1:info%gxyzl):: out
     PetscErrorCode ierr
@@ -251,7 +254,7 @@ contains
   
   subroutine InfoGatherValueToDirection2D(info, val, out, disc)
     type(info_type) info
-    type(disc_type) disc
+    type(discretization_type) disc
     PetscScalar,intent(in),dimension(info%gxs:info%gxe, &
          info%gys:info%gye):: val
     PetscScalar,intent(out),dimension(0:disc%b, &
@@ -269,7 +272,7 @@ contains
 
   subroutine InfoGatherValueToDirection3D(info, val, out, disc)
     type(info_type) info
-    type(disc_type) disc
+    type(discretization_type) disc
     PetscScalar,intent(in),dimension(info%gxs:info%gxe, &
          info%gys:info%gye, info%gzs:info%gze):: val
     PetscScalar,intent(out),dimension(0:disc%b, &

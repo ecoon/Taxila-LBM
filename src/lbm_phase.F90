@@ -6,7 +6,7 @@
 !!!     created:         17 March 2011
 !!!       on:            13:43:00 MDT
 !!!     last modified:   17 March 2011
-!!!       at:            17:38:21 MDT
+!!!       at:            18:29:55 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -57,17 +57,39 @@ module LBM_Phase_module
      end subroutine PetscBagGetData
   end interface
 
+  interface PhaseCreate
+     procedure PhaseCreateOne, PhaseCreateN
+  end interface
+
   public :: PhaseCreate, &
        PhaseDestroy, &
        PhaseSetUp!, &
 !       PhaseSetFromOptions
 
 contains
-  function PhaseCreate(comm) result(phase)
+  function PhaseCreateOne(comm) result(phase)
     MPI_Comm comm
     type(phase_type),pointer :: phase
     allocate(phase)
     phase%comm = comm
+    call PhaseInitialize(phase)
+  end function PhaseCreateOne
+
+  function PhaseCreateN(comm, n) result(phase)
+    MPI_Comm comm
+    PetscInt n
+    type(phase_type),pointer,dimension(:):: phase
+    PetscInt lcv
+    allocate(phase(n))
+
+    do lcv=1,n
+       phase(lcv)%comm = comm
+       call PhaseInitialize(phase(lcv))
+    end do
+  end function PhaseCreateN
+
+  subroutine PhaseInitialize(phase)
+    type(phase_type) phase
     phase%s = -1
     phase%b = -1
     phase%id = 0
@@ -78,8 +100,8 @@ contains
     phase%name = ''
     nullify(phase%data)
     phase%bag = 0
-  end function PhaseCreate
-
+  end subroutine PhaseInitialize
+  
   subroutine PhaseSetSizes(phase, s, b)
     type(phase_type),pointer :: phase
     PetscInt s,b
