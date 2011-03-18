@@ -34,7 +34,7 @@ module LBM_Constants_module
      !PetscInt,pointer:: m(:,:)            ! transformation matrix
      !PetscInt,pointer:: mt(:,:)           ! transpose of M
      !PetscInt,pointer:: mmt(:)            ! diagonal M dot MT matrix 
-     PetscScalar,pointer,dimension(:,:):: tau_mrt  ! diagonal relaxation matrix
+     !PetscScalar,pointer,dimension(:,:):: tau_mrt  ! diagonal relaxation matrix
 
   end type constants_type
 
@@ -59,7 +59,7 @@ contains
     nullify(constants%mm)
     nullify(constants%d_k)
     nullify(constants%alpha_0)
-    nullify(constants%tau_mrt)
+    !nullify(constants%tau_mrt)
 
   end function ConstantsCreate
     
@@ -153,7 +153,7 @@ contains
     !if (associated(constants%m)) deallocate(constants%m)
     !if (associated(constants%mt)) deallocate(constants%mt)
     !if (associated(constants%mmt)) deallocate(constants%mmt)
-    if (associated(constants%tau_mrt)) deallocate(constants%tau_mrt)
+    !if (associated(constants%tau_mrt)) deallocate(constants%tau_mrt)
   end subroutine ConstantsDestroy
 end module LBM_Constants_module
   
