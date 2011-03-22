@@ -30,7 +30,7 @@ module LBM_Discretization_Type_module
      PetscInt,pointer:: m_mrt(:,:)
      PetscInt,pointer:: mt_mrt(:,:)
      PetscInt,pointer:: mmt_mrt(:)
-     PetscScalar,pointer:: tau_mrt(:,:)
+     !PetscScalar,pointer:: tau_mrt(:,:)
 
   end type discretization_type
 
