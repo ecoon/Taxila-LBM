@@ -39,6 +39,8 @@
        PetscInt ndims
 
        PetscInt nphases
+
+       PetscBool MRT
     end type options_type
 
     public :: OptionsCreate, &
@@ -69,6 +71,8 @@
       options%ndims = 0
 
       options%nphases = 1
+
+      options%MRT = .FALSE.
     end function OptionsCreate
 
     subroutine OptionsInitialize(options, prefix, ierr)
@@ -101,6 +105,8 @@
       call PetscOptionsGetInt(options%my_prefix, '-walls_type', options%walls_type, flag, ierr)
       call PetscOptionsGetInt(options%my_prefix, '-s', options%nphases, flag, ierr)
 
+      call PetscOptionsGetInt(options%my_prefix, '-MRT', options%MRT, flag, ierr)
+      
       ! set the flow discretization
       call PetscOptionsGetString(options%my_prefix, '-discretization', &
            name, flag, ierr)
