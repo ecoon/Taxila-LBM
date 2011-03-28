@@ -27,9 +27,9 @@ module LBM_Discretization_Type_module
 
      PetscInt,pointer:: ci(:,:)
      PetscScalar,pointer:: weights(:)
-     PetscInt,pointer:: m_mrt(:,:)
-     PetscInt,pointer:: mt_mrt(:,:)
-     PetscInt,pointer:: mmt_mrt(:)
+     PetscScalar,pointer:: m_mrt(:,:)
+     PetscScalar,pointer:: mt_mrt(:,:)
+     PetscScalar,pointer:: mmt_mrt(:)
      !PetscScalar,pointer:: tau_mrt(:,:)
 
   end type discretization_type

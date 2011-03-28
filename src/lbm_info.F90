@@ -41,6 +41,7 @@
        character(len=MAXWORDLENGTH):: options_prefix
        type(discretization_type),pointer :: flow_disc
        type(discretization_type),pointer :: tran_disc
+       PetscBool MRT
 
     end type info_type
     
@@ -88,6 +89,8 @@
       nullify(info%flow_disc)
       nullify(info%tran_disc)
 
+      info%MRT = .False.
+
       info%id = -1
       info%nproc = -1
 
@@ -122,6 +125,8 @@
       call PetscOptionsGetInt(options%my_prefix,'-ny',info%NY,flag,ierr)
       call PetscOptionsGetInt(options%my_prefix,'-nz',info%NZ,flag,ierr)
       info%ndims = options%ndims
+      
+      info%MRT = options%MRT
 
       info%flow_disc => DiscretizationCreate(info%comm)
       call DiscretizationSetUp(info%flow_disc, options%flow_disc)
