@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   28 March 2011
-!!!       at:            13:26:01 MDT
+!!!     last modified:   29 March 2011
+!!!       at:            09:29:55 PDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -362,6 +362,31 @@ contains
     if (bc%zp /= 0) call VecRestoreArrayF90(bc%zp, bc%zp_a, ierr)
   end subroutine BCRestoreArrays
   
+  subroutine BCApplyFlow(bc, walls, flow)
+    type(bc_type) bc
+    type(flow_type) flow
+    PetscScalar,dimension(1:flow%grid%info%gxyzl):: walls
+
+    logical,dimension(0:10):: bcs_done    
+    PetscInt lcv_sides
+    bcs_done=.FALSE.
+    bcs_done(BC_PERIODIC) = .TRUE.   ! periodic done by default
+
+    do lcv_sides = 1,6
+       if (.not.bcs_done(bc%flags(lcv_sides))) then
+          select case (bc%flags(lcv_sides))
+          case (BC_PSEUDOPERIODIC)         ! pseudo-periodic
+             call BCPseudoperiodic(bc,flow%fi_a,walls,flow)
+          case (BC_FLUX)         ! flux
+             call BCFlux(bc, flow%fi_a, walls, flow)
+          case (BC_PRESSURE)         ! pressure
+             call BCPressure(bc, flow%fi_a, walls, flow)
+          end select
+          bcs_done(bc%flags(lcv_sides)) = .TRUE. ! only do each bc type once
+       endif
+    enddo
+  end subroutine BCApplyFlow
+
   subroutine BCPressure(bc, fi, walls, flow)
     type(bc_type) bc
     type(flow_type) flow
