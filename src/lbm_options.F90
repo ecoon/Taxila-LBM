@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         09 December 2010
 !!!       on:            14:16:32 MST
-!!!     last modified:   28 March 2011
-!!!       at:            16:40:49 MDT
+!!!     last modified:   29 March 2011
+!!!       at:            15:48:40 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -32,6 +32,7 @@
 
        character(len=MAXSTRINGLENGTH):: output_prefix
        character(len=MAXSTRINGLENGTH):: walls_file
+       PetscBool mpiio
        PetscInt walls_type
 
        PetscInt flow_disc
@@ -109,6 +110,7 @@
 
       call PetscOptionsGetString(options%my_prefix, '-output_file_prefix', options%output_prefix, flag, ierr)
       call PetscOptionsGetString(options%my_prefix, '-walls_file', options%walls_file, flag, ierr)
+      call PetscOptionsGetBool(options%my_prefix, '-mpiio', options%mpiio, flag, ierr)
       call PetscOptionsGetInt(options%my_prefix, '-walls_type', options%walls_type, flag, ierr)
       call PetscOptionsGetInt(options%my_prefix, '-s', options%nphases, flag, ierr)
 
