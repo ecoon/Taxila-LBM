@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 March 2011
 !!!       on:            16:33:56 MDT
-!!!     last modified:   17 March 2011
-!!!       at:            09:42:56 MDT
+!!!     last modified:   28 March 2011
+!!!       at:            13:18:10 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -28,7 +28,7 @@ module LBM_Discretization_module
   public:: DiscretizationCreate, &
        DiscretizationDestroy, &
        DiscretizationSetUp, &
-       DiscretizationSetUpConstants
+       DiscretizationSetUpPhase
 
 contains
   function DiscretizationCreate(comm) result(disc)
@@ -51,13 +51,11 @@ contains
     if (associated(disc%weights)) deallocate(disc%weights)
   end subroutine DiscretizationDestroy
 
-  subroutine DiscretizationSetUp(disc, name)
+  subroutine DiscretizationSetUp(disc)
     type(discretization_type) disc
-    PetscInt name
 
     PetscErrorCode ierr
-
-    select case(name)
+    select case(disc%name)
     case(D3Q19_DISCRETIZATION)
        call DiscretizationSetUp_D3Q19(disc)
     case(D2Q9_DISCRETIZATION)
@@ -67,19 +65,19 @@ contains
     end select
   end subroutine DiscretizationSetUp
 
-  subroutine DiscretizationSetUpConstants(disc, constants)
-    use LBM_Constants_module
+  subroutine DiscretizationSetUpPhase(disc, phase)
+    use LBM_Phase_module
     type(discretization_type) disc
-    type(constants_type) constants
+    type(phase_type) phase
     PetscErrorCode ierr
     
     select case(disc%name)
     case(D3Q19_DISCRETIZATION)
-       call DiscretizationSetUpConstants_D3Q19(disc, constants)
+       call DiscretizationSetUpPhase_D3Q19(disc, phase)
     case(D2Q9_DISCRETIZATION)
-       call DiscretizationSetUpConstants_D2Q9(disc, constants)
+       call DiscretizationSetUpPhase_D2Q9(disc, phase)
     case DEFAULT
        SETERRQ(1,1,'invalid discretization in LBM',ierr)
     end select
-  end subroutine DiscretizationSetUpConstants
+  end subroutine DiscretizationSetUpPhase
 end module LBM_Discretization_module

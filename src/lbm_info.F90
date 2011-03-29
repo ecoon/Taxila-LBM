@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   17 March 2011
-!!!       at:            18:01:36 MDT
+!!!     last modified:   28 March 2011
+!!!       at:            13:19:16 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -32,6 +32,8 @@ module LBM_Info_module
      PetscInt,pointer:: NX,NY,NZ
      PetscBool,pointer,dimension(:) :: periodic
      PetscScalar,pointer,dimension(:,:) :: corners
+     PetscInt,pointer:: stencil_size
+     PetscInt,pointer:: stencil_type
 
      ! dependent parameters
      PetscInt xs,xe,xl,gxs,gxe,gxl
@@ -42,16 +44,21 @@ module LBM_Info_module
      PetscInt rank
      PetscReal,pointer,dimension(:) :: gridsize
 
+     ! non-grid parameters, stored for convenience
+     PetscInt nphases, ncomponents
+     PetscInt flow_b, transport_b
+
      ! bag
      character(len=MAXWORDLENGTH):: name
-     type(phase_bag_data_type),pointer:: data
+     type(info_bag_data_type),pointer:: data
      PetscBag bag
   end type info_type
 
   interface PetscBagGetData
      subroutine PetscBagGetData(bag, data, ierr)
+       use LBM_Info_Bag_Data_type_module
        PetscBag bag
-       type(phase_bag_data_type),pointer :: data
+       type(info_bag_data_type),pointer:: data
        PetscErrorCode ierr
      end subroutine PetscBagGetData
   end interface
@@ -74,6 +81,8 @@ contains
     nullify(info%NX)
     nullify(info%NY)
     nullify(info%NZ)
+    nullify(info%stencil_size)
+    nullify(info%stencil_type)
     info%ndims = -1
 
     info%xs = -1
@@ -99,12 +108,17 @@ contains
     info%gze = -1
     info%gzl = -1
 
-    info%id = -1
-    info%nproc = -1
+    info%rank = -1
+    info%nprocs = -1
     info%nproc_x = -1
     info%nproc_y = -1
     info%nproc_z = -1
 
+    info%nphases = 0
+    info%ncomponents = 0
+    info%flow_b = 0
+    info%transport_b = 0
+    
     nullify(info%periodic)
     nullify(info%gridsize)
     nullify(info%corners)
@@ -131,7 +145,7 @@ contains
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
     call PetscDataTypeGetSize(PETSC_BOOL, sizeofbool, ierr)
     call PetscDataTypeGetSize(PETSC_INT, sizeofint, ierr)
-    sizeofdata = info%ndims*2*sizeofscalar + info%ndims*sizeofbool + 3*sizeofint
+    sizeofdata = info%ndims*2*sizeofscalar + info%ndims*sizeofbool + 5*sizeofint
     call PetscBagCreate(info%comm, sizeofdata, info%bag, ierr)
     call PetscBagSetName(info%bag, TRIM(options%my_prefix)//info%name, ierr)
 
@@ -148,6 +162,14 @@ contains
     info%NX => info%data%NX
     info%NY => info%data%NY
     info%NZ => info%data%NZ
+
+    ! -- stencil info
+    call PetscBagRegisterInt(info%bag, info%data%stencil_size, 1, 'stencil_size', &
+         'number of grid points in the stencil', ierr)
+    info%stencil_size => info%data%stencil_size
+    call PetscBagRegisterInt(info%bag, info%data%stencil_type, DMDA_STENCIL_BOX, &
+         'stencil_type', 'stencil type: 0=STAR, 1=BOX', ierr)
+    info%stencil_type => info%data%stencil_type
 
     ! -- grid perioidicty
     call PetscBagRegisterBool(info%bag, info%data%periodic(X_DIRECTION), PETSC_FALSE, &
@@ -220,6 +242,15 @@ contains
     call MPI_Comm_size(info%comm, info%nprocs, ierr)
   end subroutine InfoSetFromOptions
 
+  ! subroutine InfoSetSizes(info, nphases, ncomponents, flow_b, transport_b)
+  !   type(info_type) info
+  !   PetscInt :: nphases, ncomponents, flow_b, transport_b
+  !   info%nphases = nphases
+  !   info%ncomponents = ncomponents
+  !   info%flow_b = flow_b
+  !   info%transport_b = transport_b
+  ! end subroutine InfoSetSizes
+
   subroutine InfoView(info)
     type(info_type) info
     
@@ -250,9 +281,9 @@ contains
        SETERRQ(1, 1, 'invalid ndims in LBM', ierr)
     end if
   end subroutine InfoGatherValueToDirection
-
   
   subroutine InfoGatherValueToDirection2D(info, val, out, disc)
+    use LBM_Discretization_type_module
     type(info_type) info
     type(discretization_type) disc
     PetscScalar,intent(in),dimension(info%gxs:info%gxe, &
@@ -263,14 +294,15 @@ contains
     PetscInt n
     do n=0,disc%b
        out(n,info%xs:info%xe,info%ys:info%ye) = val( &
-            info%xs+info%flow_disc%ci(n,X_DIRECTION): &
-            info%xe+info%flow_disc%ci(n,X_DIRECTION), &
-            info%ys+info%flow_disc%ci(n,Y_DIRECTION): &
-            info%ye+info%flow_disc%ci(n,Y_DIRECTION))
+            info%xs+disc%ci(n,X_DIRECTION): &
+            info%xe+disc%ci(n,X_DIRECTION), &
+            info%ys+disc%ci(n,Y_DIRECTION): &
+            info%ye+disc%ci(n,Y_DIRECTION))
     end do
   end subroutine InfoGatherValueToDirection2D
 
   subroutine InfoGatherValueToDirection3D(info, val, out, disc)
+    use LBM_Discretization_type_module
     type(info_type) info
     type(discretization_type) disc
     PetscScalar,intent(in),dimension(info%gxs:info%gxe, &
@@ -281,12 +313,12 @@ contains
     PetscInt n
     do n=0,disc%b
        out(n,info%xs:info%xe,info%ys:info%ye,info%zs:info%ze) = val( &
-            info%xs+info%flow_disc%ci(n,X_DIRECTION): &
-            info%xe+info%flow_disc%ci(n,X_DIRECTION), &
-            info%ys+info%flow_disc%ci(n,Y_DIRECTION): &
-            info%ye+info%flow_disc%ci(n,Y_DIRECTION), &
-            info%zs+info%flow_disc%ci(n,Z_DIRECTION): &
-            info%ze+info%flow_disc%ci(n,Z_DIRECTION))
+            info%xs+disc%ci(n,X_DIRECTION): &
+            info%xe+disc%ci(n,X_DIRECTION), &
+            info%ys+disc%ci(n,Y_DIRECTION): &
+            info%ye+disc%ci(n,Y_DIRECTION), &
+            info%zs+disc%ci(n,Z_DIRECTION): &
+            info%ze+disc%ci(n,Z_DIRECTION))
     end do
   end subroutine InfoGatherValueToDirection3D
 end module LBM_Info_module

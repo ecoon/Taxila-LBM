@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   15 March 2011
-!!!       at:            17:41:51 MDT
+!!!     last modified:   28 March 2011
+!!!       at:            13:26:01 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -20,12 +20,16 @@
 module LBM_BC_module
   use LBM_Options_module
   use LBM_Info_module
+  use LBM_Flow_module
+  use LBM_Grid_module
   use petsc
   implicit none
   private
 #include "lbm_definitions.h"
 
   type, public:: bc_type
+     MPI_Comm comm
+     type(grid_type),pointer:: grid
      PetscInt, dimension(6):: flags ! enum for boundary conditions
      PetscInt dim
      PetscScalar,pointer,dimension(:):: xm_a, xp_a
@@ -40,8 +44,10 @@ module LBM_BC_module
   end type bc_type
 
   public :: BCCreate, &
-       BCSetFromOptions, &
        BCDestroy, &
+       BCSetGrid, &
+       BCSetFromOptions, &
+       BCSetUp, &
        BCSetValues, &
        BCGetArrays, &
        BCRestoreArrays, &
@@ -51,9 +57,12 @@ module LBM_BC_module
 contains
 
   ! constructor
-  function BCCreate() result(bc)
+  function BCCreate(comm) result(bc)
+    MPI_Comm comm
     type(bc_type),pointer :: bc
     allocate(bc)
+    bc%comm = comm
+    nullify(bc%grid)
     nullify(bc%xm_a)
     nullify(bc%xp_a)
     nullify(bc%ym_a)
@@ -83,91 +92,33 @@ contains
     if (bc%zp /= 0) call VecDestroy(bc%zp, ierr)
   end subroutine BCDestroy
   
-  ! set up the vectors for holding boundary data
-  subroutine BCSetFromOptions(bc, info, options, ierr)
+  subroutine BCSetGrid(bc, grid)
     type(bc_type) bc
-    type(info_type) info
+    type(grid_type),pointer:: grid
+    bc%grid => grid
+  end subroutine BCSetGrid
+
+  ! set up the vectors for holding boundary data
+  subroutine BCSetFromOptions(bc, options, ierr)
+    type(bc_type) bc
     type(options_type) options
     PetscErrorCode ierr
 
     ! locals
-    PetscInt locn
     PetscBool flag
     PetscInt nmax
     PetscBool bcvalue
 
     ! lots of internals for flags
     PetscScalar xp3_ave, xm3_ave, xp3_max, xm3_max
-    PetscScalar,dimension(1:info%s):: xp3_ave_p, xm3_ave_p
+    PetscScalar,dimension(1:options%nphases):: xp3_ave_p, xm3_ave_p
     PetscScalar yp3_ave, ym3_ave, yp3_max, ym3_max
-    PetscScalar,dimension(1:info%s):: yp3_ave_p, ym3_ave_p
+    PetscScalar,dimension(1:options%nphases):: yp3_ave_p, ym3_ave_p
     PetscScalar zp3_ave, zm3_ave, zp3_max, zm3_max
-    PetscScalar,dimension(1:info%s):: zp3_ave_p, zm3_ave_p
+    PetscScalar,dimension(1:options%nphases):: zp3_ave_p, zm3_ave_p
 
     ! dimension 
-    bc%dim = MAX(info%ndims, info%s)
-
-    ! now make the boundary vecs/arrays
-    ! x boundaries
-    if (info%xs.eq.1) then
-       locn = info%yl*info%zl*bc%dim
-    else
-       locn = 0
-    endif
-    call VecCreateMPI(options%comm, locn, PETSC_DETERMINE, bc%xm, ierr)
-    call VecSetBlockSize(bc%xm, bc%dim, ierr)
-    call PetscObjectSetName(bc%xm, 'xm_bc', ierr)
-    
-    if (info%xe.eq.info%NX) then
-       locn = info%yl*info%zl*bc%dim
-    else
-       locn = 0
-    endif
-    call VecCreateMPI(options%comm, locn, PETSC_DETERMINE, bc%xp, ierr)
-    call VecSetBlockSize(bc%xp, bc%dim, ierr)
-    call PetscObjectSetName(bc%xp, 'xp_bc', ierr)
-    
-    ! y boundaries
-    if (info%ys.eq.1) then
-       locn = info%xl*info%zl*bc%dim
-    else
-       locn = 0
-    endif
-    call VecCreateMPI(options%comm, locn, PETSC_DETERMINE, bc%ym, ierr)
-    call VecSetBlockSize(bc%ym, bc%dim, ierr)
-    call PetscObjectSetName(bc%ym, 'ym_bc', ierr)
-    
-    if (info%ye.eq.info%NY) then
-       locn = info%xl*info%zl*bc%dim
-    else
-       locn = 0
-    endif
-    call VecCreateMPI(options%comm, locn, PETSC_DETERMINE, bc%yp, ierr)
-    call VecSetBlockSize(bc%yp, bc%dim, ierr)
-    call PetscObjectSetName(bc%yp, 'yp_bc', ierr)
-    
-    if (info%ndims > 2) then
-       ! z boundaries
-       if (info%zs.eq.1) then
-          locn = info%xl*info%yl*bc%dim
-       else
-          locn = 0
-       endif
-       call VecCreateMPI(options%comm, locn, PETSC_DETERMINE, bc%zm, ierr)
-       call VecSetBlockSize(bc%zm, bc%dim, ierr)
-       call PetscObjectSetName(bc%zm, 'zm_bc', ierr)
-       
-       if (info%ze.eq.info%NZ) then
-          locn = info%xl*info%yl*bc%dim
-       else
-          locn = 0
-       endif
-       call VecCreateMPI(options%comm, locn, PETSC_DETERMINE, bc%zp, ierr)
-       call VecSetBlockSize(bc%zp, bc%dim, ierr)
-       call PetscObjectSetName(bc%zp, 'zp_bc', ierr)
-    end if
-
-    call BCGetArrays(bc, ierr)
+    bc%dim = MAX(options%ndims, options%nphases)
 
     ! flags and constant values from options
     nmax = 6
@@ -246,7 +197,7 @@ contains
        bc%flags(BOUNDARY_YP) = BC_PERIODIC
     end if
 
-    if (info%ndims > 2) then
+    if (options%ndims > 2) then
        ! zm boundary
        bcvalue = PETSC_FALSE
        call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_zm', bcvalue, flag, ierr)
@@ -286,6 +237,78 @@ contains
     call BCRestoreArrays(bc, ierr)
   end subroutine BCSetFromOptions
  
+  subroutine BCSetUp(bc)
+    type(bc_type) bc
+    PetscInt locn
+    PetscErrorCode ierr
+
+    type(info_type),pointer:: info 
+    info => bc%grid%info
+
+    ! now make the boundary vecs/arrays
+    ! x boundaries
+    if (info%xs.eq.1) then
+       locn = info%yl*info%zl*bc%dim
+    else
+       locn = 0
+    endif
+    call VecCreateMPI(bc%comm, locn, PETSC_DETERMINE, bc%xm, ierr)
+    call VecSetBlockSize(bc%xm, bc%dim, ierr)
+    call PetscObjectSetName(bc%xm, 'xm_bc', ierr)
+    
+    if (info%xe.eq.info%NX) then
+       locn = info%yl*info%zl*bc%dim
+    else
+       locn = 0
+    endif
+    call VecCreateMPI(bc%comm, locn, PETSC_DETERMINE, bc%xp, ierr)
+    call VecSetBlockSize(bc%xp, bc%dim, ierr)
+    call PetscObjectSetName(bc%xp, 'xp_bc', ierr)
+    
+    ! y boundaries
+    if (info%ys.eq.1) then
+       locn = info%xl*info%zl*bc%dim
+    else
+       locn = 0
+    endif
+    call VecCreateMPI(bc%comm, locn, PETSC_DETERMINE, bc%ym, ierr)
+    call VecSetBlockSize(bc%ym, bc%dim, ierr)
+    call PetscObjectSetName(bc%ym, 'ym_bc', ierr)
+    
+    if (info%ye.eq.info%NY) then
+       locn = info%xl*info%zl*bc%dim
+    else
+       locn = 0
+    endif
+    call VecCreateMPI(bc%comm, locn, PETSC_DETERMINE, bc%yp, ierr)
+    call VecSetBlockSize(bc%yp, bc%dim, ierr)
+    call PetscObjectSetName(bc%yp, 'yp_bc', ierr)
+    
+    if (info%ndims > 2) then
+       ! z boundaries
+       if (info%zs.eq.1) then
+          locn = info%xl*info%yl*bc%dim
+       else
+          locn = 0
+       endif
+       call VecCreateMPI(bc%comm, locn, PETSC_DETERMINE, bc%zm, ierr)
+       call VecSetBlockSize(bc%zm, bc%dim, ierr)
+       call PetscObjectSetName(bc%zm, 'zm_bc', ierr)
+       
+       if (info%ze.eq.info%NZ) then
+          locn = info%xl*info%yl*bc%dim
+       else
+          locn = 0
+       endif
+       call VecCreateMPI(bc%comm, locn, PETSC_DETERMINE, bc%zp, ierr)
+       call VecSetBlockSize(bc%zp, bc%dim, ierr)
+       call PetscObjectSetName(bc%zp, 'zp_bc', ierr)
+    end if
+
+    call BCGetArrays(bc, ierr)
+  end subroutine BCSetUp
+
+
   ! call initialize
   subroutine BCSetValues(bc, info, bc_subroutine)
     type(bc_type) bc
@@ -339,56 +362,56 @@ contains
     if (bc%zp /= 0) call VecRestoreArrayF90(bc%zp, bc%zp_a, ierr)
   end subroutine BCRestoreArrays
   
-  subroutine BCPressure(bc, fi, walls, info)
+  subroutine BCPressure(bc, fi, walls, flow)
     type(bc_type) bc
-    type(info_type) info
+    type(flow_type) flow
     
-    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, 1:info%gxyzl):: fi
-    PetscScalar,dimension(1:info%gxyzl):: walls
+    PetscScalar,dimension(1:flow%nphases, 0:flow%disc%b, 1:flow%grid%info%gxyzl):: fi
+    PetscScalar,dimension(1:flow%grid%info%gxyzl):: walls
     PetscErrorCode ierr
 
-    select case(info%flow_disc%name)
+    select case(flow%disc%name)
     case(D3Q19_DISCRETIZATION)
-       call BCPressureD3Q19(bc, fi, walls, bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, &
-            bc%zm_a, bc%zp_a, info)
+       call BCPressureD3Q19(bc,fi,walls,bc%xm_a,bc%xp_a,bc%ym_a,bc%yp_a, &
+            bc%zm_a,bc%zp_a,flow%grid%info)
     case(D2Q9_DISCRETIZATION)
-       call BCPressureD2Q9(bc, fi, walls, bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, info)
+       call BCPressureD2Q9(bc,fi,walls,bc%xm_a,bc%xp_a,bc%ym_a,bc%yp_a,flow%grid%info)
     case DEFAULT
        SETERRQ(1, 1, 'invalid discretization in LBM', ierr)
     end select
   end subroutine BCPressure
 
-  subroutine BCFlux(bc, fi, walls, info)
+  subroutine BCFlux(bc, fi, walls, flow)
     type(bc_type) bc
-    type(info_type) info
+    type(flow_type) flow
     
-    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, 1:info%gxyzl):: fi
-    PetscScalar,dimension(1:info%gxyzl):: walls
+    PetscScalar,dimension(1:flow%nphases, 0:flow%disc%b, 1:flow%grid%info%gxyzl):: fi
+    PetscScalar,dimension(1:flow%grid%info%gxyzl):: walls
     PetscErrorCode ierr
 
-    select case(info%flow_disc%name)
+    select case(flow%disc%name)
     case(D3Q19_DISCRETIZATION)
        call BCFluxD3Q19(bc, fi, walls, bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, &
-            bc%zm_a, bc%zp_a, info)
+            bc%zm_a, bc%zp_a, flow%grid%info)
     case(D2Q9_DISCRETIZATION)
-       call BCFluxD2Q9(bc, fi, walls, bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, info)
+       call BCFluxD2Q9(bc, fi, walls, bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, flow%grid%info)
     case DEFAULT
        SETERRQ(1, 1, 'invalid discretization in LBM', ierr)
     end select
   end subroutine BCFlux
 
-  subroutine BCPseudoperiodic(bc, fi, walls, info)
+  subroutine BCPseudoperiodic(bc, fi, walls, flow)
     type(bc_type) bc
-    type(info_type) info
+    type(flow_type) flow
     
-    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, 1:info%gxyzl):: fi
-    PetscScalar,dimension(1:info%gxyzl):: walls
+    PetscScalar,dimension(1:flow%nphases, 0:flow%disc%b, 1:flow%grid%info%gxyzl):: fi
+    PetscScalar,dimension(1:flow%grid%info%gxyzl):: walls
     PetscErrorCode ierr
 
-    select case(info%flow_disc%name)
+    select case(flow%disc%name)
     case(D3Q19_DISCRETIZATION)
        call BCPseudoperiodicD3Q19(bc, fi, walls, bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, &
-            bc%zm_a, bc%zp_a, info)
+            bc%zm_a, bc%zp_a, flow%grid%info)
     case(D2Q9_DISCRETIZATION)
        SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic bcs in 2d are not implemented', ierr)
     case DEFAULT
@@ -402,7 +425,7 @@ contains
     type(bc_type) bc
     type(info_type) info
 
-    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, info%gxs:info%gxe, &
+    PetscScalar,dimension(1:info%nphases, 0:info%flow_b, info%gxs:info%gxe, &
          info%gys:info%gye, info%gzs:info%gze):: fi
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
          info%gzs:info%gze):: walls
@@ -411,7 +434,7 @@ contains
     PetscScalar,dimension(bc%dim,info%xs:info%xe,info%ys:info%ye):: zm_vals, zp_vals
 
     PetscInt i,j,k
-    PetscInt directions(0:info%flow_disc%b)
+    PetscInt directions(0:info%flow_b)
     PetscInt cardinals(1:info%ndims)
 
     directions(:) = 0
@@ -512,20 +535,20 @@ contains
 
     type(bc_type) bc
     type(info_type) info
-    PetscInt,intent(in),dimension(0:info%flow_disc%b):: directions
-    PetscScalar,intent(inout),dimension(1:info%s, 0:info%flow_disc%b):: fi
+    PetscInt,intent(in),dimension(0:info%flow_b):: directions
+    PetscScalar,intent(inout),dimension(1:info%nphases, 0:info%flow_b):: fi
     PetscScalar,intent(in),dimension(bc%dim):: pvals
 
 !    PetscScalar utmp, vtmp
     PetscScalar wtmp
-    PetscScalar,dimension(0:info%flow_disc%b)::ftmp
+    PetscScalar,dimension(0:info%flow_b)::ftmp
     integer m
     
 !    utmp = 0
 !    vtmp = 0
     wtmp = 0
 
-    do m=1,info%s
+    do m=1,info%nphases
        ftmp = 0.0
        wtmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) &
             + fi(m,directions(NORTH)) + fi(m,directions(WEST)) &
@@ -613,7 +636,7 @@ contains
     type(bc_type) bc
     type(info_type) info
 
-    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, info%gxs:info%gxe, &
+    PetscScalar,dimension(1:info%nphases, 0:info%flow_b, info%gxs:info%gxe, &
          info%gys:info%gye, info%gzs:info%gze):: fi
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
          info%gzs:info%gze):: walls
@@ -622,7 +645,7 @@ contains
     PetscScalar,dimension(bc%dim,info%xs:info%xe,info%ys:info%ye):: zm_vals, zp_vals
 
     PetscInt i,j,k
-    PetscInt directions(0:info%flow_disc%b)
+    PetscInt directions(0:info%flow_b)
     PetscInt cardinals(1:info%ndims)
 
     directions(:) = 0
@@ -730,19 +753,19 @@ contains
     type(bc_type) bc
     type(info_type) info
 
-    PetscScalar,intent(inout),dimension(1:info%s, 0:info%flow_disc%b):: fi
+    PetscScalar,intent(inout),dimension(1:info%nphases, 0:info%flow_b):: fi
     PetscScalar,intent(in),dimension(bc%dim):: fvals
-    PetscInt,intent(in),dimension(0:info%flow_disc%b):: directions
+    PetscInt,intent(in),dimension(0:info%flow_b):: directions
     PetscInt,intent(in),dimension(1:info%ndims):: cardinals
 
     PetscScalar rhotmp
-    PetscScalar,dimension(0:info%flow_disc%b)::ftmp
+    PetscScalar,dimension(0:info%flow_b)::ftmp
     PetscInt m
 
     ftmp = 0.0
     rhotmp = 0.0
 
-    do m=1,info%s
+    do m=1,info%nphases
        rhotmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) &
             + fi(m,directions(NORTH)) + fi(m,directions(WEST)) &
             + fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
@@ -981,7 +1004,7 @@ contains
     type(bc_type) bc
     type(info_type) info
 
-    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, info%gxs:info%gxe, &
+    PetscScalar,dimension(1:info%nphases, 0:info%flow_b, info%gxs:info%gxe, &
          info%gys:info%gye, info%gzs:info%gze):: fi
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye, &
          info%gzs:info%gze):: walls
@@ -1118,13 +1141,13 @@ contains
     type(bc_type) bc
     type(info_type) info
 
-    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, info%gxs:info%gxe, info%gys:info%gye):: fi
+    PetscScalar,dimension(1:info%nphases, 0:info%flow_b, info%gxs:info%gxe, info%gys:info%gye):: fi
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye):: walls
     PetscScalar,dimension(bc%dim,info%ys:info%ye):: xm_vals, xp_vals
     PetscScalar,dimension(bc%dim,info%xs:info%xe):: ym_vals, yp_vals
 
     PetscInt i,j
-    PetscInt directions(0:info%flow_disc%b)
+    PetscInt directions(0:info%flow_b)
     PetscInt cardinals(1:info%ndims)
 
     directions(:) = 0
@@ -1185,13 +1208,13 @@ contains
     type(bc_type) bc
     type(info_type) info
 
-    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, info%gxs:info%gxe, info%gys:info%gye):: fi
+    PetscScalar,dimension(1:info%nphases, 0:info%flow_b, info%gxs:info%gxe, info%gys:info%gye):: fi
     PetscScalar,dimension(info%gxs:info%gxe, info%gys:info%gye):: walls
     PetscScalar,dimension(bc%dim,info%ys:info%ye):: xm_vals, xp_vals
     PetscScalar,dimension(bc%dim,info%xs:info%xe):: ym_vals, yp_vals
 
     PetscInt i,j
-    PetscInt directions(0:info%flow_disc%b)
+    PetscInt directions(0:info%flow_b)
     PetscInt cardinals(1:info%ndims)
 
     directions(:) = 0
@@ -1321,13 +1344,13 @@ contains
     type(bc_type) bc
     type(info_type) info
 
-    PetscScalar,intent(inout),dimension(1:info%s, 0:info%flow_disc%b):: fi
+    PetscScalar,intent(inout),dimension(1:info%nphases, 0:info%flow_b):: fi
     PetscScalar,intent(in),dimension(bc%dim):: fvals
-    PetscInt,intent(in),dimension(0:info%flow_disc%b):: directions
+    PetscInt,intent(in),dimension(0:info%flow_b):: directions
     PetscInt,intent(in),dimension(1:info%ndims):: cardinals
 
     PetscScalar rhotmp
-    PetscScalar,dimension(0:info%flow_disc%b)::ftmp
+    PetscScalar,dimension(0:info%flow_b)::ftmp
     PetscInt m
 
     ftmp = 0.0
@@ -1335,7 +1358,7 @@ contains
 
     !!!!! Ethan, this written for the NORTH boundary.
 
-    do m=1,info%s
+    do m=1,info%nphases
        rhotmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) + fi(m,directions(WEST)) &
             + 2.*(fi(m,directions(NORTH)) + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST))) 
        rhotmp = rhotmp/(1. + fvals(cardinals(CARDINAL_NORMAL)))
@@ -1378,13 +1401,13 @@ contains
 
     type(bc_type) bc
     type(info_type) info
-    PetscInt,intent(in),dimension(0:info%flow_disc%b):: directions
-    PetscScalar,intent(inout),dimension(1:info%s, 0:info%flow_disc%b):: fi
+    PetscInt,intent(in),dimension(0:info%flow_b):: directions
+    PetscScalar,intent(inout),dimension(1:info%nphases, 0:info%flow_b):: fi
     PetscScalar,intent(in),dimension(bc%dim):: pvals
 
 !    PetscScalar utmp
     PetscScalar vtmp
-    PetscScalar,dimension(0:info%flow_disc%b)::ftmp
+    PetscScalar,dimension(0:info%flow_b)::ftmp
     integer m
     
 !    utmp = 0
@@ -1392,7 +1415,7 @@ contains
 
     !!!!! Ethan, this written for the NORTH boundary.
 
-    do m=1,info%s
+    do m=1,info%nphases
        ftmp = 0.0
        vtmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) + fi(m,directions(WEST)) &
             + 2.*(fi(m,directions(NORTH)) + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST)))
