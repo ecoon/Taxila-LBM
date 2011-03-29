@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   28 March 2011
-!!!       at:            19:37:44 PDT
+!!!     last modified:   29 March 2011
+!!!       at:            16:11:03 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -62,8 +62,7 @@ module LBM_Info_module
   public :: InfoCreate, &
        InfoDestroy, &
        InfoSetFromOptions, &
-       InfoView, &
-       InfoGatherValueToDirection
+       InfoView
 
 contains
   function InfoCreate(comm) result(info)
@@ -246,61 +245,4 @@ contains
     if (associated(info%gridsize)) deallocate(info%gridsize)
     if (info%bag /= 0) call PetscBagDestroy(info%bag, ierr)
   end subroutine InfoDestroy
-  
-  subroutine InfoGatherValueToDirection(info, val, out, disc)
-    use LBM_Discretization_type_module
-    type(info_type) info
-    type(discretization_type) disc
-    PetscScalar,intent(in),dimension(1:info%gxyzl):: val
-    PetscScalar,intent(out),dimension(0:disc%b, 1:info%gxyzl):: out
-    PetscErrorCode ierr
-    
-    if (info%ndims.eq.2) then
-       call InfoGatherValueToDirection2D(info, val, out, disc)
-    else if (info%ndims.eq.3) then
-       call InfoGatherValueToDirection3D(info, val, out, disc)
-    else 
-       SETERRQ(1, 1, 'invalid ndims in LBM', ierr)
-    end if
-  end subroutine InfoGatherValueToDirection
-  
-  subroutine InfoGatherValueToDirection2D(info, val, out, disc)
-    use LBM_Discretization_type_module
-    type(info_type) info
-    type(discretization_type) disc
-    PetscScalar,intent(in),dimension(info%gxs:info%gxe, &
-         info%gys:info%gye):: val
-    PetscScalar,intent(out),dimension(0:disc%b, &
-         info%gxs:info%gxe, info%gys:info%gye):: out
-
-    PetscInt n
-    do n=0,disc%b
-       out(n,info%xs:info%xe,info%ys:info%ye) = val( &
-            info%xs+disc%ci(n,X_DIRECTION): &
-            info%xe+disc%ci(n,X_DIRECTION), &
-            info%ys+disc%ci(n,Y_DIRECTION): &
-            info%ye+disc%ci(n,Y_DIRECTION))
-    end do
-  end subroutine InfoGatherValueToDirection2D
-
-  subroutine InfoGatherValueToDirection3D(info, val, out, disc)
-    use LBM_Discretization_type_module
-    type(info_type) info
-    type(discretization_type) disc
-    PetscScalar,intent(in),dimension(info%gxs:info%gxe, &
-         info%gys:info%gye, info%gzs:info%gze):: val
-    PetscScalar,intent(out),dimension(0:disc%b, &
-         info%gxs:info%gxe, info%gys:info%gye, info%gzs:info%gze):: out
-    
-    PetscInt n
-    do n=0,disc%b
-       out(n,info%xs:info%xe,info%ys:info%ye,info%zs:info%ze) = val( &
-            info%xs+disc%ci(n,X_DIRECTION): &
-            info%xe+disc%ci(n,X_DIRECTION), &
-            info%ys+disc%ci(n,Y_DIRECTION): &
-            info%ye+disc%ci(n,Y_DIRECTION), &
-            info%zs+disc%ci(n,Z_DIRECTION): &
-            info%ze+disc%ci(n,Z_DIRECTION))
-    end do
-  end subroutine InfoGatherValueToDirection3D
 end module LBM_Info_module
