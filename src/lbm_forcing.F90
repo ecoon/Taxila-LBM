@@ -37,16 +37,16 @@ contains
     ! input
     type(info_type) info
     type(constants_type) constants
-    PetscScalar,dimension(1:info%s, 1:info%gxyzl):: rho
-    PetscScalar,dimension(1:info%s, 1:info%ndims, 1:info%gxyzl):: forces
+    PetscScalar,dimension(1:info%nphases, 1:info%gxyzl):: rho
+    PetscScalar,dimension(1:info%nphases, 1:info%ndims, 1:info%gxyzl):: forces
     PetscScalar,dimension(1:info%gxyzl):: walls
 
     ! local
     PetscInt i,j,k,m,n,d
-    PetscScalar,dimension(1:info%s, 0:info%flow_disc%b, 1:info%gxyzl)::tmp
+    PetscScalar,dimension(1:info%nphases, 0:info%flow_b, 1:info%gxyzl)::tmp
     PetscErrorCode ierr
 
-    do m=1,info%s
+    do m=1,info%nphases
        call InfoGatherValueToDirection(info, rho(m,:), tmp(m,:,:))
     end do
 
@@ -63,7 +63,7 @@ contains
                 forces(2,d,i) = forces(2,d,i) &
                      - rho(2,i)*tmp(2,n,i)*info%flow_disc%ci(n,d)*constants%g22
              enddo
-             do n=2*info%ndims+1,info%flow_disc%b
+             do n=2*info%ndims+1,info%flow_b
                 forces(1,d,i) = forces(1,d,i) &
                      - rho(1,i)*tmp(2,n,i)*info%flow_disc%ci(n,d)*constants%g*0.5
                 forces(1,d,i) = forces(1,d,i) &
@@ -83,13 +83,13 @@ contains
   subroutine LBMAddBodyForces(rho,forces,walls,info,constants)
     type(info_type) info
     type(constants_type) constants
-    PetscScalar,dimension(1:info%s, 1:info%gxyzl):: rho
-    PetscScalar,dimension(1:info%s, 1:info%ndims, 1:info%gxyzl):: forces
+    PetscScalar,dimension(1:info%nphases, 1:info%gxyzl):: rho
+    PetscScalar,dimension(1:info%nphases, 1:info%ndims, 1:info%gxyzl):: forces
     PetscScalar,dimension(1:info%gxyzl):: walls
 
     PetscInt i,m,n,d
 
-    do m=1,info%s
+    do m=1,info%nphases
        do i=1,info%gxyzl
           if (walls(i).eq.0) then
              do d=1,info%ndims
@@ -118,18 +118,18 @@ contains
     ! input
     type(info_type) info
     type(constants_type) constants
-    PetscScalar,dimension(1:info%s, 1:info%gxyzl):: rho
-    PetscScalar,dimension(1:info%s, 1:info%ndims, 1:info%gxyzl):: forces
+    PetscScalar,dimension(1:info%nphases, 1:info%gxyzl):: rho
+    PetscScalar,dimension(1:info%nphases, 1:info%ndims, 1:info%gxyzl):: forces
     PetscScalar,dimension(1:info%gxyzl):: walls
 
     ! local
     PetscInt i,m,n,d
-    PetscScalar,dimension(0:info%flow_disc%b,1:info%gxyzl)::tmp
+    PetscScalar,dimension(0:info%flow_b,1:info%gxyzl)::tmp
     PetscErrorCode ierr
 
     call InfoGatherValueToDirection(info, walls, tmp)
 
-    do m=1,info%s
+    do m=1,info%nphases
       do i=1,info%gxyzl
         if (walls(i).eq.0) then
           do d=1,info%ndims
@@ -137,7 +137,7 @@ contains
                forces(m,d,i) = forces(m,d,i) &
                     - rho(m,i)*tmp(n,i)*info%flow_disc%ci(n,d)*constants%gw(m)
             enddo
-            do n=2*info%ndims+1,info%flow_disc%b
+            do n=2*info%ndims+1,info%flow_b
                forces(m,d,i) = forces(m,d,i) &
                     - rho(m,i)*tmp(n,i)*info%flow_disc%ci(n,d)*constants%gw(m)*0.5
             enddo
@@ -154,7 +154,7 @@ contains
     type(constants_type) constants
     PetscInt bc_dim
     PetscInt, dimension(6)::bc_flags ! enum for boundary conditions
-    PetscScalar,dimension(1:info%s, 1:info%ndims, 1:info%gxyzl):: forces
+    PetscScalar,dimension(1:info%nphases, 1:info%ndims, 1:info%gxyzl):: forces
 
     if (info%ndims.eq.2) then
        call LBMZeroBoundaryForcesD2(bc_flags, forces, bc_dim, info,constants)
@@ -169,7 +169,7 @@ contains
     PetscInt bc_dim
     PetscInt, dimension(6)::bc_flags ! enum for boundary conditions
 
-    PetscScalar,dimension(1:info%s, 1:info%ndims, info%gxs:info%gxe, &
+    PetscScalar,dimension(1:info%nphases, 1:info%ndims, info%gxs:info%gxe, &
          info%gys:info%gye):: forces
     
     ! -- x
@@ -202,7 +202,7 @@ contains
     PetscInt bc_dim
     PetscInt, dimension(6)::bc_flags ! enum for boundary conditions
 
-    PetscScalar,dimension(1:info%s, 1:info%ndims, info%gxs:info%gxe, &
+    PetscScalar,dimension(1:info%nphases, 1:info%ndims, info%gxs:info%gxe, &
          info%gys:info%gye, info%gzs:info%gze):: forces
     
     ! -- x

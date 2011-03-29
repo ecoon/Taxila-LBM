@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         09 December 2010
 !!!       on:            14:16:32 MST
-!!!     last modified:   15 March 2011
-!!!       at:            17:37:02 MDT
+!!!     last modified:   28 March 2011
+!!!       at:            16:40:49 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -35,14 +35,16 @@
        PetscInt walls_type
 
        PetscInt flow_disc
-       PetscInt tran_disc
+       PetscInt transport_disc
        PetscInt ndims
-
        PetscInt nphases
+       PetscInt ncomponents
+       PetscInt flow_relaxation_mode
+       PetscInt transport_relaxation_mode
     end type options_type
 
     public :: OptionsCreate, &
-         OptionsInitialize, &
+         OptionsSetUp, &
          OptionsView
 
   contains
@@ -65,29 +67,38 @@
       options%walls_type = WALLS_TYPE_PETSC
       
       options%flow_disc = NULL_DISCRETIZATION
-      options%tran_disc = NULL_DISCRETIZATION
+      options%transport_disc = NULL_DISCRETIZATION
       options%ndims = 0
-
       options%nphases = 1
+      options%ncomponents = 1
+      options%flow_relaxation_mode = RELAXATION_MODE_SRT
+      options%transport_relaxation_mode = RELAXATION_MODE_SRT
     end function OptionsCreate
 
-    subroutine OptionsInitialize(options, prefix, ierr)
+    subroutine OptionsSetPrefix(options, prefix)
+      type(options_type) options
+      character(len=MAXWORDLENGTH):: prefix
+      integer charlen
+
+      charlen = LEN_TRIM(prefix)
+      options%my_prefix = prefix(1:charlen)
+    end subroutine OptionsSetPrefix
+
+    subroutine OptionsSetUp(options)
       use String_module
 
       type(options_type) options
-      character(len=MAXWORDLENGTH):: prefix
+      PetscBool help
       PetscBool flag
       PetscErrorCode ierr
       PetscInt nmax
-      integer charlen
       
       character(len=MAXWORDLENGTH):: name
       character(len=MAXWORDLENGTH):: test_discretization
       PetscInt tmpdims
 
-      charlen = LEN_TRIM(prefix)
-      options%my_prefix = prefix(1:charlen)
-     
+      call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
+    
       ! update defaults from input file
       call PetscOptionsGetInt(options%my_prefix, '-ntimes', options%ntimes, flag, ierr)
       call PetscOptionsGetInt(options%my_prefix, '-npasses', options%npasses, flag, ierr)
@@ -101,11 +112,22 @@
       call PetscOptionsGetInt(options%my_prefix, '-walls_type', options%walls_type, flag, ierr)
       call PetscOptionsGetInt(options%my_prefix, '-s', options%nphases, flag, ierr)
 
+      if (help) call PetscHelpPrintfDefault(options%comm, &
+           "-flow_relaxation_mode <0>: flow relaxation as SRT=0, MRT=1\n", ierr)
+      call PetscOptionsGetInt(options%my_prefix, '-flow_relaxation_mode', &
+           options%flow_relaxation_mode, flag, ierr)
+
       ! set the flow discretization
-      call PetscOptionsGetString(options%my_prefix, '-discretization', &
+      if (help) call PetscHelpPrintfDefault(options%comm, &
+           "-nphases <1>: number of phases\n", ierr)
+      call PetscOptionsGetInt(options%my_prefix,'-nphases', options%nphases,flag,ierr)
+
+      if (help) call PetscHelpPrintfDefault(options%comm, &
+           "-flow_discretization 'd3q19': discretization type\n", ierr)
+      call PetscOptionsGetString(options%my_prefix, '-flow_discretization', &
            name, flag, ierr)
       if (.not.flag) then
-         call PetscOptionsGetString(options%my_prefix, '-flow_discretization', &
+         call PetscOptionsGetString(options%my_prefix, '-discretization', &
               name, flag, ierr)
       end if
       if (.not.flag) name = 'D3Q19'
@@ -127,31 +149,42 @@
       end if
          
       ! set the tran discretization
+      if (help) call PetscHelpPrintfDefault(options%comm, &
+           "-ncomponents <1>: number of major components\n", ierr)
+      call PetscOptionsGetInt(options%my_prefix,'-ncomponents', options%ncomponents, &
+           flag,ierr)
+
+      if (help) call PetscHelpPrintfDefault(options%comm, &
+           "-transport_relaxation_mode <0>: transport relaxation as SRT=0, MRT=1\n", ierr)
+      call PetscOptionsGetInt(options%my_prefix, '-transport_relaxation_mode', &
+           options%transport_relaxation_mode, flag, ierr)
+
+      if (help) call PetscHelpPrintfDefault(options%comm, &
+           "-transport_discretization 'd3q19': discretization type\n", ierr)
       call PetscOptionsGetString(options%my_prefix, '-transport_discretization', &
            name, flag, ierr)
 
       if (flag) then
          test_discretization = 'd3q19'
          if (StringCompareIgnoreCase(name, test_discretization, 6)) then
-            options%tran_disc = D3Q19_DISCRETIZATION
+            options%transport_disc = D3Q19_DISCRETIZATION
             tmpdims = 3
          end if
 
          test_discretization = 'd2q9'
          if (StringCompareIgnoreCase(name, test_discretization, 5)) then
-            options%tran_disc = D2Q9_DISCRETIZATION
+            options%transport_disc = D2Q9_DISCRETIZATION
             tmpdims = 2
          end if
 
-         if (options%tran_disc == NULL_DISCRETIZATION) then
+         if (options%transport_disc == NULL_DISCRETIZATION) then
             SETERRQ(1, 1, 'Invalid Discretization', ierr)
          else if (tmpdims /= options%ndims) then
             SETERRQ(1,1,"Discretization dimensions don't match", ierr)
          end if
       end if
-
       return
-    end subroutine OptionsInitialize
+    end subroutine OptionsSetUp
 
     subroutine OptionsView(options)
       type(options_type) options
