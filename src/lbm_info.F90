@@ -6,7 +6,7 @@
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
 !!!     last modified:   28 March 2011
-!!!       at:            13:19:16 MDT
+!!!       at:            19:37:44 PDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -43,10 +43,6 @@ module LBM_Info_module
      PetscInt nproc_x, nproc_y, nproc_z, nprocs
      PetscInt rank
      PetscReal,pointer,dimension(:) :: gridsize
-
-     ! non-grid parameters, stored for convenience
-     PetscInt nphases, ncomponents
-     PetscInt flow_b, transport_b
 
      ! bag
      character(len=MAXWORDLENGTH):: name
@@ -113,11 +109,6 @@ contains
     info%nproc_x = -1
     info%nproc_y = -1
     info%nproc_z = -1
-
-    info%nphases = 0
-    info%ncomponents = 0
-    info%flow_b = 0
-    info%transport_b = 0
     
     nullify(info%periodic)
     nullify(info%gridsize)
@@ -241,15 +232,6 @@ contains
     call MPI_Comm_rank(info%comm, info%rank, ierr)
     call MPI_Comm_size(info%comm, info%nprocs, ierr)
   end subroutine InfoSetFromOptions
-
-  ! subroutine InfoSetSizes(info, nphases, ncomponents, flow_b, transport_b)
-  !   type(info_type) info
-  !   PetscInt :: nphases, ncomponents, flow_b, transport_b
-  !   info%nphases = nphases
-  !   info%ncomponents = ncomponents
-  !   info%flow_b = flow_b
-  !   info%transport_b = transport_b
-  ! end subroutine InfoSetSizes
 
   subroutine InfoView(info)
     type(info_type) info
