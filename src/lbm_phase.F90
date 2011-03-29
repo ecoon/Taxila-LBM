@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            13:43:00 MDT
-!!!     last modified:   17 March 2011
-!!!       at:            18:29:55 MDT
+!!!     last modified:   28 March 2011
+!!!       at:            16:38:38 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -18,6 +18,7 @@
 module LBM_Phase_module
   use petsc
   use LBM_Phase_Bag_Data_type_module
+  use LBM_Relaxation_module
   implicit none
 
   private
@@ -27,30 +28,28 @@ module LBM_Phase_module
      MPI_Comm comm
      ! sizes and identifiers (set pre-bag)
      PetscInt s
-     PetscInt b
      PetscInt id
 
      ! bagged parameters
      PetscScalar,pointer :: mm ! molecular mass
-     PetscScalar,pointer :: tau ! relaxation time
-     PetscScalar,pointer,dimension(:) :: tau_mrt ! components of S vector for mrt
      PetscScalar,pointer :: gw ! solid affinity? for phase-wall interaction forces
      PetscScalar,pointer,dimension(:) :: gf ! phase-phase force coefs
-     PetscBool, pointer:: mrt ! do MRT?
 
      ! dependent parameters
      PetscScalar alpha_0, alpha_1 
      PetscScalar d_k
      PetscScalar c_s2
+     type(relaxation_type),pointer:: relax
 
      ! bag 
      character(len=MAXWORDLENGTH):: name
      type(phase_bag_data_type),pointer:: data
      PetscBag bag
-  end type phase_bag_type
+  end type phase_type
 
   interface PetscBagGetData
      subroutine PetscBagGetData(bag, data, ierr)
+       use LBM_Phase_Bag_Data_type_module
        PetscBag bag
        type(phase_bag_data_type),pointer :: data
        PetscErrorCode ierr
@@ -63,8 +62,9 @@ module LBM_Phase_module
 
   public :: PhaseCreate, &
        PhaseDestroy, &
-       PhaseSetUp!, &
-!       PhaseSetFromOptions
+       PhaseSetSizes, &
+       PhaseSetName, &
+       PhaseSetFromOptions
 
 contains
   function PhaseCreateOne(comm) result(phase)
@@ -73,6 +73,7 @@ contains
     allocate(phase)
     phase%comm = comm
     call PhaseInitialize(phase)
+    phase%relax => RelaxationCreate(comm)
   end function PhaseCreateOne
 
   function PhaseCreateN(comm, n) result(phase)
@@ -85,13 +86,13 @@ contains
     do lcv=1,n
        phase(lcv)%comm = comm
        call PhaseInitialize(phase(lcv))
+       phase(lcv)%relax => RelaxationCreate(comm)
     end do
   end function PhaseCreateN
 
   subroutine PhaseInitialize(phase)
     type(phase_type) phase
     phase%s = -1
-    phase%b = -1
     phase%id = 0
     phase%alpha_0 = 0.
     phase%alpha_1 = 0.
@@ -103,22 +104,27 @@ contains
   end subroutine PhaseInitialize
   
   subroutine PhaseSetSizes(phase, s, b)
-    type(phase_type),pointer :: phase
+    type(phase_type) :: phase
     PetscInt s,b
     phase%s = s
-    phase%b = b
+    call RelaxationSetSizes(phase%relax, s, b)
   end subroutine PhaseSetSizes
-  
-  subroutine PhaseSetName(phase, name, id)
+
+  subroutine PhaseSetName(phase, name)
     type(phase_type) phase
     character(len=MAXWORDLENGTH):: name
-    PetscInt id
     
     phase%name = name
-    phase%id = id
+    call RelaxationSetName(phase%relax, name)
   end subroutine PhaseSetName
 
-  subroutine LBMPhaseSetFromOptions(phase, options, ierr)
+  subroutine PhaseSetID(phase, id)
+    type(phase_type) phase
+    PetscInt id
+    phase%id = id
+  end subroutine PhaseSetID
+
+  subroutine PhaseSetFromOptions(phase, options, ierr)
     use LBM_Options_module
     type(phase_type) phase
     type(options_type) options
@@ -129,35 +135,17 @@ contains
     character(len=MAXWORDLENGTH):: paramname
 
     ! set up the data
-    allocate(phase%data%tau_mrt(0%phase%b))
-    allocate(phase%data%gf(1%phase%s))
+    allocate(phase%data%gf(1:phase%s))
 
     ! create the bag
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
-    call PetscDataTypeGetSize(PETSC_BOOL, sizeofbool, ierr)
-    sizeofdata = (3+b+1+s)*sizeofscalar + sizeofbool
+    sizeofdata = (3+phase%s)*sizeofscalar
     call PetscBagCreate(phase%comm, sizeofdata, phase%bag, ierr)
     call PetscBagSetName(phase%bag, TRIM(options%my_prefix)//phase%name, ierr)
 
     ! register data
-    call PetscBagGetData(phase%bag, phase%data, ierr)
-    call PetscBagRegisterBool(phase%bag, phase%data%mrt, PETSC_FALSE, 'mrt', &
-         'Use MRT on this phase?', ierr)
-    phase%mrt => phase%data%mrt
-    
-    if (phase%mrt) then
-       do lcv=0,b
-          write(paramname, '(I0.2)') lcv
-          call PetscBagRegisterScalar(phase%bag, phase%data%tau_mrt(lcv), 0.d0, &
-               'tau_'//paramname, 'MRT relaxation moment coefficient', ierr)
-       end do
-    else
-       phase%data%tau_mrt = 0.d0
-    end if
-    phase%tau_mrt => phase%data%tau_mrt
-    
-    do lcv=1,s
-       write(paramname, '(I1, I1)') lcv, phase
+    do lcv=1,phase%s
+       write(paramname, '(I1, I1)') lcv, phase%id
        call PetscBagRegisterScalar(phase%bag, phase%data%gf(lcv), 0.d0, &
             'g_'//paramname, 'phase-phase interaction potential coefficient', ierr)
     end do
@@ -166,15 +154,17 @@ contains
     call PetscBagRegisterScalar(phase%bag, phase%data%gw, 0.d0, &
          'gw', 'Phase-solid interaction potential coefficient', ierr)
     phase%gw => phase%data%gw
-    call PetscBagRegisterScalar(phase%bag, phase%data%tau, 1.d0, &
-         'tau', 'relaxation time', ierr)
-    phase%tau => phase%data%tau
     call PetscBagRegisterScalar(phase%bag, phase%data%mm, 1.d0, &
          'mm', 'molecular mass', ierr)
     phase%mm => phase%data%mm
-  end subroutine LBMPhaseSetFromOptions
 
-  subroutine LBMPhaseDestroy(phase, ierr)
+    call RelaxationSetMode(phase%relax, options%flow_relaxation_mode)
+    call RelaxationSetFromOptions(phase%relax, options, ierr)
+  end subroutine PhaseSetFromOptions
+
+  subroutine PhaseDestroy(phase, ierr)
+    type(phase_type) phase
+    PetscErrorCode ierr
     if (phase%bag /= 0) call PetscBagDestroy(phase%bag, ierr)
-  end subroutine LBMPhaseDestroy
+  end subroutine PhaseDestroy
 end module LBM_Phase_module

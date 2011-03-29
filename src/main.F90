@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
-!!!     last modified:   28 February 2011
-!!!       at:            10:46:28 MST
+!!!     last modified:   28 March 2011
+!!!       at:            13:25:27 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -46,10 +46,11 @@
 
     ! initialize options and constants
     prefix = ''
-    call OptionsInitialize(options, prefix, ierr)
-    call LBMSetFromOptions(user, options)
+    call OptionsSetPrefix(options, prefix)
+    call OptionsSetUp(options)
+    call LBMSetFromOptions(user, options, ierr)
 
-    if (user%info%id.eq.0) call LBMView(user)
+!    if (user%info%id.eq.0) call LBMView(user)
 
     ! --- initialize state
     ! walls

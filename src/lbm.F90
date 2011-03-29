@@ -20,10 +20,11 @@
   module LBM_module
     use petsc
     use Timing_module
-    use LBM_Constants_module
     use LBM_Discretization_module
-    use LBM_Info_module
+    use LBM_Grid_module
     use LBM_BC_module
+    use LBM_Flow_module
+!    use LBM_Transport_module
     use LBM_Options_module
     implicit none
 
@@ -32,55 +33,23 @@
 #include "lbm_definitions.h"
     type, public:: lbm_type
        MPI_Comm comm
-       type(info_type),pointer:: info
-       type(bc_type),pointer:: bc
        type(options_type),pointer:: options
-       type(constants_type),pointer:: constants
+       type(grid_type),pointer:: grid
+       type(bc_type),pointer:: bc
+       type(flow_type),pointer:: flow
+!       type(transport_type),pointer:: transport
 
-       DM,pointer:: da_one ! pressure, rhot, etc
-       DM,pointer:: da_s   ! rho -- #dofs = s = # of components
-       DM,pointer:: da_sb  ! fi -- #dofs = s*b = components * directions
-       DM,pointer:: da_flow ! ut -- #dofs = 3
-       PetscInt dm_index_to_ndof(4)
-
-       Vec fi
-       Vec rho
-       Vec ut
-       Vec prs
-       Vec rhot
        Vec walls
-
-       Vec fi_g
-       Vec rho_g
-       Vec ut_g
-       Vec uyt_g
-       Vec uzt_g
-       Vec prs_g
-       Vec rhot_g
        Vec walls_g
-
-       PetscScalar,pointer:: ut_a(:)
-       PetscScalar,pointer:: prs_a(:)
        PetscScalar,pointer:: walls_a(:)
-       PetscScalar,pointer:: rho_a(:)
-       PetscScalar,pointer:: fi_a(:)
-       PetscScalar,pointer:: rhot_a(:)
 
-       PetscScalar,pointer,dimension(:,:,:):: vel
-       PetscScalar,pointer,dimension(:,:,:):: vel_eq
-       PetscScalar,pointer,dimension(:,:,:):: forces
        character(len=MAXSTRINGLENGTH) name       
     end type lbm_type
-
-    interface LBMCreate
-       module procedure LBMCreate_Comm
-       module procedure LBMCreate_CommName
-    end interface
     
     public :: LBMCreate, &
-         LBMSetFromOptions, &
          LBMDestroy, &
-         LBMSetDomain, &
+         LBMSetName, &
+         LBMSetFromOptions, &
          LBMRun, &
          LBMLocalToGlobal, &
          LBMInitializeWalls, &
@@ -93,383 +62,90 @@
          LBMInput
 
   contains
-    function LBMCreate_Comm(comm) result(lbm)
+    function LBMCreate(comm) result(lbm)
       type(lbm_type),pointer:: lbm
       MPI_Comm comm
 
       allocate(lbm)
-      allocate(lbm%da_one)
-      allocate(lbm%da_s)
-      allocate(lbm%da_sb)
-      allocate(lbm%da_flow)
-
-      lbm%comm = 0
-      lbm%da_one = 0
-      lbm%da_s = 0
-      lbm%da_sb = 0
-      lbm%da_flow = 0
-      lbm%info => InfoCreate(comm)
-      lbm%bc => BCCreate()
-      lbm%options => OptionsCreate(comm)
-      lbm%constants => ConstantsCreate()
       lbm%comm = comm
 
-      lbm%fi = 0
-      lbm%rho = 0
-      lbm%ut = 0
-      lbm%prs = 0
-      lbm%rhot = 0
+      lbm%options => OptionsCreate(comm)
+      lbm%grid => GridCreate(comm)
+      lbm%bc => BCCreate(comm)
+      nullify(lbm%flow)
+!      nullify(lbm%transport)
+
       lbm%walls = 0
-
-      lbm%fi_g = 0
-      lbm%rho_g = 0
-      lbm%ut_g = 0
-      lbm%prs_g = 0
-      lbm%rhot_g = 0
       lbm%walls_g = 0
-
-      nullify(lbm%ut_a)
-      nullify(lbm%prs_a)
       nullify(lbm%walls_a)
-      nullify(lbm%rho_a)
-      nullify(lbm%fi_a)
-      nullify(lbm%rhot_a)
-
-      nullify(lbm%vel)
-      nullify(lbm%vel_eq)
-      nullify(lbm%forces)
 
       lbm%name = ''
-    end function LBMCreate_Comm
-
-    function LBMCreate_CommName(comm, name) result(lbm)
-      type(lbm_type),pointer:: lbm 
-      MPI_Comm comm
-      character(len=*):: name       
-
-      lbm => LBMCreate_Comm(comm)
-      lbm%name = name
-    end function LBMCreate_CommName
-
-    ! --- set up LB method
-    subroutine LBMSetFromOptions(lbm, options)
-      type(lbm_type) lbm
-      type(options_type) options
-
-      ! local
-      PetscErrorCode ierr
-      PetscInt xs,gxs
-      PetscInt ys,gys
-      PetscInt zs,gzs
-      PetscInt,allocatable,dimension(:):: ownership_x, ownership_y, ownership_z
-      PetscScalar,dimension(3,2):: corners
-      PetscScalar,dimension(3):: tmpcorners
-      PetscInt nmax
-      PetscBool flag, flag2
-      integer charlen
-      Vec coords
-      character(len=MAXSTRINGLENGTH) coordfile
-      PetscViewer viewer
-      PetscScalar zero
-      PetscInt,dimension(3):: btype
-        
-      call mpi_comm_rank(lbm%comm,lbm%info%id,ierr)
-      call mpi_comm_size(lbm%comm,lbm%info%nproc, ierr)
-
-      call InfoSetFromOptions(lbm%info, options, ierr)
-      call ConstantsSetFromOptions(lbm%constants, options, ierr)
-      call DiscretizationSetUpConstants(lbm%info%flow_disc, lbm%constants)
-      if (options%tran_disc /= NULL_DISCRETIZATION) then
-         call DiscretizationSetUpConstants(lbm%info%tran_disc, lbm%constants)
-      end if
-
-      lbm%dm_index_to_ndof(ONEDOF) = 1
-      lbm%dm_index_to_ndof(NPHASEDOF) = lbm%info%s
-      lbm%dm_index_to_ndof(NPHASEXBDOF) = lbm%info%s*(lbm%info%flow_disc%b+1)
-      lbm%dm_index_to_ndof(NFLOWDOF) = lbm%info%ndims
-
-      ! create DAs
-      btype(:) = DMDA_BOUNDARY_GHOSTED
-      if (lbm%info%periodic(X_DIRECTION)) btype(X_DIRECTION) = DMDA_BOUNDARY_PERIODIC
-      if (lbm%info%periodic(Y_DIRECTION)) btype(Y_DIRECTION) = DMDA_BOUNDARY_PERIODIC
-      if (lbm%info%ndims > 2) then
-         if (lbm%info%periodic(Z_DIRECTION)) btype(Z_DIRECTION) = DMDA_BOUNDARY_PERIODIC
-      else
-         btype(Z_DIRECTION) = PETSC_NULL_INTEGER
-      end if
-
-      call DMDACreate3d(lbm%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
-           btype(Z_DIRECTION), DMDA_STENCIL_BOX, &
-           lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
-           PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, lbm%dm_index_to_ndof(ONEDOF), 1, &
-           PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%da_one, ierr)
-      CHKERRQ(ierr)
-      call PetscObjectSetName(lbm%da_one, trim(lbm%name)//'DA_one_dof', ierr)
-!      call DMView(lbm%da_one, PETSC_VIEWER_STDOUT_WORLD, ierr)
-
-      call DMDAGetCorners(lbm%da_one, xs, ys, zs, lbm%info%xl, lbm%info%yl, lbm%info%zl, ierr)
-      call DMDAGetGhostCorners(lbm%da_one, gxs, gys, gzs, lbm%info%gxl, lbm%info%gyl, &
-           lbm%info%gzl, ierr)
-      call DMDAGetInfo(lbm%da_one, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
-           PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, lbm%info%nproc_x, &
-           lbm%info%nproc_y, lbm%info%nproc_z, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
-           PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, ierr)
-      allocate(ownership_x(1:lbm%info%nproc_x))
-      allocate(ownership_y(1:lbm%info%nproc_y))
-      allocate(ownership_z(1:lbm%info%nproc_z))
-      ownership_x = 0
-      ownership_y = 0
-      ownership_z = 0
-      call DMDAGetOwnershipRanges(lbm%da_one, ownership_x, ownership_y, ownership_z, ierr)
-
-      ! set lbm%info including corners
-      lbm%info%xs = xs+1
-      lbm%info%gxs = gxs+1
-      lbm%info%xe = lbm%info%xs+lbm%info%xl-1
-      lbm%info%gxe = lbm%info%gxs+lbm%info%gxl-1
-
-      lbm%info%ys = ys+1
-      lbm%info%gys = gys+1
-      lbm%info%ye = lbm%info%ys+lbm%info%yl-1
-      lbm%info%gye = lbm%info%gys+lbm%info%gyl-1
-
-      if (lbm%info%ndims > 2) then
-         lbm%info%zs = zs+1
-         lbm%info%gzs = gzs+1
-         lbm%info%ze = lbm%info%zs+lbm%info%zl-1
-         lbm%info%gze = lbm%info%gzs+lbm%info%gzl-1
-      end if
-
-      lbm%info%xyzl = lbm%info%xl*lbm%info%yl*lbm%info%zl
-      lbm%info%gxyzl = lbm%info%gxl*lbm%info%gyl*lbm%info%gzl
-
-      call DMDACreate3d(lbm%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
-           btype(Z_DIRECTION), DMDA_STENCIL_BOX, &
-           lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
-           lbm%info%nproc_x, lbm%info%nproc_y, lbm%info%nproc_z, &
-           lbm%dm_index_to_ndof(NPHASEDOF), 1, &
-           ownership_x, ownership_y, ownership_z, &
-           lbm%da_s, ierr)
-      call PetscObjectSetName(lbm%da_s, trim(lbm%name)//'DA_NPHASE', ierr)
-
-      call DMDACreate3d(lbm%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
-           btype(Z_DIRECTION), DMDA_STENCIL_BOX, &
-           lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
-           lbm%info%nproc_x, lbm%info%nproc_y, lbm%info%nproc_z, &
-           lbm%dm_index_to_ndof(NPHASEXBDOF), 1, &
-           ownership_x, ownership_y, ownership_z, &
-           lbm%da_sb, ierr)
-      call PetscObjectSetName(lbm%da_sb, trim(lbm%name)//'DA_fi', ierr)
-
-      call DMDACreate3d(lbm%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
-           btype(Z_DIRECTION), DMDA_STENCIL_BOX, &
-           lbm%info%NX, lbm%info%NY, lbm%info%NZ, &
-           lbm%info%nproc_x, lbm%info%nproc_y, lbm%info%nproc_z, &
-           lbm%dm_index_to_ndof(NFLOWDOF), 1, &
-           ownership_x, ownership_y, ownership_z, &
-           lbm%da_flow, ierr)
-      call PetscObjectSetName(lbm%da_flow, trim(lbm%name)//'DA_nflow', ierr)
-
-      deallocate(ownership_x)
-      deallocate(ownership_y)
-      deallocate(ownership_z)
-
-      ! set up constants, bcs, periodicity
-      call BCSetFromOptions(lbm%bc, lbm%info, options, ierr)
-
-      ! coordinates
-      tmpcorners = 0.d0
-      corners = 0.d0
-
-      nmax = lbm%info%ndims
-      call PetscOptionsGetRealArray(options%my_prefix, '-corner0', tmpcorners, nmax, flag, ierr)
-      if (flag) corners(:,1) = tmpcorners
-
-      tmpcorners = 0.d0
-      nmax = lbm%info%ndims
-      call PetscOptionsGetRealArray(options%my_prefix, '-corner1', tmpcorners, nmax, flag2, ierr)
-      if (flag2) corners(:,2) = tmpcorners
-
-      if (flag .and. flag2) then
-         call LBMSetDomain(lbm, corners)
-         call DMDAGetCoordinates(lbm%da_one, coords, ierr)
-         charlen = LEN_TRIM(lbm%options%output_prefix)
-         coordfile = options%output_prefix(1:charlen)//'coords.dat'
-         call PetscViewerBinaryOpen(PETSC_COMM_WORLD, coordfile, FILE_MODE_WRITE, &
-              viewer, ierr)
-         call VecView(coords, viewer, ierr)
-         call PetscViewerDestroy(viewer,ierr)
-      end if
-
-
-
-      ! allocate, associate workspace
-      allocate(lbm%vel(1:lbm%info%s, 1:lbm%info%ndims, 1:lbm%info%gxyzl))
-      allocate(lbm%vel_eq(1:lbm%info%s, 1:lbm%info%ndims, 1:lbm%info%gxyzl))
-      allocate(lbm%forces(1:lbm%info%s, 1:lbm%info%ndims, 1:lbm%info%gxyzl))
-
-      lbm%vel = 0
-      lbm%vel_eq = 0
-      lbm%forces = 0
-
-      ! get vectors
-      call DMCreateLocalVector(lbm%da_one, lbm%prs, ierr)
-      call VecDuplicate(lbm%prs, lbm%rhot, ierr)
-      call VecDuplicate(lbm%prs, lbm%walls, ierr)
-
-      call DMCreateLocalVector(lbm%da_s, lbm%rho, ierr)
-      call DMCreateLocalVector(lbm%da_sb, lbm%fi, ierr)
-      call DMCreateLocalVector(lbm%da_flow, lbm%ut, ierr)
-
-      call DMCreateGlobalVector(lbm%da_one, lbm%prs_g, ierr)
-      call VecDuplicate(lbm%prs_g, lbm%walls_g, ierr)
-      call VecDuplicate(lbm%prs_g, lbm%rhot_g, ierr)
-      call DMCreateGlobalVector(lbm%da_s, lbm%rho_g, ierr)
-      call DMCreateGlobalVector(lbm%da_sb, lbm%fi_g, ierr)
-      call DMCreateGlobalVector(lbm%da_flow, lbm%ut_g, ierr)
-
-      zero = 0.d0
-      call VecSet(lbm%prs_g, zero, ierr)
-      call VecSet(lbm%walls_g, zero, ierr)
-      call VecSet(lbm%rhot_g, zero, ierr)
-      call VecSet(lbm%rho_g, zero, ierr)
-      call VecSet(lbm%fi_g, zero, ierr)
-      call VecSet(lbm%ut_g, zero, ierr)
-      call VecSet(lbm%prs, zero, ierr)
-      call VecSet(lbm%walls, zero, ierr)
-      call VecSet(lbm%rhot, zero, ierr)
-      call VecSet(lbm%rho, zero, ierr)
-      call VecSet(lbm%fi, zero, ierr)
-      call VecSet(lbm%ut, zero, ierr)
-
-      call PetscObjectSetName(lbm%prs_g, trim(lbm%name)//'prs', ierr)
-      call PetscObjectSetName(lbm%walls_g, trim(lbm%name)//'walls', ierr)
-      call PetscObjectSetName(lbm%rhot_g, trim(lbm%name)//'rhot', ierr)
-      call PetscObjectSetName(lbm%rho_g, trim(lbm%name)//'rho', ierr)
-      call PetscObjectSetName(lbm%fi_g, trim(lbm%name)//'fi', ierr)
-      call PetscObjectSetName(lbm%ut_g, trim(lbm%name)//'ut', ierr)
-
-      CHKERRQ(ierr)
-      CHKMEMQ
-      return
-    end subroutine LBMSetFromOptions
-
-    subroutine LBMView(lbm)
-      type(lbm_type) lbm
-      
-      call OptionsView(lbm%options)
-      call InfoView(lbm%info)
-      call ConstantsView(lbm%constants)
-    end subroutine LBMView
+    end function LBMCreate
 
     ! --- destroy things
     subroutine LBMDestroy(lbm, ierr)
       type(lbm_type) lbm
       PetscErrorCode ierr
 
-      if (lbm%ut /= 0) call VecDestroy(lbm%ut,ierr)
-      if (lbm%prs /= 0) call VecDestroy(lbm%prs,ierr)
-      if (lbm%rhot /= 0) call VecDestroy(lbm%rhot,ierr)
-      if (lbm%rho /= 0) call VecDestroy(lbm%rho,ierr)
-      if (lbm%fi /= 0) call VecDestroy(lbm%fi,ierr)
       if (lbm%walls /= 0) call VecDestroy(lbm%walls,ierr)
-      if (lbm%ut_g /= 0) call VecDestroy(lbm%ut_g,ierr)
-      if (lbm%prs_g /= 0) call VecDestroy(lbm%prs_g,ierr)
-      if (lbm%rhot_g /= 0) call VecDestroy(lbm%rhot_g,ierr)
-      if (lbm%rho_g /= 0) call VecDestroy(lbm%rho_g,ierr)
       if (lbm%walls_g /= 0) call VecDestroy(lbm%walls_g,ierr)
 
-      if (associated(lbm%vel)) deallocate(lbm%vel)
-      if (associated(lbm%vel_eq)) deallocate(lbm%vel_eq)
-      if (associated(lbm%forces)) deallocate(lbm%forces)
-
-      if (lbm%da_one /= 0) call DMDestroy(lbm%da_one, ierr)
-      if (lbm%da_s /= 0) call DMDestroy(lbm%da_s, ierr)
-      if (lbm%da_sb /= 0) call DMDestroy(lbm%da_sb, ierr)
-      if (lbm%da_flow /= 0) call DMDestroy(lbm%da_flow, ierr)
-      deallocate(lbm%da_one)
-      deallocate(lbm%da_s)
-      deallocate(lbm%da_sb)
-      deallocate(lbm%da_flow)
-
       call BCDestroy(lbm%bc, ierr)
-      call InfoDestroy(lbm%info, ierr)
-      call ConstantsDestroy(lbm%constants, ierr)
+      if (associated(lbm%flow)) call FlowDestroy(lbm%flow,ierr)
+!      if (associated(lbm%transport)) call TransportDestroy(lbm%transport,ierr)
       return
     end subroutine LBMDestroy
 
-    ! --- do things
-    subroutine LBMSetDomain(lbm, corners)
+    subroutine LBMSetName(lbm, name) 
+      type(lbm_type) lbm 
+      character(len=MAXWORDLENGTH):: name       
+      lbm%name = name
+    end subroutine LBMSetName
+
+    subroutine LBMSetFromOptions(lbm, options, ierr)
       type(lbm_type) lbm
-      PetscScalar,dimension(lbm%info%ndims,2):: corners
+      type(options_type) options
       PetscErrorCode ierr
-      PetscScalar deltacoord
-      PetscScalar newcoord_x
-      PetscScalar newcoord_y
-      PetscScalar newcoord_z
+      
+      call GridSetFromOptions(lbm%grid, options, ierr)
+      call GridSetName(lbm%grid, lbm%name)
+      
+      lbm%flow => FlowCreate(lbm%comm)
+      call FlowSetFromOptions(lbm%flow, options)
+!      if (options%transport_disc /= NULL_DISCRETIZATION) then
+!         lbm%transport => TransportCreate(lbm%comm)
+!         call TransportSetFromOptions(lbm%transport, options)
+!      end if
 
-      ! uniform coordinates DA
-      if (.not.lbm%info%periodic(X_DIRECTION)) then
-         lbm%info%gridsize(X_DIRECTION) = (corners(X_DIRECTION,2) - &
-              corners(X_DIRECTION,1))/dble(lbm%info%NX-1)
-      else
-         lbm%info%gridsize(X_DIRECTION) = (corners(X_DIRECTION,2) - &
-              corners(X_DIRECTION,1))/dble(lbm%info%NX)
-      endif
+      call BCSetFromOptions(lbm%bc,options)
+    end subroutine LBMSetFromOptions
 
-      if (.not.lbm%info%periodic(Y_DIRECTION)) then
-         lbm%info%gridsize(Y_DIRECTION) = (corners(Y_DIRECTION,2) - &
-              corners(Y_DIRECTION,1))/dble(lbm%info%NY-1)
-      else
-         lbm%info%gridsize(Y_DIRECTION) = (corners(Y_DIRECTION,2) - &
-              corners(Y_DIRECTION,1))/dble(lbm%info%NY)
-      endif
+    subroutine LBMSetUp(lbm)
+      PetscScalar zero
 
-      if (lbm%info%ndims > 2) then
-         if (.not.lbm%info%periodic(Z_DIRECTION)) then
-            lbm%info%gridsize(Z_DIRECTION) = (corners(Z_DIRECTION,2) - &
-                 corners(Z_DIRECTION,1))/dble(lbm%info%NZ-1)
-         else
-            lbm%info%gridsize(Z_DIRECTION) = (corners(Z_DIRECTION,2) - &
-                 corners(Z_DIRECTION,1))/dble(lbm%info%NZ)
-         endif
+      call GridSetUp(lbm%grid)
+      call FlowSetGrid(lbm%flow, lbm%grid)
+      call FlowSetUp(lbm%flow)
+      ! if (associated(lbm%transport)) then
+      !    call TransportSetGrid(lbm%transport, lbm%grid)
+      !    call TransportSetUp(lbm%transport)
+      ! end if
+      call BCSetGrid(lbm%bc, lbm%grid)
+      call BCSetUp(lbm%bc)
 
-         call DMDASetUniformCoordinates(lbm%da_one, corners(X_DIRECTION,1), &
-              corners(X_DIRECTION, 2), corners(Y_DIRECTION,1), corners(Y_DIRECTION, 2), &
-              corners(Z_DIRECTION,1), corners(Z_DIRECTION, 2), ierr)
-         call DMDASetUniformCoordinates(lbm%da_s, corners(X_DIRECTION,1), &
-              corners(X_DIRECTION, 2), corners(Y_DIRECTION,1), corners(Y_DIRECTION, 2), &
-              corners(Z_DIRECTION,1), corners(Z_DIRECTION, 2), ierr)
-         call DMDASetUniformCoordinates(lbm%da_sb, corners(X_DIRECTION,1), &
-              corners(X_DIRECTION, 2), corners(Y_DIRECTION,1), corners(Y_DIRECTION, 2), &
-              corners(Z_DIRECTION,1), corners(Z_DIRECTION, 2), ierr)
-         call DMDASetUniformCoordinates(lbm%da_flow, corners(X_DIRECTION,1), &
-              corners(X_DIRECTION, 2), corners(Y_DIRECTION,1), corners(Y_DIRECTION, 2), &
-              corners(Z_DIRECTION,1), corners(Z_DIRECTION, 2), ierr)
-      else 
-         call DMDASetUniformCoordinates(lbm%da_one, corners(X_DIRECTION,1), &
-              corners(X_DIRECTION, 2), corners(Y_DIRECTION,1), corners(Y_DIRECTION, 2), &
-              PETSC_NULL_SCALAR, PETSC_NULL_SCALAR, ierr)
+      ! get vectors
+      call DMCreateLocalVector(lbm%grid%da(ONEDOF), lbm%walls, ierr)
+      call DMCreateGlobalVector(lbm%grid%da(ONEDOF), lbm%walls_g, ierr)
 
-         call DMDASetUniformCoordinates(lbm%da_s, corners(X_DIRECTION,1), &
-              corners(X_DIRECTION, 2), corners(Y_DIRECTION,1), corners(Y_DIRECTION, 2), &
-              PETSC_NULL_SCALAR, PETSC_NULL_SCALAR, ierr)
+      zero = 0.d0
+      call VecSet(lbm%walls_g, zero, ierr)
+      call VecSet(lbm%walls, zero, ierr)
 
-         call DMDASetUniformCoordinates(lbm%da_sb, corners(X_DIRECTION,1), &
-              corners(X_DIRECTION, 2), corners(Y_DIRECTION,1), corners(Y_DIRECTION, 2), &
-              PETSC_NULL_SCALAR, PETSC_NULL_SCALAR, ierr)
-
-         call DMDASetUniformCoordinates(lbm%da_flow, corners(X_DIRECTION,1), &
-              corners(X_DIRECTION, 2), corners(Y_DIRECTION,1), corners(Y_DIRECTION, 2), &
-              PETSC_NULL_SCALAR, PETSC_NULL_SCALAR, ierr)
-      end if
+      call PetscObjectSetName(lbm%walls_g, trim(lbm%name)//'walls', ierr)
 
       CHKERRQ(ierr)
-      CHKMEMQ
-
-      lbm%info%corners = corners
       return
-    end subroutine LBMSetDomain
+    end subroutine LBMSetUp
 
     subroutine LBMRun(lbm, istep, kstep, kwrite)
       use LBM_Updates_module
@@ -493,35 +169,47 @@
       character(len=MAXWORDLENGTH) timername
 
       ! communicate to initialize
-      call DMDALocalToLocalBegin(lbm%da_one, lbm%walls, INSERT_VALUES, lbm%walls, ierr)
-      call DMDALocalToLocalEnd(lbm%da_one, lbm%walls, INSERT_VALUES, lbm%walls, ierr)
+      call DMDALocalToLocalBegin(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, &
+           lbm%walls, ierr)
+      call DMDALocalToLocalEnd(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, &
+           lbm%walls, ierr)
 
-      call DMDALocalToLocalBegin(lbm%da_sb, lbm%fi, INSERT_VALUES, lbm%fi, ierr)
-      call DMDALocalToLocalEnd(lbm%da_sb, lbm%fi, INSERT_VALUES, lbm%fi, ierr)
+      call DMDALocalToLocalBegin(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi, &
+           INSERT_VALUES, lbm%flow%distribution%fi, ierr)
+      call DMDALocalToLocalEnd(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi, &
+           INSERT_VALUES, lbm%flow%distribution%fi, ierr)
+
+      if (associated(lbm%transport)) then
+         call DMDALocalToLocalBegin(lbm%grid%da(NCOMPONENTXBDOF), &
+              lbm%transport%distribution%fi, INSERT_VALUES, &
+              lbm%transport%distribution%fi, ierr)
+         call DMDALocalToLocalEnd(lbm%grid%da(NCOMPONENTXBDOF), &
+              lbm%transport%distribution%fi, INSERT_VALUES, &
+              lbm%transport%distribution%fi, ierr)
+      end if
 
       if (istep.eq.0) then
          ! get arrays
-         call DMDAVecGetArrayF90(lbm%da_one, lbm%rhot, lbm%rhot_a, ierr)
-         call DMDAVecGetArrayF90(lbm%da_one, lbm%prs, lbm%prs_a, ierr)
-         call DMDAVecGetArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
-         call DMDAVecGetArrayF90(lbm%da_sb, lbm%fi, lbm%fi_a, ierr)
-         call DMDAVecGetArrayF90(lbm%da_s, lbm%rho, lbm%rho_a, ierr)
-         call DMDAVecGetArrayF90(lbm%da_flow, lbm%ut, lbm%ut_a, ierr)
-         
+         call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+         call FlowGetArrays(lbm%flow)
+
          ! update values for zero time i/o
-         call LBMUpdateMoments(lbm%fi_a, lbm%rho_a, lbm%vel, lbm%walls_a, lbm%info)
+         call FlowUpdateMoments(lbm%fi_a, lbm%rho_a, lbm%vel, lbm%walls_a, lbm%info)
+
+!!!!!!!!!!!!! here!!!!!!!!
+
          call LBMUpdateUEquilibrium(lbm%fi_a, lbm%rho_a, lbm%vel, lbm%walls_a, &
               lbm%vel_eq, lbm%rhot_a, lbm%forces, lbm%info, lbm%constants)
-         call LBMUpdateDiagnostics(lbm%rho_a, lbm%vel, lbm%walls_a, lbm%ut_a, &
+         call LBMUpdateDiagnostics(lbm%rho_a, lbm%vel, lbm%walls_a, lbm%velt_a, &
               lbm%rhot_a, lbm%prs_a, lbm%forces, lbm%info, lbm%constants)
          
          ! --  --  restore arrays
-         call DMDAVecRestoreArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
-         call DMDAVecRestoreArrayF90(lbm%da_one, lbm%prs, lbm%prs_a, ierr)
-         call DMDAVecRestoreArrayF90(lbm%da_one, lbm%rhot, lbm%rhot_a, ierr)
-         call DMDAVecRestoreArrayF90(lbm%da_s, lbm%rho, lbm%rho_a, ierr)
-         call DMDAVecRestoreArrayF90(lbm%da_flow, lbm%ut, lbm%ut_a, ierr)
-         call DMDAVecRestoreArrayF90(lbm%da_sb, lbm%fi, lbm%fi_a, ierr)
+         call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+         call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%prs, lbm%prs_a, ierr)
+         call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%rhot, lbm%rhot_a, ierr)
+         call DMDAVecRestoreArrayF90(lbm%grid%da(NPHASEDOF), lbm%rho, lbm%rho_a, ierr)
+         call DMDAVecRestoreArrayF90(lbm%grid%da(NFLOWDOF), lbm%velt, lbm%velt_a, ierr)
+         call DMDAVecRestoreArrayF90(lbm%grid%da(NPHASEXBDOF), lbm%fi, lbm%fi_a, ierr)
 
          call LBMLocalToGlobal(lbm, ierr)
          ! output at zero time
@@ -531,12 +219,12 @@
       endif
 
       ! get arrays
-      call DMDAVecGetArrayF90(lbm%da_one, lbm%rhot, lbm%rhot_a, ierr)
-      call DMDAVecGetArrayF90(lbm%da_one, lbm%prs, lbm%prs_a, ierr)
-      call DMDAVecGetArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
-      call DMDAVecGetArrayF90(lbm%da_sb, lbm%fi, lbm%fi_a, ierr)
-      call DMDAVecGetArrayF90(lbm%da_s, lbm%rho, lbm%rho_a, ierr)
-      call DMDAVecGetArrayF90(lbm%da_flow, lbm%ut, lbm%ut_a, ierr)
+      call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%rhot, lbm%rhot_a, ierr)
+      call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%prs, lbm%prs_a, ierr)
+      call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+      call DMDAVecGetArrayF90(lbm%grid%da(NPHASEXBDOF), lbm%fi, lbm%fi_a, ierr)
+      call DMDAVecGetArrayF90(lbm%grid%da(NPHASEDOF), lbm%rho, lbm%rho_a, ierr)
+      call DMDAVecGetArrayF90(lbm%grid%da(NFLOWDOF), lbm%velt, lbm%velt_a, ierr)
 
       call BCGetArrays(lbm%bc, ierr)
 
@@ -578,10 +266,10 @@
 !         timer2 => TimingCreate(lbm%comm, timername)
 
          ! update rho ghosts values
-         call DMDAVecRestoreArrayF90(lbm%da_s,lbm%rho, lbm%rho_a, ierr)
-         call DMDALocalToLocalBegin(lbm%da_s, lbm%rho, INSERT_VALUES, lbm%rho, ierr)
-         call DMDALocalToLocalEnd(lbm%da_s, lbm%rho, INSERT_VALUES, lbm%rho, ierr)
-         call DMDAVecGetArrayF90(lbm%da_s, lbm%rho, lbm%rho_a, ierr)
+         call DMDAVecRestoreArrayF90(lbm%grid%da(NPHASEDOF),lbm%rho, lbm%rho_a, ierr)
+         call DMDALocalToLocalBegin(lbm%grid%da(NPHASEDOF), lbm%rho, INSERT_VALUES, lbm%rho, ierr)
+         call DMDALocalToLocalEnd(lbm%grid%da(NPHASEDOF), lbm%rho, INSERT_VALUES, lbm%rho, ierr)
+         call DMDAVecGetArrayF90(lbm%grid%da(NPHASEDOF), lbm%rho, lbm%rho_a, ierr)
 !         call TimingEnd(timer2)
 !         timer2%name = 'communication + forces'
 !         timername = 'forces'
@@ -591,7 +279,7 @@
          !calculate forces
          lbm%forces=0.d0
 
-         if (lbm%info%s > 1) then
+         if (lbm%info%nphases > 1) then
             if ((lbm%constants%g /= 0.0d0).or.(lbm%constants%g11 /= 0.0d0).or. &
                  (lbm%constants%g22 /= 0.0d0)) then
                call LBMAddFluidFluidForces(lbm%rho_a, lbm%forces, &
@@ -625,36 +313,36 @@
 !         call TimingEnd(timer2)
 
          ! communicate, update fi
-         call DMDAVecRestoreArrayF90(lbm%da_sb, lbm%fi, lbm%fi_a, ierr)
-         call DMDALocalToLocalBegin(lbm%da_sb, lbm%fi, INSERT_VALUES, lbm%fi, ierr)
-         call DMDALocalToLocalEnd(lbm%da_sb, lbm%fi, INSERT_VALUES, lbm%fi, ierr)
+         call DMDAVecRestoreArrayF90(lbm%grid%da(NPHASEXBDOF), lbm%fi, lbm%fi_a, ierr)
+         call DMDALocalToLocalBegin(lbm%grid%da(NPHASEXBDOF), lbm%fi, INSERT_VALUES, lbm%fi, ierr)
+         call DMDALocalToLocalEnd(lbm%grid%da(NPHASEXBDOF), lbm%fi, INSERT_VALUES, lbm%fi, ierr)
 
-         ! check for output?
+         ! check for oveltput?
          if(mod(lcv_step,kwrite).eq.0) then
             ! --  --  update diagnostics
-            call LBMUpdateDiagnostics(lbm%rho_a, lbm%vel, lbm%walls_a, lbm%ut_a, &
+            call LBMUpdateDiagnostics(lbm%rho_a, lbm%vel, lbm%walls_a, lbm%velt_a, &
                  lbm%rhot_a, lbm%prs_a, lbm%forces, lbm%info, lbm%constants)
 
             ! --  --  restore arrays
-            call DMDAVecRestoreArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
-            call DMDAVecRestoreArrayF90(lbm%da_one, lbm%prs, lbm%prs_a, ierr)
-            call DMDAVecRestoreArrayF90(lbm%da_one, lbm%rhot, lbm%rhot_a, ierr)
-            call DMDAVecRestoreArrayF90(lbm%da_s, lbm%rho, lbm%rho_a, ierr)
-            call DMDAVecRestoreArrayF90(lbm%da_flow, lbm%ut, lbm%ut_a, ierr)
+            call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+            call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%prs, lbm%prs_a, ierr)
+            call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%rhot, lbm%rhot_a, ierr)
+            call DMDAVecRestoreArrayF90(lbm%grid%da(NPHASEDOF), lbm%rho, lbm%rho_a, ierr)
+            call DMDAVecRestoreArrayF90(lbm%grid%da(NFLOWDOF), lbm%velt, lbm%velt_a, ierr)
 
             ! --  --  output
             call LBMLocalToGlobal(lbm, ierr)
             call LBMOutput(lbm, lcv_step, kwrite)
 
             ! --  --  reopen arrays
-            call DMDAVecGetArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
-            call DMDAVecGetArrayF90(lbm%da_one, lbm%prs, lbm%prs_a, ierr)
-            call DMDAVecGetArrayF90(lbm%da_one, lbm%rhot, lbm%rhot_a, ierr)
-            call DMDAVecGetArrayF90(lbm%da_s, lbm%rho, lbm%rho_a, ierr)
-            call DMDAVecGetArrayF90(lbm%da_flow, lbm%ut, lbm%ut_a, ierr)
+            call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+            call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%prs, lbm%prs_a, ierr)
+            call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%rhot, lbm%rhot_a, ierr)
+            call DMDAVecGetArrayF90(lbm%grid%da(NPHASEDOF), lbm%rho, lbm%rho_a, ierr)
+            call DMDAVecGetArrayF90(lbm%grid%da(NFLOWDOF), lbm%velt, lbm%velt_a, ierr)
          endif
 
-         call DMDAVecGetArrayF90(lbm%da_sb, lbm%fi, lbm%fi_a, ierr)
+         call DMDAVecGetArrayF90(lbm%grid%da(NPHASEXBDOF), lbm%fi, lbm%fi_a, ierr)
       end do
 
       timerunits = 'timestep'
@@ -663,12 +351,12 @@
 
       ! restore arrays in prep for communication
       call BCRestoreArrays(lbm%bc, ierr)
-      call DMDAVecRestoreArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
-      call DMDAVecRestoreArrayF90(lbm%da_one, lbm%prs, lbm%prs_a, ierr)
-      call DMDAVecRestoreArrayF90(lbm%da_one, lbm%rhot, lbm%rhot_a, ierr)
-      call DMDAVecRestoreArrayF90(lbm%da_sb, lbm%fi, lbm%fi_a, ierr)
-      call DMDAVecRestoreArrayF90(lbm%da_s, lbm%rho, lbm%rho_a, ierr)
-      call DMDAVecRestoreArrayF90(lbm%da_flow, lbm%ut, lbm%ut_a, ierr)
+      call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+      call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%prs, lbm%prs_a, ierr)
+      call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%rhot, lbm%rhot_a, ierr)
+      call DMDAVecRestoreArrayF90(lbm%grid%da(NPHASEXBDOF), lbm%fi, lbm%fi_a, ierr)
+      call DMDAVecRestoreArrayF90(lbm%grid%da(NPHASEDOF), lbm%rho, lbm%rho_a, ierr)
+      call DMDAVecRestoreArrayF90(lbm%grid%da(NFLOWDOF), lbm%velt, lbm%velt_a, ierr)
 
       ! communicate local to global
       call LBMLocalToGlobal(lbm, ierr)
@@ -679,23 +367,35 @@
       type(lbm_type) lbm
       PetscErrorCode ierr
 
-      call DMLocalToGlobalBegin(lbm%da_flow, lbm%ut, INSERT_VALUES, lbm%ut_g, ierr)
-      call DMLocalToGlobalEnd(lbm%da_flow, lbm%ut, INSERT_VALUES, lbm%ut_g, ierr)
+      call DMLocalToGlobalBegin(lbm%grid%da(NFLOWDOF), lbm%velt, INSERT_VALUES, &
+           lbm%velt_g, ierr)
+      call DMLocalToGlobalEnd(lbm%grid%da(NFLOWDOF), lbm%velt, INSERT_VALUES, &
+           lbm%velt_g, ierr)
 
-      call DMLocalToGlobalBegin(lbm%da_one, lbm%prs, INSERT_VALUES, lbm%prs_g, ierr)
-      call DMLocalToGlobalEnd(lbm%da_one, lbm%prs, INSERT_VALUES, lbm%prs_g, ierr)
+      call DMLocalToGlobalBegin(lbm%grid%da(ONEDOF), lbm%prs, INSERT_VALUES, &
+           lbm%prs_g, ierr)
+      call DMLocalToGlobalEnd(lbm%grid%da(ONEDOF), lbm%prs, INSERT_VALUES, &
+           lbm%prs_g, ierr)
 
-      call DMLocalToGlobalBegin(lbm%da_one, lbm%walls, INSERT_VALUES, lbm%walls_g, ierr)
-      call DMLocalToGlobalEnd(lbm%da_one, lbm%walls, INSERT_VALUES, lbm%walls_g, ierr)
+      call DMLocalToGlobalBegin(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, &
+           lbm%walls_g, ierr)
+      call DMLocalToGlobalEnd(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, &
+           lbm%walls_g, ierr)
 
-      call DMLocalToGlobalBegin(lbm%da_one, lbm%rhot, INSERT_VALUES, lbm%rhot_g, ierr)
-      call DMLocalToGlobalEnd(lbm%da_one, lbm%rhot, INSERT_VALUES, lbm%rhot_g, ierr)
+      call DMLocalToGlobalBegin(lbm%grid%da(ONEDOF), lbm%rhot, INSERT_VALUES, &
+           lbm%rhot_g, ierr)
+      call DMLocalToGlobalEnd(lbm%grid%da(ONEDOF), lbm%rhot, INSERT_VALUES, &
+           lbm%rhot_g, ierr)
 
-      call DMLocalToGlobalBegin(lbm%da_s, lbm%rho, INSERT_VALUES, lbm%rho_g, ierr)
-      call DMLocalToGlobalEnd(lbm%da_s, lbm%rho, INSERT_VALUES, lbm%rho_g, ierr)
+      call DMLocalToGlobalBegin(lbm%grid%da(NPHASEDOF), lbm%rho, INSERT_VALUES, &
+           lbm%rho_g, ierr)
+      call DMLocalToGlobalEnd(lbm%grid%da(NPHASEDOF), lbm%rho, INSERT_VALUES, &
+           lbm%rho_g, ierr)
 
-      call DMLocalToGlobalBegin(lbm%da_sb, lbm%fi, INSERT_VALUES, lbm%fi_g, ierr)
-      call DMLocalToGlobalEnd(lbm%da_sb, lbm%fi, INSERT_VALUES, lbm%fi_g, ierr)
+      call DMLocalToGlobalBegin(lbm%grid%da(NPHASEXBDOF), lbm%fi, INSERT_VALUES, &
+           lbm%fi_g, ierr)
+      call DMLocalToGlobalEnd(lbm%grid%da(NPHASEXBDOF), lbm%fi, INSERT_VALUES, &
+           lbm%fi_g, ierr)
       return
     end subroutine LBMLocalToGlobal
 
@@ -713,9 +413,9 @@
       PetscErrorCode ierr
       PetscInt vsize
 
-      call DMDAVecGetArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
+      call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
       call init_subroutine(lbm%walls_a, lbm%options%walls_file, lbm%info)
-      call DMDAVecRestoreArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
+      call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
       return
     end subroutine LBMInitializeWalls
 
@@ -728,8 +428,8 @@
       call PetscViewerBinaryOpen(lbm%comm, filename, FILE_MODE_READ, viewer, ierr)
       call VecLoad(lbm%walls_g, viewer, ierr)
       call PetscViewerDestroy(viewer, ierr)
-      call DMGlobalToLocalBegin(lbm%da_one, lbm%walls_g, INSERT_VALUES, lbm%walls, ierr)
-      call DMGlobalToLocalEnd(lbm%da_one, lbm%walls_g, INSERT_VALUES, lbm%walls, ierr)
+      call DMGlobalToLocalBegin(lbm%grid%da(ONEDOF), lbm%walls_g, INSERT_VALUES, lbm%walls, ierr)
+      call DMGlobalToLocalEnd(lbm%grid%da(ONEDOF), lbm%walls_g, INSERT_VALUES, lbm%walls, ierr)
       return
     end subroutine LBMInitializeWallsPetsc
 
@@ -747,33 +447,33 @@
       !      end interface
       external :: init_subroutine
       PetscErrorCode ierr
-      call DMDAVecGetArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
-      call DMDAVecGetArrayF90(lbm%da_sb, lbm%fi, lbm%fi_a, ierr)
-      call DMDAVecGetArrayF90(lbm%da_s, lbm%rho, lbm%rho_a, ierr)
+      call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+      call DMDAVecGetArrayF90(lbm%grid%da(NPHASEXBDOF), lbm%fi, lbm%fi_a, ierr)
+      call DMDAVecGetArrayF90(lbm%grid%da(NPHASEDOF), lbm%rho, lbm%rho_a, ierr)
       call init_subroutine(lbm%fi_a, lbm%rho_a, lbm%vel, lbm%walls_a, lbm%info, lbm%constants)
-      call DMDAVecRestoreArrayF90(lbm%da_one, lbm%walls, lbm%walls_a, ierr)
-      call DMDAVecRestoreArrayF90(lbm%da_sb, lbm%fi, lbm%fi_a, ierr)
-      call DMDAVecRestoreArrayF90(lbm%da_s, lbm%rho, lbm%rho_a, ierr)
+      call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+      call DMDAVecRestoreArrayF90(lbm%grid%da(NPHASEXBDOF), lbm%fi, lbm%fi_a, ierr)
+      call DMDAVecRestoreArrayF90(lbm%grid%da(NPHASEDOF), lbm%rho, lbm%rho_a, ierr)
       return
     end subroutine LBMInitializeState
 
-    function LBMGetDMByIndex( lbm, dm_index ) result(dm)
-      type(lbm_type) lbm
-      PetscInt dm_index
-      DM,pointer:: dm
-      PetscErrorCode ierr
-      nullify(dm)
-      select case(dm_index)
-      case (ONEDOF)
-         dm => lbm%da_one
-      case (NPHASEDOF)
-         dm => lbm%da_s
-      case (NPHASEXBDOF)
-         dm => lbm%da_sb
-      case (NFLOWDOF)
-         dm => lbm%da_flow
-      end select
-    end function LBMGetDMByIndex
+    ! function LBMGetDMByIndex( lbm, dm_index ) result(dm)
+    !   type(lbm_type) lbm
+    !   PetscInt dm_index
+    !   DM,pointer:: dm
+    !   PetscErrorCode ierr
+    !   nullify(dm)
+    !   select case(dm_index)
+    !   case (ONEDOF)
+    !      dm => lbm%grid%da(ONEDOF)
+    !   case (NPHASEDOF)
+    !      dm => lbm%grid%da(NPHASEDOF)
+    !   case (NPHASEXBDOF)
+    !      dm => lbm%grid%da(NPHASEXBDOF)
+    !   case (NFLOWDOF)
+    !      dm => lbm%grid%da(NFLOWDOF)
+    !   end select
+    ! end function LBMGetDMByIndex
 
     ! get the corner coordinates of the domain
     subroutine LBMGetCorners(lbm, corners)
@@ -793,8 +493,9 @@
     PetscErrorCode ierr
     character(len=MAXIODIGITS):: outnum
     character(len=MAXSTRINGLENGTH):: stringformat
-    character(len=MAXSTRINGLENGTH):: flnm1,flnm2,flnm3,flnm4,flnm5,flnm6,flnm7,flnm8
+    character(len=MAXSTRINGLENGTH):: flnm0,flnm1,flnm2,flnm3,flnm6,flnm7,flnm8
     integer charlen
+    Vec coords
 
     charlen = LEN_TRIM(lbm%options%output_prefix)
 
@@ -806,6 +507,19 @@
 
     write(stringformat, '("(I0.",I1,")")'), MAXIODIGITS
     write(outnum, stringformat) istep/kwrite
+
+    if (istep == 0) then
+       flnm0=lbm%options%output_prefix(1:charlen)//'coords'//outnum//'.dat'
+       call DMDAGetCoordinates(lbm%grid%da(ONEDOF), coords, ierr)
+       call PetscViewerCreate(lbm%comm, viewer, ierr)
+       call PetscViewerSetType(viewer, PETSCVIEWERBINARY, ierr)
+       call PetscViewerBinarySetMPIIO(viewer, ierr)
+       call PetscViewerFileSetMode(viewer, FILE_MODE_WRITE, ierr)
+       call PetscViewerFileSetName(viewer, flnm0, ierr)
+       call VecView(coords, viewer, ierr)
+       call PetscViewerDestroy(viewer,ierr)
+    end if
+
     flnm1=lbm%options%output_prefix(1:charlen)//'fi'//outnum//'.dat'
     flnm2=lbm%options%output_prefix(1:charlen)//'rho'//outnum//'.dat'
     flnm3=lbm%options%output_prefix(1:charlen)//'u'//outnum//'.dat'
@@ -834,7 +548,7 @@
     call PetscViewerBinarySetMPIIO(viewer, ierr)
     call PetscViewerFileSetMode(viewer, FILE_MODE_WRITE, ierr)
     call PetscViewerFileSetName(viewer, flnm3, ierr)
-    call VecView(lbm%ut_g, viewer, ierr)
+    call VecView(lbm%velt_g, viewer, ierr)
     call PetscViewerDestroy(viewer,ierr)
 
     call PetscViewerCreate(lbm%comm, viewer, ierr)
@@ -904,7 +618,7 @@
     call PetscViewerDestroy(viewer,ierr)
 
     call PetscViewerBinaryOpen(lbm%comm, flnm3, FILE_MODE_READ, viewer, ierr)
-    call VecLoad(lbm%ut_g, viewer, ierr)
+    call VecLoad(lbm%velt_g, viewer, ierr)
     call PetscViewerDestroy(viewer,ierr)
 
     call PetscViewerBinaryOpen(lbm%comm, flnm6, FILE_MODE_READ, viewer, ierr)

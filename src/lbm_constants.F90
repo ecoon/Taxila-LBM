@@ -31,9 +31,6 @@ module LBM_Constants_module
      PetscScalar,pointer,dimension(:):: d_k   ! 
      PetscScalar,pointer,dimension(:):: alpha_0   ! 
      PetscScalar alpha_1
-     !PetscInt,pointer:: m(:,:)            ! transformation matrix
-     !PetscInt,pointer:: mt(:,:)           ! transpose of M
-     !PetscInt,pointer:: mmt(:)            ! diagonal M dot MT matrix 
      PetscScalar,pointer,dimension(:,:):: tau_mrt  ! diagonal relaxation matrix
 
   end type constants_type

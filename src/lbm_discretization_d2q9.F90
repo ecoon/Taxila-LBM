@@ -41,7 +41,7 @@ module LBM_Discretization_D2Q9_module
 #include "lbm_definitions.h"
 
   public:: DiscretizationSetUp_D2Q9, &
-       DiscretizationSetUpConstants_D2Q9
+       DiscretizationSetUpPhase_D2Q9
 
 contains
   subroutine DiscretizationSetUp_D2Q9(disc)
@@ -60,13 +60,13 @@ contains
        1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0 /)
   end subroutine DiscretizationSetUp_D2Q9
 
-  subroutine DiscretizationSetUpConstants_D2Q9(disc, constants)
-    use LBM_Constants_module
+  subroutine DiscretizationSetUpPhase_D2Q9(disc, phase)
+    use LBM_Phase_module
     type(discretization_type) disc
-    type(constants_type) constants
+    type(phase_type) phase
     
-    constants%alpha_0 = (1.d0 + constants%d_k*5.d0)/6.d0
-    constants%alpha_1 = -2.d0/3.d0
-  end subroutine DiscretizationSetUpConstants_D2Q9
+    phase%alpha_0 = (1.d0 + phase%d_k*5.d0)/6.d0
+    phase%alpha_1 = -2.d0/3.d0
+  end subroutine DiscretizationSetUpPhase_D2Q9
 end module LBM_Discretization_D2Q9_module
 

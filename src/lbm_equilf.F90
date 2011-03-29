@@ -4,37 +4,99 @@
 #include "finclude/petscdmdef.h"
 
 module LBM_Equilibrium_module
-  use LBM_Info_module
-  use LBM_Constants_module
+  use LBM_Phase_module
+  use LBM_Distribution_Function_module
   implicit none
   private
 #include "lbm_definitions.h"
-  public :: LBMEquilf
+  public :: LBMEquilfFlow
 
 contains
-  subroutine LBMEquilf(feq, rho, ue, info, constants)
-    use petsc
-    type(info_type) info
-    type(constants_type) constants
-    PetscScalar,dimension(1:info%s,0:info%flow_disc%b)::feq
-    PetscScalar,dimension(1:info%s):: rho
-    PetscScalar,dimension(1:info%s,1:info%ndims):: ue
-    PetscErrorCode ierr
-    
-    PetscScalar usqr(1:info%s),tmp(1:info%s)
-    PetscInt i,m
-    
-    usqr = SUM(ue*ue, 2)
-    feq(:,0) = rho*(constants%alpha_0 + constants%alpha_1*usqr)
+  subroutine LBMEquilfFlow(feq, rho, ue, phase, dist)
+    type(distribution_type) dist
+    type(phase_type) phase(1:dist%s)
 
-    do i=1,info%flow_disc%b
-       do m=1,info%s
-          tmp(m) = SUM(info%flow_disc%ci(i,:)*ue(m,:), 1)
+    PetscScalar,dimension(1:dist%s,0:dist%b,1:dist%info%gxyzl):: feq
+    PetscScalar,dimension(1:dist%s,1:dist%info%gxyzl):: rho
+    PetscScalar,dimension(1:dist%s,1:dist%info%ndims,1:dist%info%gxyzl):: ue
+
+    select case(dist%info%ndims)
+    case(3)
+       call LBMEquilfFlowD3(feq, rho, ue, phase, dist)
+    case(2)
+       call LBMEquilfFlowD2(feq, rho, ue, phase, dist)
+    end select
+  end subroutine LBMEquilfFlow
+
+  subroutine LBMEquilfFlowD3(feq, rho, ue, phase, dist)
+    type(distribution_type) dist
+    type(phase_type) phase(1:dist%s)
+
+    PetscScalar,dimension(1:dist%s,0:dist%b, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: feq
+    PetscScalar,dimension(1:dist%s,dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: rho
+    PetscScalar,dimension(1:dist%s,1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: ue
+
+    PetscScalar usqr(1:dist%s)
+    PetscScalar tmp
+    PetscInt i,j,k,n,m
+    
+    do k=dist%info%zs,dist%info%ze
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+       usqr = SUM(ue(:,:,i,j,k)*ue(:,:,i,j,k), 2)
+       do m=1,dist%s
+          feq(m,0,i,j,k) = rho(m,i,j,k)*(phase(m)%alpha_0 + phase(m)%alpha_1*usqr(m))
        end do
-       feq(:,i)= info%flow_disc%weights(i)*rho* &
-            (1.5d0*(1.d0-constants%d_k) + tmp/constants%c_s2 &
-            + tmp*tmp/(2.d0*constants%c_s2*constants%c_s2) &
-            - usqr/(2.d0*constants%c_s2))
+
+       do n=1,dist%b
+          do m=1,dist%s
+             tmp = SUM(dist%disc%ci(n,:)*ue(m,:,i,j,k), 1)
+             feq(m,n,i,j,k)= dist%disc%weights(n)*rho(m,i,j,k)* &
+                  (1.5d0*(1.d0-phase(m)%d_k) + tmp/phase(m)%c_s2 &
+                  + tmp*tmp/(2.d0*phase(m)%c_s2*phase(m)%c_s2) &
+                  - usqr(m)/(2.d0*phase(m)%c_s2))
+          end do
+       end do
     end do
-  end subroutine LBMEquilf
+    end do
+    end do
+  end subroutine LBMEquilfFlowD3
+
+  subroutine LBMEquilfFlowD2(feq, rho, ue, phase, dist)
+    type(distribution_type) dist
+    type(phase_type) phase(1:dist%s)
+
+    PetscScalar,dimension(1:dist%s,0:dist%b, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: feq
+    PetscScalar,dimension(1:dist%s,dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: rho
+    PetscScalar,dimension(1:dist%s,1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: ue
+
+    PetscScalar usqr(1:dist%s)
+    PetscScalar tmp
+    PetscInt i,j,n,m
+    
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+       usqr = SUM(ue(:,:,i,j)*ue(:,:,i,j), 2)
+       do m=1,dist%s
+          feq(m,0,i,j) = rho(m,i,j)*(phase(m)%alpha_0 + phase(m)%alpha_1*usqr(m))
+       end do
+
+       do n=1,dist%b
+          do m=1,dist%s
+             tmp = SUM(dist%disc%ci(n,:)*ue(m,:,i,j), 1)
+             feq(m,n,i,j)= dist%disc%weights(n)*rho(m,i,j)* &
+                  (1.5d0*(1.d0-phase(m)%d_k) + tmp/phase(m)%c_s2 &
+                  + tmp*tmp/(2.d0*phase(m)%c_s2*phase(m)%c_s2) &
+                  - usqr(m)/(2.d0*phase(m)%c_s2))
+          end do
+       end do
+    end do
+    end do
+  end subroutine LBMEquilfFlowD2
 end module LBM_Equilibrium_module

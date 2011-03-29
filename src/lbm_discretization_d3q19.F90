@@ -122,13 +122,13 @@ contains
     
   end subroutine DiscretizationSetup_D3Q19
 
-  subroutine DiscretizationSetupConstants_D3Q19(disc, constants)
-    use LBM_Constants_module
+  subroutine DiscretizationSetupPhase_D3Q19(disc, phase)
+    use LBM_Phase_module
     type(discretization_type) disc
-    type(constants_type) constants
+    type(phase_type) phase
     
-    constants%alpha_0 = constants%d_k
-    constants%alpha_1 = -1.d0/2.d0
-  end subroutine DiscretizationSetupConstants_D3Q19
+    phase%alpha_0 = phase%d_k
+    phase%alpha_1 = -1.d0/2.d0
+  end subroutine DiscretizationSetupPhase_D3Q19
 end module LBM_Discretization_D3Q19_module
 
