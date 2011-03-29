@@ -162,8 +162,7 @@
 
       ! local
       PetscErrorCode ierr
-      logical,dimension(0:10):: bcs_done        ! flag for whether boundary condition
-      integer lcv_sides, lcv_step
+      integer lcv_step
       type(timing_type),pointer:: timer1, timer2, timer3
       character(len=MAXWORDLENGTH) timerunits
       character(len=MAXWORDLENGTH) timername
@@ -188,93 +187,35 @@
               lbm%transport%distribution%fi, ierr)
       end if
 
-      if (istep.eq.0) then
-         ! get arrays
-         call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-         call FlowGetArrays(lbm%flow)
-
-         ! update values for zero time i/o
-         call FlowUpdateMoments(lbm%fi_a, lbm%rho_a, lbm%vel, lbm%walls_a, lbm%info)
-
-!!!!!!!!!!!!! here!!!!!!!!
-
-         call LBMUpdateUEquilibrium(lbm%fi_a, lbm%rho_a, lbm%vel, lbm%walls_a, &
-              lbm%vel_eq, lbm%rhot_a, lbm%forces, lbm%info, lbm%constants)
-         call LBMUpdateDiagnostics(lbm%rho_a, lbm%vel, lbm%walls_a, lbm%velt_a, &
-              lbm%rhot_a, lbm%prs_a, lbm%forces, lbm%info, lbm%constants)
-         
-         ! --  --  restore arrays
-         call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-         call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%prs, lbm%prs_a, ierr)
-         call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%rhot, lbm%rhot_a, ierr)
-         call DMDAVecRestoreArrayF90(lbm%grid%da(NPHASEDOF), lbm%rho, lbm%rho_a, ierr)
-         call DMDAVecRestoreArrayF90(lbm%grid%da(NFLOWDOF), lbm%velt, lbm%velt_a, ierr)
-         call DMDAVecRestoreArrayF90(lbm%grid%da(NPHASEXBDOF), lbm%fi, lbm%fi_a, ierr)
-
-         call LBMLocalToGlobal(lbm, ierr)
-         ! output at zero time
-         call LBMOutput(lbm, istep, kwrite)
-      else
-         call LBMLocalToGlobal(lbm, ierr)
-      endif
-
-      ! get arrays
-      call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%rhot, lbm%rhot_a, ierr)
-      call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%prs, lbm%prs_a, ierr)
       call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-      call DMDAVecGetArrayF90(lbm%grid%da(NPHASEXBDOF), lbm%fi, lbm%fi_a, ierr)
-      call DMDAVecGetArrayF90(lbm%grid%da(NPHASEDOF), lbm%rho, lbm%rho_a, ierr)
-      call DMDAVecGetArrayF90(lbm%grid%da(NFLOWDOF), lbm%velt, lbm%velt_a, ierr)
-
+      call FlowGetArrays(lbm%flow)
       call BCGetArrays(lbm%bc, ierr)
+
+      if (istep.eq.0) then
+         ! update values for zero time i/o
+         call FlowUpdateMoments(lbm%flow, lbm%walls_a)
+         call FlowOutputDiagnostics(lbm%flow, lbm%walls_a, lbm%io)
+      endif
 
       timername = trim(lbm%name)//'Simulation'
       timer1 => TimingCreate(lbm%comm, timername)
       do lcv_step = istep+1,kstep
-!         timername = 'Streaming'
-!         timer2 => TimingCreate(lbm%comm, timername)
-         call LBMStreaming(lbm%fi_a, lbm%info)
-!         call TimingEnd(timer2)
-!         timer2%name = 'Streaming + Bounceback'
-         call LBMBounceback(lbm%fi_a, lbm%walls_a, lbm%info)
-!         call TimingEnd(timer2)
-!         timername = 'BCs + moments'
-!         timer2 => TimingCreate(lbm%comm, timername)
+         call DistributionStreaming(lbm%flow%distribution)
 
-         bcs_done=.FALSE.
-         bcs_done(0) = .TRUE.   ! periodic done by default
-         do lcv_sides = 1,6
-            if (.not.bcs_done(lbm%bc%flags(lcv_sides))) then
-               select case (lbm%bc%flags(lcv_sides))
-               case (BC_PSEUDOPERIODIC)         ! pseudo-periodic
-                  call BCPseudoperiodic(lbm%bc, lbm%fi_a, lbm%walls_a, lbm%info)
+         call LBMStreaming(lbm%flow%fi_a, lbm%flow%distribution)
+         if (associated(lbm%transport)) then 
+            call LBMStreaming(lbm%transport%fi_a, lbm%transport%distribution)
+         end if
 
-               case (BC_FLUX)         ! flux
-                  call BCFlux(lbm%bc, lbm%fi_a, lbm%walls_a, lbm%info)
-
-               case (BC_PRESSURE)         ! pressure
-                  call BCPressure(lbm%bc, lbm%fi_a, lbm%walls_a, lbm%info)
-               end select
-               bcs_done(lbm%bc%flags(lcv_sides)) = .TRUE. ! only do each bc type once
-            endif
-         enddo
-
-         call LBMUpdateMoments(lbm%fi_a,lbm%rho_a, lbm%vel, lbm%walls_a, lbm%info)
-
-!         call TimingEnd(timer2)
-!         timername = 'communication'
-!         timer2 => TimingCreate(lbm%comm, timername)
+         call LBMBounceback(lbm%flow%fi_a, lbm%walls_a, lbm%flow%distribution)
+         call BCApplyFlow(lbm%bc, lbm%walls_a, lbm%flow)
+         call FlowUpdateMoments(lbm%flow, lbm%walls_a)
 
          ! update rho ghosts values
          call DMDAVecRestoreArrayF90(lbm%grid%da(NPHASEDOF),lbm%rho, lbm%rho_a, ierr)
          call DMDALocalToLocalBegin(lbm%grid%da(NPHASEDOF), lbm%rho, INSERT_VALUES, lbm%rho, ierr)
          call DMDALocalToLocalEnd(lbm%grid%da(NPHASEDOF), lbm%rho, INSERT_VALUES, lbm%rho, ierr)
          call DMDAVecGetArrayF90(lbm%grid%da(NPHASEDOF), lbm%rho, lbm%rho_a, ierr)
-!         call TimingEnd(timer2)
-!         timer2%name = 'communication + forces'
-!         timername = 'forces'
-!         timer3 => TimingCreate(lbm%comm, timername)
-
 
          !calculate forces
          lbm%forces=0.d0
