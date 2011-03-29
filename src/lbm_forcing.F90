@@ -15,8 +15,8 @@
 #include "finclude/petscsysdef.h"
 
 module LBM_Forcing_module
-  use LBM_Info_module
-  use LBM_Constants_module
+  use LBM_Distribution_Function_module
+  use LBM_Phase_module
   use petsc
   implicit none
 
@@ -24,83 +24,116 @@ module LBM_Forcing_module
 #include "lbm_definitions.h"
 
   public:: LBMAddFluidFluidForces, &
-       LBMAddBodyForces, &
        LBMAddFluidSolidForces, &
-       LBMZeroBoundaryForces
+       LBMAddBodyForces
 
 contains
   ! --- Fluid-fluid interaction forces, from
   ! ---  (Kang 2002 Eq. 6)
-  subroutine LBMAddFluidFluidForces(rho, forces, walls, info, constants)
+  subroutine LBMAddFluidFluidForces(dist, phases, rho, walls, forces)
     !     NONLOCAL IN RHO
+    type(distribution_type) dist
+    type(phase_type) phases(dist%s)
+    PetscScalar,dimension(1:dist%s, 1:dist%info%gxyzl):: rho
+    PetscScalar,dimension(1:dist%s, 1:dist%info%ndims, 1:dist%info%gxyzl):: forces
+    PetscScalar,dimension(1:dist%info%gxyzl):: walls
 
-    ! input
-    type(info_type) info
-    type(constants_type) constants
-    PetscScalar,dimension(1:info%nphases, 1:info%gxyzl):: rho
-    PetscScalar,dimension(1:info%nphases, 1:info%ndims, 1:info%gxyzl):: forces
-    PetscScalar,dimension(1:info%gxyzl):: walls
+    select case(dist%info%ndims)
+    case(2)
+       call LBMAddFluidFluidForcesD2(dist, phases, rho, walls, forces)
+    case(3)
+       call LBMAddFluidFluidForcesD3(dist, phases, rho, walls, forces)
+    end select
+  end subroutine LBMAddFluidFluidForces
+
+  subroutine LBMAddFluidFluidForcesD3(dist, phases, rho, walls, forces)
+    type(distribution_type) dist
+    type(phase_type) phases(dist%s)
+    PetscScalar,dimension(dist%s, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: rho
+    PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: forces
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
 
     ! local
     PetscInt i,j,k,m,n,d
-    PetscScalar,dimension(1:info%nphases, 0:info%flow_b, 1:info%gxyzl)::tmp
+    PetscScalar,dimension(1:dist%s, 0:dist%b,  dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: tmp
     PetscErrorCode ierr
 
-    do m=1,info%nphases
-       call InfoGatherValueToDirection(info, rho(m,:), tmp(m,:,:))
+    do m=1,dist%s
+       call DistributionGatherValueToDirection(dist, rho(m,:,:,:), tmp(m,:,:,:,:))
     end do
 
-    do i=1,info%gxyzl
-       if (walls(i).eq.0) then
-          do d=1,info%ndims
-             do n=1,2*info%ndims
-                forces(1,d,i) = forces(1,d,i) &
-                     - rho(1,i)*tmp(2,n,i)*info%flow_disc%ci(n,d)*constants%g
-                forces(1,d,i) = forces(1,d,i) &
-                     - rho(1,i)*tmp(1,n,i)*info%flow_disc%ci(n,d)*constants%g11
-                forces(2,d,i) = forces(2,d,i) &
-                     - rho(2,i)*tmp(1,n,i)*info%flow_disc%ci(n,d)*constants%g
-                forces(2,d,i) = forces(2,d,i) &
-                     - rho(2,i)*tmp(2,n,i)*info%flow_disc%ci(n,d)*constants%g22
-             enddo
-             do n=2*info%ndims+1,info%flow_b
-                forces(1,d,i) = forces(1,d,i) &
-                     - rho(1,i)*tmp(2,n,i)*info%flow_disc%ci(n,d)*constants%g*0.5
-                forces(1,d,i) = forces(1,d,i) &
-                     - rho(1,i)*tmp(1,n,i)*info%flow_disc%ci(n,d)*constants%g11*0.5
-                forces(2,d,i) = forces(2,d,i) &
-                     - rho(2,i)*tmp(1,n,i)*info%flow_disc%ci(n,d)*constants%g*0.5
-                forces(2,d,i) = forces(2,d,i) &
-                     - rho(2,i)*tmp(2,n,i)*info%flow_disc%ci(n,d)*constants%g22*0.5
-             enddo
+    do k=dist%info%zs,dist%info%ze
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+       if (walls(i,j,k).eq.0) then
+          do d=1,dist%info%ndims
+             do n=1,2*dist%info%ndims
+                do m=1,dist%s
+                   forces(m,d,i,j,k) = forces(m,d,i,j,k) &
+                      - rho(m,i,j,k)*sum(phases(m)%gf*tmp(:,n,i,j,k)*dist%disc%ci(n,d),1)
+                enddo
+             end do
+             do n=2*dist%info%ndims+1,dist%b
+                do m=1,dist%s
+                   forces(m,d,i,j,k) = forces(m,d,i,j,k) &
+                    - 0.5*rho(m,i,j,k)*sum(phases(m)%gf*tmp(:,n,i,j,k)*dist%disc%ci(n,d),1)
+                enddo
+             end do
           end do
        end if
     end do
-  end subroutine LBMAddFluidFluidForces
+    end do
+    end do
+  end subroutine LBMAddFluidFluidForcesD3
 
+  subroutine LBMAddFluidFluidForcesD2(dist, phases, rho, walls, forces)
+    !     NONLOCAL IN RHO
 
-  ! --- body forces on fluid
-  subroutine LBMAddBodyForces(rho,forces,walls,info,constants)
-    type(info_type) info
-    type(constants_type) constants
-    PetscScalar,dimension(1:info%nphases, 1:info%gxyzl):: rho
-    PetscScalar,dimension(1:info%nphases, 1:info%ndims, 1:info%gxyzl):: forces
-    PetscScalar,dimension(1:info%gxyzl):: walls
+    ! input
+    type(distribution_type) dist
+    type(phase_type) phases(dist%s)
+    PetscScalar,dimension(dist%s, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: rho
+    PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: forces
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: walls
 
-    PetscInt i,m,n,d
+    ! local
+    PetscInt i,j,m,n,d
+    PetscScalar,dimension(1:dist%s, 0:dist%b,  dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: tmp
+    PetscErrorCode ierr
 
-    do m=1,info%nphases
-       do i=1,info%gxyzl
-          if (walls(i).eq.0) then
-             do d=1,info%ndims
-                forces(m,d,i) = forces(m,d,i) &
-                     + constants%gvt(m,d)*constants%mm(m)*rho(m,i)
+    do m=1,dist%s
+       call DistributionGatherValueToDirection(dist, rho(m,:,:), tmp(m,:,:,:))
+    end do
+
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+       if (walls(i,j).eq.0) then
+          do d=1,dist%info%ndims
+             do n=1,2*dist%info%ndims
+                do m=1,dist%s
+                   forces(m,d,i,j) = forces(m,d,i,j) &
+                      - rho(m,i,j)*sum(phases(m)%gf*tmp(:,n,i,j)*dist%disc%ci(n,d),1)
+                enddo
              end do
-          end if
-       end do
-    enddo
-    return
-  end subroutine LBMAddBodyForces
+             do n=2*dist%info%ndims+1,dist%b
+                do m=1,dist%s
+                   forces(m,d,i,j) = forces(m,d,i,j) &
+                    - 0.5*rho(m,i,j)*sum(phases(m)%gf*tmp(:,n,i,j)*dist%disc%ci(n,d),1)
+                enddo
+             end do
+          end do
+       end if
+    end do
+    end do
+  end subroutine LBMAddFluidFluidForcesD2
 
   ! --- Fluid-solid interaction forces, from
   ! ---  (Kang 2002 Eq. 8)
@@ -108,134 +141,181 @@ contains
   !             wrap even in the non-periodic case.  This seems
   !             save at this point, since it seems unlikely that
   !             there will be walls on one side but not the other
-  subroutine LBMAddFluidSolidForces(rho, forces, walls, info, constants)
-    !     NONLOCAL IN WALLS
-
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! New code added by MLP.  This accounts for fluid-solid forces on the 
-    ! diagonals, which is not accounted for in the other version.
+  ! New code added by MLP.  This accounts for fluid-solid forces on the 
+  ! diagonals, which is not accounted for in the other version.
  
-    ! input
-    type(info_type) info
-    type(constants_type) constants
-    PetscScalar,dimension(1:info%nphases, 1:info%gxyzl):: rho
-    PetscScalar,dimension(1:info%nphases, 1:info%ndims, 1:info%gxyzl):: forces
-    PetscScalar,dimension(1:info%gxyzl):: walls
+  subroutine LBMAddFluidSolidForces(dist, phases, rho, walls, forces)
+    !     NONLOCAL IN WALLS
+    type(distribution_type) dist
+    type(phase_type) phases(dist%s)
+    PetscScalar,dimension(1:dist%s, 1:dist%info%gxyzl):: rho
+    PetscScalar,dimension(1:dist%s, 1:dist%info%ndims, 1:dist%info%gxyzl):: forces
+    PetscScalar,dimension(1:dist%info%gxyzl):: walls
+
+    select case(dist%info%ndims)
+    case(2)
+       call LBMAddFluidSolidForcesD2(dist, phases, rho, walls, forces)
+    case(3)
+       call LBMAddFluidSolidForcesD3(dist, phases, rho, walls, forces)
+    end select
+  end subroutine LBMAddFluidSolidForces
+    
+  subroutine LBMAddFluidSolidForcesD3(dist, phases, rho, walls, forces)
+    type(distribution_type) dist
+    type(phase_type) phases(dist%s)
+    PetscScalar,dimension(dist%s, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: rho
+    PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: forces
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
 
     ! local
-    PetscInt i,m,n,d
-    PetscScalar,dimension(0:info%flow_b,1:info%gxyzl)::tmp
+    PetscInt i,j,k,m,n,d
+    PetscScalar,dimension(0:dist%b,  dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: tmp
+    PetscScalar gw(1:dist%s)
     PetscErrorCode ierr
 
-    call InfoGatherValueToDirection(info, walls, tmp)
+    call DistributionGatherValueToDirection(dist, walls, tmp)
 
-    do m=1,info%nphases
-      do i=1,info%gxyzl
-        if (walls(i).eq.0) then
-          do d=1,info%ndims
-            do n=1,2*info%ndims
-               forces(m,d,i) = forces(m,d,i) &
-                    - rho(m,i)*tmp(n,i)*info%flow_disc%ci(n,d)*constants%gw(m)
-            enddo
-            do n=2*info%ndims+1,info%flow_b
-               forces(m,d,i) = forces(m,d,i) &
-                    - rho(m,i)*tmp(n,i)*info%flow_disc%ci(n,d)*constants%gw(m)*0.5
-            enddo
-          end do
-        end if
-      end do
+    do m=1,dist%s
+       gw(m) = phases(m)%gw
     end do
-  end subroutine LBMAddFluidSolidForces
-
-
-  ! --- zero out boundaries, as they affect the fi
-  subroutine LBMZeroBoundaryForces(bc_flags, forces, bc_dim, info,constants)
-    type(info_type) info
-    type(constants_type) constants
-    PetscInt bc_dim
-    PetscInt, dimension(6)::bc_flags ! enum for boundary conditions
-    PetscScalar,dimension(1:info%nphases, 1:info%ndims, 1:info%gxyzl):: forces
-
-    if (info%ndims.eq.2) then
-       call LBMZeroBoundaryForcesD2(bc_flags, forces, bc_dim, info,constants)
-    else if (info%ndims.eq.3) then
-       call LBMZeroBoundaryForcesD3(bc_flags, forces, bc_dim, info,constants)
+    
+    do k=dist%info%zs,dist%info%ze
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+    if (walls(i,j,k).eq.0) then
+       do d=1,dist%info%ndims
+          do n=1,2*dist%info%ndims
+             forces(:,d,i,j,k) = forces(:,d,i,j,k) &
+                  - rho(m,i,j,k)*tmp(n,i,j,k)*dist%disc%ci(n,d)*gw
+          end do
+          do n=2*dist%info%ndims+1,dist%b
+             forces(:,d,i,j,k) = forces(:,d,i,j,k) &
+                  - 0.5*rho(m,i,j,k)*tmp(n,i,j,k)*dist%disc%ci(n,d)*gw
+          end do
+       end do
     end if
-  end subroutine LBMZeroBoundaryForces
+    end do
+    end do
+    end do
+  end subroutine LBMAddFluidSolidForcesD3
 
-  subroutine LBMZeroBoundaryForcesD2(bc_flags, forces, bc_dim, info,constants)
-    type(info_type) info
-    type(constants_type) constants
-    PetscInt bc_dim
-    PetscInt, dimension(6)::bc_flags ! enum for boundary conditions
+  subroutine LBMAddFluidSolidForcesD2(dist, phases, rho, walls, forces)
+    type(distribution_type) dist
+    type(phase_type) phases(dist%s)
+    PetscScalar,dimension(dist%s, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: rho
+    PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: forces
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: walls
 
-    PetscScalar,dimension(1:info%nphases, 1:info%ndims, info%gxs:info%gxe, &
-         info%gys:info%gye):: forces
+    ! local
+    PetscInt i,j,m,n,d
+    PetscScalar,dimension(0:dist%b,  dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: tmp
+    PetscScalar gw(1:dist%s)
+    PetscErrorCode ierr
+
+    call DistributionGatherValueToDirection(dist, walls, tmp)
+
+    do m=1,dist%s
+       gw(m) = phases(m)%gw
+    end do
     
-    ! -- x
-    if ((info%xs.eq.1).and.((bc_flags(BOUNDARY_XM).eq.BC_FLUX).or.&
-         (bc_flags(BOUNDARY_XM).eq.BC_PRESSURE))) then
-       forces(:,:,1,:) = 0
-    endif
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+    if (walls(i,j).eq.0) then
+       do d=1,dist%info%ndims
+          do n=1,2*dist%info%ndims
+             forces(:,d,i,j) = forces(:,d,i,j) &
+                  - rho(m,i,j)*tmp(n,i,j)*dist%disc%ci(n,d)*gw
+          end do
+          do n=2*dist%info%ndims+1,dist%b
+             forces(:,d,i,j) = forces(:,d,i,j) &
+                  - 0.5*rho(m,i,j)*tmp(n,i,j)*dist%disc%ci(n,d)*gw
+          end do
+       end do
+    end if
+    end do
+    end do
+  end subroutine LBMAddFluidSolidForcesD2
 
-    if ((info%xe.eq.info%NX).and.((bc_flags(BOUNDARY_XP).eq.BC_FLUX).or. &
-         (bc_flags(BOUNDARY_XP).eq.BC_PRESSURE))) then
-       forces(:,:,info%NX,:) = 0
-    endif
+  ! --- body forces on fluid
+  subroutine LBMAddBodyForces(dist, phases, gvt, rho, walls, forces)
+    type(distribution_type) dist
+    type(phase_type) phases(1:dist%s)
+    PetscScalar,dimension(dist%s, dist%info%gxyzl):: rho
+    PetscScalar,dimension(dist%s, dist%info%ndims, 1:dist%info%gxyzl):: forces
+    PetscScalar,dimension(dist%info%gxyzl):: walls
+    PetscScalar,dimension(dist%info%ndims) :: gvt
 
-    ! -- y
-    if ((info%ys.eq.1).and.((bc_flags(BOUNDARY_YM).eq.BC_FLUX).or.&
-         (bc_flags(BOUNDARY_YM).eq.BC_PRESSURE))) then
-       forces(:,:,:,1) = 0
-    endif
-
-    if ((info%ye.eq.info%NY).and.((bc_flags(BOUNDARY_YP).eq.BC_FLUX).or. &
-         (bc_flags(BOUNDARY_YP).eq.BC_PRESSURE))) then
-       forces(:,:,:,info%NY) = 0
-    endif
-
-  end subroutine LBMZeroBoundaryForcesD2
-
-  subroutine LBMZeroBoundaryForcesD3(bc_flags, forces, bc_dim, info,constants)
-    type(info_type) info
-    type(constants_type) constants
-    PetscInt bc_dim
-    PetscInt, dimension(6)::bc_flags ! enum for boundary conditions
-
-    PetscScalar,dimension(1:info%nphases, 1:info%ndims, info%gxs:info%gxe, &
-         info%gys:info%gye, info%gzs:info%gze):: forces
+    select case(dist%info%ndims)
+    case(2)
+       call LBMAddBodyForcesD2(dist, phases, gvt, rho, walls, forces)
+    case(3)
+       call LBMAddBodyForcesD3(dist, phases, gvt, rho, walls, forces)
+    end select
+  end subroutine LBMAddBodyForces
     
-    ! -- x
-    if ((info%xs.eq.1).and.((bc_flags(BOUNDARY_XM).eq.BC_FLUX).or.&
-         (bc_flags(BOUNDARY_XM).eq.BC_PRESSURE))) then
-       forces(:,:,1,:,:) = 0
-    endif
+  subroutine LBMAddBodyForcesD3(dist, phases, gvt, rho, walls, forces)
+    type(distribution_type) dist
+    type(phase_type) phases(dist%s)
+    PetscScalar,dimension(dist%s, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: rho
+    PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: forces
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
+    PetscScalar,dimension(dist%info%ndims) :: gvt
 
-    if ((info%xe.eq.info%NX).and.((bc_flags(BOUNDARY_XP).eq.BC_FLUX).or. &
-         (bc_flags(BOUNDARY_XP).eq.BC_PRESSURE))) then
-       forces(:,:,info%NX,:,:) = 0
-    endif
+    ! local
+    PetscInt i,j,k,m
+    PetscErrorCode ierr
 
-    ! -- y
-    if ((info%ys.eq.1).and.((bc_flags(BOUNDARY_YM).eq.BC_FLUX).or.&
-         (bc_flags(BOUNDARY_YM).eq.BC_PRESSURE))) then
-       forces(:,:,:,1,:) = 0
-    endif
+    do k=dist%info%zs,dist%info%ze
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+       if (walls(i,j,k).eq.0) then
+          do m=1,dist%s
+             forces(m,:,i,j,k) = forces(m,:,i,j,k) &
+                  + gvt*phases(m)%mm*rho(m,i,j,k)
+          end do
+       end if
+    end do
+    end do
+    end do
+    return
+  end subroutine LBMAddBodyForcesD3
 
-    if ((info%ye.eq.info%NY).and.((bc_flags(BOUNDARY_YP).eq.BC_FLUX).or. &
-         (bc_flags(BOUNDARY_YP).eq.BC_PRESSURE))) then
-       forces(:,:,:,info%NY,:) = 0
-    endif
+  subroutine LBMAddBodyForcesD2(dist, phases, gvt, rho, walls, forces)
+    type(distribution_type) dist
+    type(phase_type) phases(dist%s)
+    PetscScalar,dimension(dist%s, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: rho
+    PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: forces
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: walls
+    PetscScalar,dimension(dist%info%ndims) :: gvt
 
-    ! -- z
-    if ((info%zs.eq.1).and.((bc_flags(BOUNDARY_ZM).eq.BC_FLUX).or.&
-         (bc_flags(BOUNDARY_ZM).eq.BC_PRESSURE))) then
-       forces(:,:,:,:,1) = 0
-    endif
+    ! local
+    PetscInt i,j,m
+    PetscErrorCode ierr
 
-    if ((info%ze.eq.info%NZ).and.((bc_flags(BOUNDARY_ZP).eq.BC_FLUX).or. &
-         (bc_flags(BOUNDARY_ZP).eq.BC_PRESSURE))) then
-       forces(:,:,:,:,info%NZ) = 0
-    endif
-  end subroutine LBMZeroBoundaryForcesD3
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+       if (walls(i,j).eq.0) then
+          do m=1,dist%s
+             forces(m,:,i,j) = forces(m,:,i,j) &
+                  + gvt*phases(m)%mm*rho(m,i,j)
+          end do
+       end if
+    end do
+    end do
+    return
+  end subroutine LBMAddBodyForcesD2
 end module LBM_Forcing_module

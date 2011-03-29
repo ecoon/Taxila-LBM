@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            09:24:24 MDT
-!!!     last modified:   28 March 2011
-!!!       at:            13:21:50 MDT
+!!!     last modified:   29 March 2011
+!!!       at:            16:16:00 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -30,7 +30,7 @@ module LBM_Grid_module
      type(info_type), pointer:: info
      PetscInt,pointer,dimension(:) :: da_sizes
      PetscInt nda
-     character(len=MAXSTRINGLENGTH) name       
+     character(len=MAXWORDLENGTH) name       
   end type grid_type
 
   public:: GridCreate, &
@@ -41,7 +41,7 @@ module LBM_Grid_module
 contains
   function GridCreate(comm) result(grid)
     MPI_Comm comm
-    character(len=MAXSTRINGLENGTH) name       
+    character(len=MAXWORDLENGTH) name       
     type(grid_type),pointer :: grid
     allocate(grid)
     grid%comm = comm
@@ -68,7 +68,7 @@ contains
 
   subroutine GridSetName(grid, name)
     type(grid_type) grid
-    character(len=MAXSTRINGLENGTH) name       
+    character(len=MAXWORDLENGTH) name       
     grid%name = name
   end subroutine GridSetName
 
@@ -101,15 +101,6 @@ contains
     PetscInt zs,gzs
     PetscInt,allocatable,dimension(:):: ownership_x, ownership_y, ownership_z
     integer lcv
-
-    grid%da_sizes(ONEDOF) = 1
-    grid%da_sizes(NPHASEDOF) = grid%info%nphases
-    grid%da_sizes(NPHASEXBDOF) = grid%info%nphases*(grid%info%flow_b+1)
-    grid%da_sizes(NFLOWDOF) = grid%info%ndims
-    if (grid%nda > 4) then
-       grid%da_sizes(NCOMPONENTDOF) = grid%info%ncomponents
-       grid%da_sizes(NCOMPONENTXBDOF) = grid%info%ncomponents*(grid%info%transport_b+1)
-    end if
 
     btype(:) = DMDA_BOUNDARY_GHOSTED
     if (grid%info%periodic(X_DIRECTION)) btype(X_DIRECTION) = DMDA_BOUNDARY_PERIODIC
@@ -202,4 +193,14 @@ contains
     end if
   end subroutine GridSetUp
 
- end module LBM_Grid_module
+  subroutine GridViewCoordinates(grid, io)
+    use LBM_IO_module
+    type(grid_type) grid
+    type(io_type) io
+    Vec coords
+    PetscErrorCode ierr
+
+    call DMDAGetCoordinates(grid%da(ONEDOF), coords, ierr)
+    call IOView(io, coords, 'coords')
+  end subroutine GridViewCoordinates
+end module LBM_Grid_module
