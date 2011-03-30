@@ -56,6 +56,7 @@
          LBMInitializeWalls, &
          LBMInitializeWallsPetsc, &
          LBMInitializeState, &
+         LBMInitializeStateRestarted, &
          LBMGetCorners
 
   contains
@@ -176,32 +177,35 @@
       character(len=MAXWORDLENGTH) timerunits
       character(len=MAXWORDLENGTH) timername
 
-      ! communicate to initialize
       call DMDALocalToLocalBegin(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, &
            lbm%walls, ierr)
       call DMDALocalToLocalEnd(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, &
            lbm%walls, ierr)
 
-      call DMDALocalToLocalBegin(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi, &
-           INSERT_VALUES, lbm%flow%distribution%fi, ierr)
-      call DMDALocalToLocalEnd(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi, &
-           INSERT_VALUES, lbm%flow%distribution%fi, ierr)
-
-      ! if (associated(lbm%transport)) then
-      !    call DMDALocalToLocalBegin(lbm%grid%da(NCOMPONENTXBDOF), &
-      !         lbm%transport%distribution%fi, INSERT_VALUES, &
-      !         lbm%transport%distribution%fi, ierr)
-      !    call DMDALocalToLocalEnd(lbm%grid%da(NCOMPONENTXBDOF), &
-      !         lbm%transport%distribution%fi, INSERT_VALUES, &
-      !         lbm%transport%distribution%fi, ierr)
-      ! end if
-
-      call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-      call FlowGetArrays(lbm%flow)
-      call BCGetArrays(lbm%bc, ierr)
-
       if (istep.eq.0) then
+         call DMDALocalToLocalBegin(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi, &
+              INSERT_VALUES, lbm%flow%distribution%fi, ierr)
+         call DMDALocalToLocalEnd(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi, &
+              INSERT_VALUES, lbm%flow%distribution%fi, ierr)
+
+         ! if (associated(lbm%transport)) then
+         !    call DMDALocalToLocalBegin(lbm%grid%da(NCOMPONENTXBDOF), &
+         !         lbm%transport%distribution%fi, INSERT_VALUES, &
+         !         lbm%transport%distribution%fi, ierr)
+         !    call DMDALocalToLocalEnd(lbm%grid%da(NCOMPONENTXBDOF), &
+         !         lbm%transport%distribution%fi, INSERT_VALUES, &
+         !         lbm%transport%distribution%fi, ierr)
+         ! end if
+
+         ! get arrays
+         call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+         call FlowGetArrays(lbm%flow)
+         call BCGetArrays(lbm%bc, ierr)
+
          ! update values and view
+         if (lbm%grid%info%rank.eq.0) then
+            write(*,*) 'outputing step', istep, 'to file', lbm%io%counter
+         endif
          call FlowUpdateMoments(lbm%flow, lbm%walls_a)
          call FlowOutputDiagnostics(lbm%flow, lbm%walls_a, lbm%io)
 
@@ -214,6 +218,11 @@
 
          ! view grid coordinates
          call GridViewCoordinates(lbm%grid, lbm%io)
+      else
+         ! just get arrays
+         call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+         call FlowGetArrays(lbm%flow)
+         call BCGetArrays(lbm%bc, ierr)
       endif
       call IOIncrementCounter(lbm%io)
 
@@ -241,6 +250,9 @@
 
          ! check for output
          if(mod(lcv_step,kwrite).eq.0) then
+            if (lbm%grid%info%rank.eq.0) then
+               write(*,*) 'outputing step', istep, 'to file', lbm%io%counter
+            endif
             call FlowOutputDiagnostics(lbm%flow, lbm%walls_a, lbm%io)
             call IOIncrementCounter(lbm%io)
          endif
@@ -255,14 +267,6 @@
 
     subroutine LBMInitializeWalls(lbm, init_subroutine)
       type(lbm_type) lbm
-      !      interface
-      !         subroutine init_subroutine(walls, info)
-      !           use LBM_Info_module
-      !           type(info_type) info
-      !           PetscScalar walls(:) ! problem is that this does not work, as we want
-      !                                  to specify an explicit shape within the subroutine
-      !         end subroutine init_subroutine
-      !      end interface
       external :: init_subroutine
       PetscErrorCode ierr
       PetscInt vsize
@@ -289,22 +293,14 @@
 
     subroutine LBMInitializeState(lbm, init_subroutine)
       type(lbm_type) lbm
-      !      interface
-      !         subroutine init_subroutine(fi, rho, vel, walls, info)
-      !           use LBM_Info_module
-      !           type(info_type) info
-      !           PetscScalar fi(:)
-      !           PetscScalar rho(:)
-      !           PetscScalar vel(:,:,:,:,:)
-      !           PetscScalar walls(:)
-      !         end subroutine init_subroutine
-      !      end interface
       external :: init_subroutine
       PetscErrorCode ierr
+
       call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
       call FlowGetArrays(lbm%flow)
       call init_subroutine(lbm%flow%distribution%fi_a, lbm%flow%distribution%rho_a, &
-           lbm%flow%distribution%flux, lbm%walls_a, lbm%flow%distribution, lbm%flow%phases)
+           lbm%flow%distribution%flux, lbm%walls_a, lbm%flow%distribution, &
+           lbm%flow%phases, lbm%options)
       call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
       call FlowRestoreArrays(lbm%flow)
       return
@@ -335,5 +331,24 @@
       
       corners = lbm%grid%info%corners
     end subroutine LBMGetCorners
+
+  subroutine LBMInitializeStateRestarted(lbm, istep, kwrite)
+    use petsc
+    type(lbm_type) lbm
+    PetscInt istep, kwrite
+    PetscErrorCode ierr
+
+    lbm%io%counter = istep/kwrite
+    if (lbm%grid%info%rank.eq.0) then
+       write(*,*) 'reading step', istep, 'from file', lbm%io%counter
+    endif
+    call IOLoad(lbm%io, lbm%flow%distribution%fi_g, 'fi')
+
+    call DMGlobalToLocalBegin(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi_g, &
+         INSERT_VALUES, lbm%flow%distribution%fi, ierr)
+    call DMGlobalToLocalEnd(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi_g, &
+         INSERT_VALUES, lbm%flow%distribution%fi, ierr)
+    return
+  end subroutine LBMInitializeStateRestarted
 end module LBM_module
 
