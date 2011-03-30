@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            13:43:00 MDT
-!!!     last modified:   29 March 2011
-!!!       at:            16:42:38 MDT
+!!!     last modified:   30 March 2011
+!!!       at:            17:01:07 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -65,6 +65,7 @@ module LBM_Phase_module
        PhaseDestroy, &
        PhaseSetSizes, &
        PhaseSetName, &
+       PhaseSetID, &
        PhaseSetFromOptions
 
 contains
@@ -77,17 +78,20 @@ contains
     phase%relax => RelaxationCreate(comm)
   end function PhaseCreateOne
 
-  function PhaseCreateN(comm, n) result(phase)
+  function PhaseCreateN(comm, n) result(phases)
     MPI_Comm comm
     PetscInt n
-    type(phase_type),pointer,dimension(:):: phase
+    type(phase_type),pointer,dimension(:):: phases
+    type(phase_type),pointer:: aphase
     PetscInt lcv
-    allocate(phase(n))
+    allocate(phases(1:n))
 
     do lcv=1,n
-       phase(lcv)%comm = comm
-       call PhaseInitialize(phase(lcv))
-       phase(lcv)%relax => RelaxationCreate(comm)
+       aphase => phases(lcv)
+       aphase%comm = comm
+       call PhaseInitialize(aphase)
+       aphase%relax => RelaxationCreate(comm)
+       call PhaseSetID(aphase, lcv)
     end do
   end function PhaseCreateN
 
@@ -131,6 +135,7 @@ contains
     type(phase_type) phase
     PetscInt id
     phase%id = id
+    call RelaxationSetID(phase%relax, id)
   end subroutine PhaseSetID
 
   subroutine PhaseSetFromOptions(phase, options, ierr)
@@ -139,33 +144,32 @@ contains
     type(options_type) options
     PetscErrorCode ierr
 
-    PetscInt sizeofint, sizeofscalar, sizeofbool, sizeofdata
+    PetscSizeT sizeofint, sizeofscalar, sizeofbool, sizeofdata
     PetscInt lcv
     character(len=MAXWORDLENGTH):: paramname
-
-    ! set up the data
-    allocate(phase%data%gf(1:phase%s))
+    write(paramname, '(I1)') phase%id
 
     ! create the bag
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
     sizeofdata = (3+phase%s)*sizeofscalar
     call PetscBagCreate(phase%comm, sizeofdata, phase%bag, ierr)
-    call PetscBagSetName(phase%bag, TRIM(options%my_prefix)//phase%name, ierr)
+    call PetscBagSetName(phase%bag, TRIM(options%my_prefix)//phase%name, "", ierr)
+    call PetscBagGetData(phase%bag, phase%data, ierr)
 
     ! register data
+    call PetscBagRegisterScalar(phase%bag, phase%data%gw, 0.d0, &
+         'gw'//paramname, 'Phase-solid interaction potential coefficient', ierr)
+    phase%gw => phase%data%gw
+    call PetscBagRegisterScalar(phase%bag, phase%data%mm, 1.d0, &
+         'mm'//paramname, 'molecular mass', ierr)
+    phase%mm => phase%data%mm
+
     do lcv=1,phase%s
        write(paramname, '(I1, I1)') lcv, phase%id
        call PetscBagRegisterScalar(phase%bag, phase%data%gf(lcv), 0.d0, &
             'g_'//paramname, 'phase-phase interaction potential coefficient', ierr)
     end do
-    phase%gf => phase%data%gf
-
-    call PetscBagRegisterScalar(phase%bag, phase%data%gw, 0.d0, &
-         'gw', 'Phase-solid interaction potential coefficient', ierr)
-    phase%gw => phase%data%gw
-    call PetscBagRegisterScalar(phase%bag, phase%data%mm, 1.d0, &
-         'mm', 'molecular mass', ierr)
-    phase%mm => phase%data%mm
+    phase%gf => phase%data%gf(1:options%nphases)
 
     call RelaxationSetMode(phase%relax, options%flow_relaxation_mode)
     call RelaxationSetFromOptions(phase%relax, options, ierr)

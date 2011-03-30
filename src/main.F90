@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
-!!!     last modified:   29 March 2011
-!!!       at:            17:46:41 MDT
+!!!     last modified:   30 March 2011
+!!!       at:            12:03:57 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -49,7 +49,8 @@ program MAIN
   call OptionsSetPrefix(options, prefix)
   call OptionsSetUp(options)
   call LBMSetFromOptions(lbm, options, ierr)
-  
+  call LBMSetUp(lbm)
+
   ! --- initialize state
   ! walls
   if (lbm%grid%info%rank.eq.0) then
@@ -65,12 +66,12 @@ program MAIN
   call BCSetValues(lbm%bc, lbm%flow%distribution, options, initialize_bcs)
   
   ! fi/state
-  if (options%new_simulation) then
-     call LBMInitializeState(lbm, initialize_state)
-     istep=0
-  else
+  if (options%restart) then
      call LBMInitializeStateRestarted(lbm, options%istep, options%kwrite)
      istep = options%istep
+  else
+     call LBMInitializeState(lbm, initialize_state)
+     istep=0
   endif
   
   ! start lbm

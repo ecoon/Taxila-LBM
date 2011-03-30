@@ -74,7 +74,7 @@ contains
              do n=1,2*dist%info%ndims
                 do m=1,dist%s
                    forces(m,d,i,j,k) = forces(m,d,i,j,k) &
-                      - rho(m,i,j,k)*sum(phases(m)%gf*tmp(:,n,i,j,k)*dist%disc%ci(n,d),1)
+                      - rho(m,i,j,k)*sum(phases(m)%gf(1:dist%s)*tmp(:,n,i,j,k)*dist%disc%ci(n,d),1)
                 enddo
              end do
              do n=2*dist%info%ndims+1,dist%b
@@ -190,11 +190,11 @@ contains
        do d=1,dist%info%ndims
           do n=1,2*dist%info%ndims
              forces(:,d,i,j,k) = forces(:,d,i,j,k) &
-                  - rho(m,i,j,k)*tmp(n,i,j,k)*dist%disc%ci(n,d)*gw
+                  - rho(:,i,j,k)*tmp(n,i,j,k)*dist%disc%ci(n,d)*gw
           end do
           do n=2*dist%info%ndims+1,dist%b
              forces(:,d,i,j,k) = forces(:,d,i,j,k) &
-                  - 0.5*rho(m,i,j,k)*tmp(n,i,j,k)*dist%disc%ci(n,d)*gw
+                  - 0.5*rho(:,i,j,k)*tmp(n,i,j,k)*dist%disc%ci(n,d)*gw
           end do
        end do
     end if

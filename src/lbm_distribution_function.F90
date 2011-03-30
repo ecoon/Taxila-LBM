@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            14:06:07 MDT
-!!!     last modified:   29 March 2011
-!!!       at:            16:19:49 MDT
+!!!     last modified:   30 March 2011
+!!!       at:            11:04:18 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -54,8 +54,15 @@ module LBM_Distribution_Function_module
        DistributionSetDiscretization, &
        DistributionSetSizes, &
        DistributionSetDAs, &
+       DistributionSetUp, &
+       DistributionGetArrays, &
+       DistributionRestoreArrays, &
+       DistributionCommunicateAll, &       
+       DistributionCommunicateFi, &       
+       DistributionCommunicateRho, &       
        DistributionCalcDensity, &
-       DistributionCalcFlux
+       DistributionCalcFlux, &
+       DistributionGatherValueToDirection
 
 contains
   function DistributionCreate(comm) result(distribution)
@@ -139,7 +146,7 @@ contains
 
     call DMCreateGlobalVector(distribution%da_fi, distribution%fi_g, ierr)
     call VecSet(distribution%fi_g, zero, ierr)
-    call PetscObjectSetName(distribution%rho_g, trim(distribution%name)//'fi', ierr)
+    call PetscObjectSetName(distribution%fi_g, trim(distribution%name)//'fi', ierr)
 
     call DMCreateLocalVector(distribution%da_rho, distribution%rho, ierr)
     call VecSet(distribution%rho, zero, ierr)

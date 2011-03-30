@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            15:15:25 MDT
-!!!     last modified:   29 March 2011
-!!!       at:            18:09:38 MDT
+!!!     last modified:   30 March 2011
+!!!       at:            17:02:48 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -26,6 +26,7 @@ module LBM_Relaxation_module
 
   type, public :: relaxation_type
      MPI_Comm comm
+     PetscInt id
      PetscInt s
      PetscInt b
      PetscInt mode
@@ -51,6 +52,7 @@ module LBM_Relaxation_module
        RelaxationDestroy, &
        RelaxationSetSizes, &
        RelaxationSetName, &
+       RelaxationSetID, &
        RelaxationSetMode, &
        RelaxationSetFromOptions
 
@@ -64,6 +66,7 @@ contains
     relax%b = -1
     nullify(relax%data)
     relax%bag = 0
+    relax%name = ''
   end function RelaxationCreate
 
   subroutine RelaxationDestroy(relax, ierr)
@@ -92,40 +95,41 @@ contains
     relax%name = name
   end subroutine RelaxationSetName
 
+  subroutine RelaxationSetID(relax, id)
+    type(relaxation_type) relax
+    PetscInt id
+    relax%id = id
+  end subroutine RelaxationSetID
+
   subroutine RelaxationSetFromOptions(relax, options, ierr)
     use LBM_Options_module
     type(relaxation_type) relax
     type(options_type) options
     PetscErrorCode ierr
 
-    PetscInt sizeofscalar, sizeofdata
+    PetscSizeT sizeofscalar, sizeofdata
     PetscInt lcv
-    character(len=MAXWORDLENGTH):: paramname
+    character(len=MAXWORDLENGTH):: paramname, paramname2
 
     ! create the bag
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
     sizeofdata = (relax%b+2)*sizeofscalar 
     call PetscBagCreate(relax%comm, sizeofdata, relax%bag, ierr)
-    call PetscBagSetName(relax%bag, TRIM(options%my_prefix)//relax%name, ierr)
-
-
-    ! register data
     call PetscBagGetData(relax%bag, relax%data, ierr)
 
+    write(paramname, '(I1)') relax%id
     call PetscBagRegisterScalar(relax%bag, relax%data%tau, 1.d0, &
-         'tau', 'relaxation time', ierr)
+         'tau'//paramname, 'relaxation time', ierr)
     relax%tau => relax%data%tau
 
     if (relax%mode == RELAXATION_MODE_MRT) then
-       allocate(relax%data%tau_mrt(0:relax%b))
        do lcv=0,relax%b
-          write(paramname, '(I0.2)') lcv
+          write(paramname2, '(I0.2)') lcv
           call PetscBagRegisterScalar(relax%bag, relax%data%tau_mrt(lcv), 0.d0, &
-               'tau_'//paramname, 'MRT relaxation moment coefficient', ierr)
+               'mrt'//trim(paramname)//'_s'//paramname2, 'MRT relaxation moment coefficient', ierr)
        end do
-    else
-       relax%data%tau_mrt = 0.d0
     end if
+    call PetscBagSetName(relax%bag, TRIM(options%my_prefix)//relax%name, "", ierr)
     relax%tau_mrt => relax%data%tau_mrt
   end subroutine RelaxationSetFromOptions
 end module LBM_Relaxation_module

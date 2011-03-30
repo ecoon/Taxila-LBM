@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         29 March 2011
 !!!       on:            15:38:36 MDT
-!!!     last modified:   29 March 2011
-!!!       at:            16:10:41 MDT
+!!!     last modified:   30 March 2011
+!!!       at:            12:40:01 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -70,7 +70,7 @@ contains
   subroutine IOView(io, vec, name)
     type(io_type) io
     Vec vec
-    character(len=MAXWORDLENGTH) name
+    character(len=*) name
     character(len=MAXIODIGITS):: outnum
     character(len=MAXSTRINGLENGTH):: stringformat
     character(len=MAXSTRINGLENGTH):: filename
@@ -94,7 +94,7 @@ contains
   subroutine IOLoad(io, vec, name)
     type(io_type) io
     Vec vec
-    character(len=MAXWORDLENGTH) name
+    character(len=*) name
     character(len=MAXIODIGITS):: outnum
     character(len=MAXSTRINGLENGTH):: stringformat
     character(len=MAXSTRINGLENGTH):: filename

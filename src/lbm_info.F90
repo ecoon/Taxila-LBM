@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   29 March 2011
-!!!       at:            16:11:03 MDT
+!!!     last modified:   30 March 2011
+!!!       at:            10:32:26 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -123,21 +123,19 @@ contains
     type(options_type) options
     PetscErrorCode ierr
       
-    PetscInt sizeofint, sizeofscalar, sizeofbool, sizeofdata
+    PetscSizeT sizeofint, sizeofscalar, sizeofbool, sizeofdata
 
     ! grab, allocate sizes
     info%ndims = options%ndims
-    allocate(info%data%periodic(1:info%ndims))
-    allocate(info%data%corners(1:info%ndims,2))
     allocate(info%gridsize(1:info%ndims))
 
     ! create the bag
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
     call PetscDataTypeGetSize(PETSC_BOOL, sizeofbool, ierr)
     call PetscDataTypeGetSize(PETSC_INT, sizeofint, ierr)
-    sizeofdata = info%ndims*2*sizeofscalar + info%ndims*sizeofbool + 5*sizeofint
+    sizeofdata = 3*2*sizeofscalar + 3*sizeofbool + 5*sizeofint
     call PetscBagCreate(info%comm, sizeofdata, info%bag, ierr)
-    call PetscBagSetName(info%bag, TRIM(options%my_prefix)//info%name, ierr)
+!    call PetscBagSetName(info%bag, TRIM(options%my_prefix)//info%name, "", ierr)
 
     ! register data
     ! -- grid size
