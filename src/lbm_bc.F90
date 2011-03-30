@@ -6,7 +6,7 @@
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
 !!!     last modified:   29 March 2011
-!!!       at:            16:54:12 MDT
+!!!       at:            17:38:39 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -310,31 +310,17 @@ contains
 
 
   ! call initialize
-  subroutine BCSetValues(bc, info, bc_subroutine)
+  subroutine BCSetValues(bc, dist, options, bc_subroutine)
+    use LBM_Options_module
     type(bc_type) bc
-    type(info_type) info
-    
-    !  interface 
-    !     subroutine bc_subroutine(xm, xp, ym, yp, zm, zp, dim, info)
-    !       use LBM_Info_module
-    !       PetscScalar xm(:)
-    !       PetscScalar xp(:)
-    !       PetscScalar ym(:)
-    !       PetscScalar yp(:)
-    !       PetscScalar zm(:)
-    !       PetscScalar zp(:)
-    !       PetscInt dim
-    !       type(info_type) info
-    !     end subroutine bc_subroutine
-    !  end interface
+    type(distribution_type) dist
+    type(options_type) options
     external bc_subroutine
     
     PetscErrorCode ierr
-
     call BCGetArrays(bc, ierr)
-
     call bc_subroutine(bc%flags, bc%xm_a, bc%xp_a, &
-         bc%ym_a, bc%yp_a, bc%zm_a, bc%zp_a, bc%dim, info)
+         bc%ym_a, bc%yp_a, bc%zm_a, bc%zp_a, bc%dim, dist, options)
     CHKERRQ(ierr)
     CHKMEMQ
     call BCRestoreArrays(bc, ierr)
