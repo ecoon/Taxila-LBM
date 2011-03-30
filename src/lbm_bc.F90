@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   29 March 2011
-!!!       at:            17:38:39 MDT
+!!!     last modified:   30 March 2011
+!!!       at:            10:48:33 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -49,6 +49,8 @@ module LBM_BC_module
        BCSetFromOptions, &
        BCSetUp, &
        BCSetValues, &
+       BCApplyFlow, &
+       BCZeroForces, &
        BCGetArrays, &
        BCRestoreArrays, &
        BCFlux, &
@@ -233,8 +235,6 @@ contains
           bc%flags(BOUNDARY_ZP) = BC_PERIODIC
        end if
     end if
-
-    call BCRestoreArrays(bc, ierr)
   end subroutine BCSetFromOptions
  
   subroutine BCSetUp(bc)

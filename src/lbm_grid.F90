@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            09:24:24 MDT
-!!!     last modified:   29 March 2011
-!!!       at:            16:16:00 MDT
+!!!     last modified:   30 March 2011
+!!!       at:            11:01:47 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -36,7 +36,9 @@ module LBM_Grid_module
   public:: GridCreate, &
        GridDestroy, &
        GridSetName, &
-       GridSetFromOptions
+       GridSetFromOptions, &
+       GridSetUp, &
+       GridViewCoordinates
 
 contains
   function GridCreate(comm) result(grid)
@@ -180,7 +182,7 @@ contains
     end if
     
     ! set the coordinates, but only on the one-dof (no need for extra memory)
-    if (grid%info%ndims == 2) then
+    if (grid%info%ndims == 3) then
        call DMDASetUniformCoordinates(grid%da(ONEDOF), &
             grid%info%corners(X_DIRECTION,1), grid%info%corners(X_DIRECTION,2), &
             grid%info%corners(Y_DIRECTION,1), grid%info%corners(Y_DIRECTION,2), &

@@ -23,6 +23,7 @@
     use LBM_Discretization_module
     use LBM_Grid_module
     use LBM_BC_module
+    use LBM_Distribution_Function_module
     use LBM_Flow_module
 !    use LBM_Transport_module
     use LBM_IO_module
@@ -52,6 +53,7 @@
          LBMDestroy, &
          LBMSetName, &
          LBMSetFromOptions, &
+         LBMSetUp, &
          LBMRun, &
          LBMInitializeWalls, &
          LBMInitializeWallsPetsc, &
@@ -71,7 +73,7 @@
       lbm%grid => GridCreate(comm)
       lbm%bc => BCCreate(comm)
       lbm%io => IOCreate(comm)
-      nullify(lbm%flow)
+      lbm%flow => FlowCreate(lbm%comm)
 !      nullify(lbm%transport)
 
       lbm%walls = 0
@@ -107,11 +109,10 @@
       type(lbm_type) lbm
       type(options_type) options
       PetscErrorCode ierr
-      
+
+      call IOSetFromOptions(lbm%io, options, ierr)
       call GridSetFromOptions(lbm%grid, options, ierr)
       call GridSetName(lbm%grid, lbm%name)
-      
-      lbm%flow => FlowCreate(lbm%comm)
       call FlowSetFromOptions(lbm%flow, options, ierr)
 !      if (options%transport_disc /= NULL_DISCRETIZATION) then
 !         lbm%transport => TransportCreate(lbm%comm)
@@ -211,8 +212,8 @@
 
          ! view walls
          call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-         call DMDALocalToGlobalBegin(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, lbm%walls_g, ierr)
-         call DMDALocalToGlobalEnd(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, lbm%walls_g, ierr)
+         call DMLocalToGlobalBegin(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, lbm%walls_g, ierr)
+         call DMLocalToGlobalEnd(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, lbm%walls_g, ierr)
          call IOView(lbm%io, lbm%walls_g, 'walls')
          call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
 
@@ -251,7 +252,7 @@
          ! check for output
          if(mod(lcv_step,kwrite).eq.0) then
             if (lbm%grid%info%rank.eq.0) then
-               write(*,*) 'outputing step', istep, 'to file', lbm%io%counter
+               write(*,*) 'outputing step', lcv_step, 'to file', lbm%io%counter
             endif
             call FlowOutputDiagnostics(lbm%flow, lbm%walls_a, lbm%io)
             call IOIncrementCounter(lbm%io)

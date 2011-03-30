@@ -5,8 +5,8 @@
 ###     version:         
 ###     created:         25 January 2011
 ###       on:            10:53:33 MST
-###     last modified:   10 March 2011
-###       at:            12:47:21 MST
+###     last modified:   30 March 2011
+###       at:            12:30:14 MDT
 ###     URL:             http://www.ldeo.columbia.edu/~ecoon/
 ###     email:           ecoon _at_ lanl.gov
 ###  
@@ -44,7 +44,7 @@ class SolutionReader(object):
                           self._opts.getInt('NZ'))
             self._dim = 3
             print 'got d3q19'
-        self._s = self._opts.getInt('s',default=2)
+        self._s = self._opts.getInt('nphases',default=2)
         lsize = list(self._size)
         lsize.reverse()
         self._size_r = tuple(lsize)

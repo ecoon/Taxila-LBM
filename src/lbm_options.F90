@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         09 December 2010
 !!!       on:            14:16:32 MST
-!!!     last modified:   29 March 2011
-!!!       at:            15:48:40 MDT
+!!!     last modified:   30 March 2011
+!!!       at:            12:37:50 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -27,7 +27,7 @@
        character(len=MAXWORDLENGTH):: my_prefix
        PetscInt ntimes, npasses
        PetscInt kprint, kwrite
-       PetscBool new_simulation
+       PetscBool restart
        PetscInt istep
 
        character(len=MAXSTRINGLENGTH):: output_prefix
@@ -46,6 +46,7 @@
 
     public :: OptionsCreate, &
          OptionsSetUp, &
+         OptionsSetPrefix, &
          OptionsView
 
   contains
@@ -56,12 +57,13 @@
 
       allocate(options)
       options%comm = comm
-      options%ntimes = 0
-      options%npasses = 0
+      options%ntimes = 1
+      options%npasses = 1
       options%kprint = 0
-      options%kwrite = 0
-      options%new_simulation = .TRUE.
+      options%kwrite = 1
+      options%restart = PETSC_FALSE
       options%istep = 0
+      options%mpiio = PETSC_FALSE
 
       options%output_prefix = 'test_solution/'
       options%walls_file = 'geometry.dat'
@@ -101,31 +103,49 @@
       call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
     
       ! update defaults from input file
+      if (help) call PetscPrintf(options%comm, "  -ntimes=<1>: total ??? to run (defunct)\n", ierr)
       call PetscOptionsGetInt(options%my_prefix, '-ntimes', options%ntimes, flag, ierr)
+
+      if (help) call PetscPrintf(options%comm, "  -npasses=<1>: total timesteps to run\n", ierr)
       call PetscOptionsGetInt(options%my_prefix, '-npasses', options%npasses, flag, ierr)
-      call PetscOptionsGetInt(options%my_prefix, '-kprint', options%kprint, flag, ierr)
+
+      if (help) call PetscPrintf(options%comm, "  -kwrite=<1>: output interval in timesteps\n", ierr)
       call PetscOptionsGetInt(options%my_prefix, '-kwrite', options%kwrite, flag, ierr)
-      call PetscOptionsGetBool(options%my_prefix, '-new_simulation', options%new_simulation, flag, ierr)
+
+      if (help) call PetscPrintf(options%comm, "  -restart: start from an old simulation\n", ierr)
+      call PetscOptionsGetBool(options%my_prefix, '-restart', options%restart, flag, ierr)
+
+      if (help) call PetscPrintf(options%comm, "  -istep=<0>: initial timestep\n", ierr)
       call PetscOptionsGetInt(options%my_prefix, '-istep', options%istep, flag, ierr)
 
+      if (help) call PetscPrintf(options%comm, "  -output_file_prefix=<test_solution/>: "// &
+           "prefix for solution data output files\n", ierr)
       call PetscOptionsGetString(options%my_prefix, '-output_file_prefix', options%output_prefix, flag, ierr)
+
+      if (help) then
+         call PetscPrintf(options%comm, "  -walls_file=<geometry.dat>: filename for porescale walls \n", ierr)
+      end if
       call PetscOptionsGetString(options%my_prefix, '-walls_file', options%walls_file, flag, ierr)
+
+      if (help) call PetscPrintf(options%comm, "  -mpiio: use mpiio for i/o\n", ierr)
       call PetscOptionsGetBool(options%my_prefix, '-mpiio', options%mpiio, flag, ierr)
-      call PetscOptionsGetInt(options%my_prefix, '-walls_type', options%walls_type, flag, ierr)
-      call PetscOptionsGetInt(options%my_prefix, '-s', options%nphases, flag, ierr)
 
       if (help) call PetscPrintf(options%comm, &
-           "-flow_relaxation_mode <0>: flow relaxation as SRT=0, MRT=1\n", ierr)
+           "  -walls_type <1>: number of phases\n", ierr)
+      call PetscOptionsGetInt(options%my_prefix, '-walls_type', options%walls_type, flag, ierr)
+
+      if (help) call PetscPrintf(options%comm, &
+           "  -flow_relaxation_mode <0>: flow relaxation as SRT=0, MRT=1\n", ierr)
       call PetscOptionsGetInt(options%my_prefix, '-flow_relaxation_mode', &
            options%flow_relaxation_mode, flag, ierr)
 
       ! set the flow discretization
       if (help) call PetscPrintf(options%comm, &
-           "-nphases <1>: number of phases\n", ierr)
+           "  -nphases <1>: number of phases\n", ierr)
       call PetscOptionsGetInt(options%my_prefix,'-nphases', options%nphases,flag,ierr)
 
       if (help) call PetscPrintf(options%comm, &
-           "-flow_discretization 'd3q19': discretization type\n", ierr)
+           "  -flow_discretization 'd3q19': discretization type\n", ierr)
       call PetscOptionsGetString(options%my_prefix, '-flow_discretization', &
            name, flag, ierr)
       if (.not.flag) then
@@ -151,18 +171,19 @@
       end if
          
       ! set the tran discretization
+      options%ncomponents = 1
       if (help) call PetscPrintf(options%comm, &
-           "-ncomponents <1>: number of major components\n", ierr)
+           "  -ncomponents <1>: number of major components\n", ierr)
       call PetscOptionsGetInt(options%my_prefix,'-ncomponents', options%ncomponents, &
            flag,ierr)
 
       if (help) call PetscPrintf(options%comm, &
-           "-transport_relaxation_mode <0>: transport relaxation as SRT=0, MRT=1\n", ierr)
+           "  -transport_relaxation_mode <0>: transport relaxation as SRT=0, MRT=1\n", ierr)
       call PetscOptionsGetInt(options%my_prefix, '-transport_relaxation_mode', &
            options%transport_relaxation_mode, flag, ierr)
 
       if (help) call PetscPrintf(options%comm, &
-           "-transport_discretization 'd3q19': discretization type\n", ierr)
+           "  -transport_discretization 'd3q19': discretization type\n", ierr)
       call PetscOptionsGetString(options%my_prefix, '-transport_discretization', &
            name, flag, ierr)
 
