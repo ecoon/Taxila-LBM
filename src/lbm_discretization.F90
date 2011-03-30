@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 March 2011
 !!!       on:            16:33:56 MDT
-!!!     last modified:   28 March 2011
-!!!       at:            13:18:10 MDT
+!!!     last modified:   30 March 2011
+!!!       at:            08:40:44 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -27,6 +27,7 @@ module LBM_Discretization_module
 
   public:: DiscretizationCreate, &
        DiscretizationDestroy, &
+       DiscretizationSetType, &
        DiscretizationSetUp, &
        DiscretizationSetUpPhase
 
@@ -50,6 +51,12 @@ contains
     if (associated(disc%ci)) deallocate(disc%ci)
     if (associated(disc%weights)) deallocate(disc%weights)
   end subroutine DiscretizationDestroy
+  
+  subroutine DiscretizationSetType(disc, name)
+    type(discretization_type) disc
+    PetscInt name
+    disc%name = name
+  end subroutine DiscretizationSetType
 
   subroutine DiscretizationSetUp(disc)
     type(discretization_type) disc
