@@ -114,17 +114,17 @@
       call PetscOptionsGetInt(options%my_prefix, '-walls_type', options%walls_type, flag, ierr)
       call PetscOptionsGetInt(options%my_prefix, '-s', options%nphases, flag, ierr)
 
-      if (help) call PetscHelpPrintfDefault(options%comm, &
+      if (help) call PetscPrintf(options%comm, &
            "-flow_relaxation_mode <0>: flow relaxation as SRT=0, MRT=1\n", ierr)
       call PetscOptionsGetInt(options%my_prefix, '-flow_relaxation_mode', &
            options%flow_relaxation_mode, flag, ierr)
 
       ! set the flow discretization
-      if (help) call PetscHelpPrintfDefault(options%comm, &
+      if (help) call PetscPrintf(options%comm, &
            "-nphases <1>: number of phases\n", ierr)
       call PetscOptionsGetInt(options%my_prefix,'-nphases', options%nphases,flag,ierr)
 
-      if (help) call PetscHelpPrintfDefault(options%comm, &
+      if (help) call PetscPrintf(options%comm, &
            "-flow_discretization 'd3q19': discretization type\n", ierr)
       call PetscOptionsGetString(options%my_prefix, '-flow_discretization', &
            name, flag, ierr)
@@ -151,17 +151,17 @@
       end if
          
       ! set the tran discretization
-      if (help) call PetscHelpPrintfDefault(options%comm, &
+      if (help) call PetscPrintf(options%comm, &
            "-ncomponents <1>: number of major components\n", ierr)
       call PetscOptionsGetInt(options%my_prefix,'-ncomponents', options%ncomponents, &
            flag,ierr)
 
-      if (help) call PetscHelpPrintfDefault(options%comm, &
+      if (help) call PetscPrintf(options%comm, &
            "-transport_relaxation_mode <0>: transport relaxation as SRT=0, MRT=1\n", ierr)
       call PetscOptionsGetInt(options%my_prefix, '-transport_relaxation_mode', &
            options%transport_relaxation_mode, flag, ierr)
 
-      if (help) call PetscHelpPrintfDefault(options%comm, &
+      if (help) call PetscPrintf(options%comm, &
            "-transport_discretization 'd3q19': discretization type\n", ierr)
       call PetscOptionsGetString(options%my_prefix, '-transport_discretization', &
            name, flag, ierr)
