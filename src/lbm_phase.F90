@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            13:43:00 MDT
-!!!     last modified:   30 March 2011
-!!!       at:            17:01:07 MDT
+!!!     last modified:   31 March 2011
+!!!       at:            09:47:37 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -163,6 +163,7 @@ contains
     call PetscBagRegisterScalar(phase%bag, phase%data%mm, 1.d0, &
          'mm'//paramname, 'molecular mass', ierr)
     phase%mm => phase%data%mm
+    phase%d_k = 1.d0 - 2.d0/(3.d0*phase%mm)
 
     do lcv=1,phase%s
        write(paramname, '(I1, I1)') lcv, phase%id
