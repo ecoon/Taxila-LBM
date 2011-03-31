@@ -233,6 +233,7 @@
          call LBMStreaming(lbm%flow%distribution)
          call LBMBounceback(lbm%flow%distribution, lbm%walls_a)
 
+
          call BCApplyFlow(lbm%bc, lbm%walls_a, lbm%flow%distribution)
          call FlowUpdateMoments(lbm%flow, lbm%walls_a)
 
@@ -351,5 +352,7 @@
          INSERT_VALUES, lbm%flow%distribution%fi, ierr)
     return
   end subroutine LBMInitializeStateRestarted
+
+
 end module LBM_module
 

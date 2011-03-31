@@ -65,9 +65,9 @@ contains
        do m=1,dist%s
           ue(m,:) = up + forces(m,:,i,j,k)/(rho(m,i,j,k)*mmot(m)+eps)
        end do
+       
        usqr = sum(ue*ue, 2)
        feq(:,0,i,j,k) = rho(:,i,j,k)*(alpha_0 + alpha_1*usqr)
-
        do n=1,dist%b
        do m=1,dist%s
           tmp = sum(dist%disc%ci(n,:)*ue(m,:), 1)
