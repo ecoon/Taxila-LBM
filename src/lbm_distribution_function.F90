@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            14:06:07 MDT
-!!!     last modified:   30 March 2011
-!!!       at:            11:04:18 MDT
+!!!     last modified:   31 March 2011
+!!!       at:            11:29:52 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -305,7 +305,7 @@ contains
        if (walls(i,j,k).eq.0) then
           do m=1,distribution%s
           do d=1,distribution%info%ndims
-             u(m,d,i,j,k) = sum(dble(distribution%disc%ci(:,d))*fi(m,:,i,j,k),1)
+             u(m,d,i,j,k) = sum(fi(m,:,i,j,k)*distribution%disc%ci(:,d),1)
           end do
           end do
        else

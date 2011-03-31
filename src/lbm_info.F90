@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   30 March 2011
-!!!       at:            10:32:26 MDT
+!!!     last modified:   31 March 2011
+!!!       at:            11:04:51 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -161,12 +161,12 @@ contains
 
     ! -- grid perioidicty
     call PetscBagRegisterBool(info%bag, info%data%periodic(X_DIRECTION), PETSC_FALSE, &
-         'bc_x_periodic', 'x-direction periodic?', ierr)
+         'bc_periodic_x', 'x-direction periodic?', ierr)
     call PetscBagRegisterBool(info%bag, info%data%periodic(Y_DIRECTION), PETSC_FALSE, &
-         'bc_y_periodic', 'y-direction periodic?', ierr)
+         'bc_periodic_y', 'y-direction periodic?', ierr)
     if (info%ndims > 2) then
        call PetscBagRegisterBool(info%bag, info%data%periodic(Z_DIRECTION), PETSC_FALSE, &
-            'bc_z_periodic', 'z-direction periodic?', ierr)
+            'bc_periodic_z', 'z-direction periodic?', ierr)
     end if
     info%periodic => info%data%periodic
 
