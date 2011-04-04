@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
-!!!     last modified:   17 March 2011
-!!!       at:            09:59:14 MDT
+!!!     last modified:   29 March 2011
+!!!       at:            18:04:19 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -16,56 +16,72 @@
 #include "finclude/petscvecdef.h"
 #include "finclude/petscdmdef.h"
 
-  subroutine initialize_state(fi, rho, u, walls, info, constants)
+  subroutine initialize_state(fi, rho, u, walls, dist, phases, options)
     use petsc
-    use LBM_Info_module
-    use LBM_Constants_module
+    use LBM_Distribution_Function_module
+    use LBM_Phase_module
+    use LBM_Options_module
     use LBM_Equilibrium_module
     implicit none
 
     ! input variables
-    type(info_type) info
-    type(constants_type) constants
-    PetscScalar,dimension(1:info%s,0:info%flow_disc%b, &
-         info%gxs:info%gxe, &
-         info%gys:info%gye, &
-         info%gzs:info%gze):: fi
-    PetscScalar,dimension(1:info%s, &
-         info%gxs:info%gxe, &
-         info%gys:info%gye, &
-         info%gzs:info%gze):: rho
-    PetscScalar,dimension(1:info%s, 1:info%ndims, &
-         info%gxs:info%gxe, &
-         info%gys:info%gye, &
-         info%gzs:info%gze):: u
-    PetscScalar,dimension(info%gxs:info%gxe, &
-         info%gys:info%gye, &
-         info%gzs:info%gze):: walls
+    type(distribution_type) dist
+    type(phase_type) phases(dist%s)
+    type(options_type) options
+    PetscScalar,dimension(dist%s,0:dist%b, &
+         dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, &
+         dist%info%gzs:dist%info%gze):: fi
+    PetscScalar,dimension(dist%s, &
+         dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, &
+         dist%info%gzs:dist%info%gze):: rho
+    PetscScalar,dimension(dist%s, 1:dist%info%ndims, &
+         dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, &
+         dist%info%gzs:dist%info%gze):: u
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, &
+         dist%info%gzs:dist%info%gze):: walls
 
     ! local variables
     PetscErrorCode ierr
     PetscBool flag
-    logical,dimension(info%gxs:info%gxe, &
-         info%gys:info%gye, &
-         info%gzs:info%gze):: bound
-    PetscScalar,dimension(1:info%s):: rho1, rho2         ! left and right fluid densities?
+    logical,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, &
+         dist%info%gzs:dist%info%gze):: bound
+    PetscScalar,dimension(dist%s):: rho1, rho2         ! left and right fluid densities?
     PetscInt nmax
     PetscBool flushx, flushy, flushz
+    PetscScalar,dimension(dist%s, 1:dist%info%ndims, &
+         dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, &
+         dist%info%gzs:dist%info%gze):: forces
 
     PetscInt i,j,k,m ! local values
+    PetscBool help
 
     ! input data
-    nmax = constants%s
-    call PetscOptionsGetRealArray(info%options_prefix, '-rho1', rho1, nmax, flag, ierr)
-    nmax = constants%s
-    call PetscOptionsGetRealArray(info%options_prefix, '-rho2', rho2, nmax, flag, ierr)
+    call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
+
+    rho1 = 0.d0
+    if (help) call PetscPrintf(options%comm, "-rho1=<0,0>: ???", ierr)
+    nmax = dist%s
+    call PetscOptionsGetRealArray(options%my_prefix, '-rho1', rho1, nmax, flag, ierr)
+
+    rho2 = 0.d0
+    if (help) call PetscPrintf(options%comm, "-rho2=<0,0>: ???", ierr)
+    nmax = dist%s
+    call PetscOptionsGetRealArray(options%my_prefix, '-rho2', rho2, nmax, flag, ierr)
     
     flushz = .TRUE.
     flushy = .FALSE.
     flushx = .FALSE.
-    call PetscOptionsGetBool(info%options_prefix, '-flush_direction_x', flushx, flag, ierr)
-    call PetscOptionsGetBool(info%options_prefix, '-flush_direction_y', flushy, flag, ierr)
-    call PetscOptionsGetBool(info%options_prefix, '-flush_direction_z', flushz, flag, ierr)
+    if (help) call PetscPrintf(options%comm, "-flush_direction_{xyz}: set the direction"// &
+         " of flushing", ierr)
+    call PetscOptionsGetBool(options%my_prefix, '-flush_direction_x', flushx, flag, ierr)
+    call PetscOptionsGetBool(options%my_prefix, '-flush_direction_y', flushy, flag, ierr)
+    call PetscOptionsGetBool(options%my_prefix, '-flush_direction_z', flushz, flag, ierr)
     
     ! initialize state
     fi=0.0
@@ -74,27 +90,27 @@
     ! flushing experiement 
     if (flushx) then
        bound=.false.
-       do i=info%xs,info%xe
-          do j=info%ys,info%ye
-             do k=info%zs,info%ze
+       do i=dist%info%xs,dist%info%xe
+          do j=dist%info%ys,dist%info%ye
+             do k=dist%info%zs,dist%info%ze
                 if(i.le.10) bound(i,j,k)=.true.
              enddo
           enddo
        enddo
     else if (flushy) then
        bound=.false.
-       do i=info%xs,info%xe
-          do j=info%ys,info%ye
-             do k=info%zs,info%ze
+       do i=dist%info%xs,dist%info%xe
+          do j=dist%info%ys,dist%info%ye
+             do k=dist%info%zs,dist%info%ze
                 if(j.le.10) bound(i,j,k)=.true.
              enddo
           enddo
        enddo
     else if (flushz) then
        bound=.false.
-       do i=info%xs,info%xe
-          do j=info%ys,info%ye
-             do k=info%zs,info%ze
+       do i=dist%info%xs,dist%info%xe
+          do j=dist%info%ys,dist%info%ye
+             do k=dist%info%zs,dist%info%ze
                 if(k.le.10) bound(i,j,k)=.true.
              enddo
           enddo
@@ -116,14 +132,7 @@
     end where
     
     ! set state at equilibrium       
-    do i=info%xs,info%xe
-       do j=info%ys,info%ye
-          do k=info%zs,info%ze
-             call LBMEquilf(fi(:,:,i,j,k),rho(:,i,j,k),u(:,:,i,j,k), &
-                  info, constants)
-          enddo
-       enddo
-    enddo
-    
+    forces = 0.d0
+    call LBMEquilfFlow(fi, rho, u, forces, walls, phases, dist)
     return
   end subroutine initialize_state

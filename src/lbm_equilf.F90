@@ -4,91 +4,134 @@
 #include "finclude/petscdmdef.h"
 
 module LBM_Equilibrium_module
-  use LBM_Info_module
-  use LBM_Constants_module
+  use LBM_Phase_module
+  use LBM_Distribution_Function_module
   implicit none
   private
 #include "lbm_definitions.h"
-  public :: LBMEquilf
+  public :: LBMEquilfFlow
 
 contains
-  subroutine LBMEquilf(feq, rho, ue, info, constants)
-    use petsc
-    type(info_type) info
-    type(constants_type) constants
-    PetscScalar,dimension(1:info%s,0:info%flow_disc%b)::feq
-    PetscScalar,dimension(1:info%s):: rho
-    PetscScalar,dimension(1:info%s,1:info%ndims):: ue
-    PetscErrorCode ierr
+  subroutine LBMEquilfFlow(feq, rho, u, forces, walls, phase, dist)
+    type(distribution_type) dist
+    type(phase_type) phase(1:dist%s)
+
+    PetscScalar,dimension(dist%s,0:dist%b,dist%info%gxyzl):: feq
+    PetscScalar,dimension(dist%s,dist%info%gxyzl):: rho
+    PetscScalar,dimension(dist%s,dist%info%ndims,dist%info%gxyzl):: u,forces
+    PetscScalar,dimension(dist%info%gxyzl):: walls
+
+    select case(dist%info%ndims)
+    case(3)
+       call LBMEquilfFlowD3(feq, rho, u, forces, walls, phase, dist)
+    case(2)
+       call LBMEquilfFlowD2(feq, rho, u, forces, walls, phase, dist)
+    end select
+  end subroutine LBMEquilfFlow
+
+  subroutine LBMEquilfFlowD3(feq, rho, u, forces, walls, phase, dist)
+    type(distribution_type) dist
+    type(phase_type) phase(1:dist%s)
+
+    PetscScalar,dimension(1:dist%s,0:dist%b, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: feq
+    PetscScalar,dimension(1:dist%s,dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: rho
+    PetscScalar,dimension(1:dist%s,1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: u,forces
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
+
+    PetscInt i,j,k,d,n,m
+    PetscScalar,parameter:: eps=1.e-15 ! slightly larger than machine epsilon
+    PetscScalar,dimension(1:dist%s) :: mmot, mm, alpha_0, alpha_1, usqr
+    PetscScalar :: up(1:dist%info%ndims)
+    PetscScalar :: ue(1:dist%s,1:dist%info%ndims)
+    PetscScalar tmp
+    do m=1,dist%s
+       mmot(m) = phase(m)%mm/phase(m)%tau
+       mm(m) = phase(m)%mm
+       alpha_0(m) = phase(m)%alpha_0
+       alpha_1(m) = phase(m)%alpha_1
+    end do
+
+    do k=dist%info%zs,dist%info%ze
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+    if (walls(i,j,k).eq.0) then
+       do d=1,dist%info%ndims
+          up(d) = sum(u(:,d,i,j,k)*mmot,1)/sum(rho(:,i,j,k)*mmot,1)
+       end do
+       do m=1,dist%s
+          ue(m,:) = up + forces(m,:,i,j,k)/(rho(m,i,j,k)*mmot(m)+eps)
+       end do
+       
+       usqr = sum(ue*ue, 2)
+       feq(:,0,i,j,k) = rho(:,i,j,k)*(alpha_0 + alpha_1*usqr)
+       do n=1,dist%b
+       do m=1,dist%s
+          tmp = sum(dist%disc%ci(n,:)*ue(m,:), 1)
+          feq(m,n,i,j,k)= dist%disc%weights(n)*rho(m,i,j,k)* &
+               (1.5d0*(1.d0-phase(m)%d_k) + tmp/phase(m)%c_s2 &
+               + tmp*tmp/(2.d0*phase(m)%c_s2*phase(m)%c_s2) &
+               - usqr(m)/(2.d0*phase(m)%c_s2))
+       end do
+       end do
+    end if
+    end do
+    end do
+    end do
+  end subroutine LBMEquilfFlowD3
+
+  subroutine LBMEquilfFlowD2(feq, rho, u, forces, walls, phase, dist)
+    type(distribution_type) dist
+    type(phase_type) phase(1:dist%s)
+
+    PetscScalar,dimension(1:dist%s,0:dist%b, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: feq
+    PetscScalar,dimension(1:dist%s,dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: rho
+    PetscScalar,dimension(1:dist%s,1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: u,forces
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: walls
+
+    PetscInt i,j,d,n,m
+    PetscScalar,parameter:: eps=1.e-15 ! slightly larger than machine epsilon
+    PetscScalar,dimension(1:dist%s) :: mmot, mm, alpha_0, alpha_1, usqr
+    PetscScalar :: up(1:dist%info%ndims)
+    PetscScalar :: ue(1:dist%s,1:dist%info%ndims)
+    PetscScalar tmp
+    do m=1,dist%s
+       mmot(m) = phase(m)%mm/phase(m)%tau
+       mm(m) = phase(m)%mm
+       alpha_0(m) = phase(m)%alpha_0
+       alpha_1(m) = phase(m)%alpha_1
+    end do
     
-    PetscScalar usqr(1:info%s),tmp(1:info%s)
-    PetscInt i,m
-    PetscScalar,dimension(1:info%s):: jx
-    PetscScalar,dimension(1:info%s):: jy
-    PetscScalar,dimension(1:info%s):: jz
-    PetscScalar,dimension(1:info%s):: jsqr
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+    if (walls(i,j).eq.0) then
+       do d=1,dist%info%ndims
+          up(d) = sum(u(:,d,i,j)*mmot,1)/sum(rho(:,i,j)*mmot,1)
+       end do
+       do m=1,dist%s
+          ue(m,:) = up + forces(m,:,i,j)/(rho(m,i,j)*mmot(m)+eps)
+       end do
+       usqr = sum(ue*ue, 2)
+       feq(:,0,i,j) = rho(:,i,j)*(alpha_0 + alpha_1*usqr)
 
-    if(info%MRT) then
-     if(info%ndims.eq.3) then
-       
-
-       
-!! It appears that ue is the equilibrium velocity and I need u = sum(fi,ci)
-!!$       jx(:) = ue(:,1)
-!!$       jy(:) = ue(:,2)
-!!$       jz(:) = ue(:,3)
-       jx(:) = rho(:)*ue(:,1)
-       jy(:) = rho(:)*ue(:,2)
-       jz(:) = rho(:)*ue(:,3)
-       jsqr(:) = jx(:)**2 + jy(:)**2 + jz(:)**2
-
-       
-       ! Assumes rho_0 = 1.0 from d'Humieres et al. (2002) and
-       ! Pan et al. (2006).  I am following Pan et al. (2006) and
-       ! I have chosen to write out meq explicitly because there 
-       ! are free parameters in the derivation by d'Humieres. 
-       feq(:, 0) = rho(:)
-       feq(:, 1) = -11.d0*rho(:)+19.d0*jsqr(:)
-       !feq(:, 2) = 0.d0*rho(:)-475.d0/63.d0*jsqr(:)
-       feq(:, 2) = 3.d0*rho(:)-11.d0/2.d0*jsqr(:)
-       feq(:, 3) = jx(:)
-       feq(:, 4) = -2.d0/3.d0*jx(:)
-       feq(:, 5) = jy(:)
-       feq(:, 6) = -2.d0/3.d0*jy(:)
-       feq(:, 7) = jz(:)
-       feq(:, 8) = -2.d0/3.d0*jz(:)
-       feq(:, 9) = 2.d0*jx(:)**2-(jy(:)**2+jz(:)**2)
-       !feq(:,10) = 0.d0
-       feq(:,10) = -1.d0/2.d0*feq(:,9)
-       feq(:,11) = jy(:)**2-jz(:)**2
-       !feq(:,12) = 0.d0 
-       feq(:,12) = -1.d0/2.d0*feq(:,11)
-       feq(:,13) = jx(:)*jy(:)
-       feq(:,14) = jy(:)*jz(:)
-       feq(:,15) = jx(:)*jz(:)
-       feq(:,16) = 0.d0
-       feq(:,17) = 0.d0
-       feq(:,18) = 0.d0  
-
-     endif
-     ! Need to work on the 2D MRT
-
-    else    
-
-      usqr = SUM(ue*ue, 2)
-      feq(:,0) = rho*(constants%alpha_0 + constants%alpha_1*usqr)
-
-      do i=1,info%flow_disc%b
-        do m=1,info%s
-           tmp(m) = SUM(info%flow_disc%ci(i,:)*ue(m,:), 1)
-        end do
-        feq(:,i)= info%flow_disc%weights(i)*rho* &
-            (1.5d0*(1.d0-constants%d_k) + tmp/constants%c_s2 &
-            + tmp*tmp/(2.d0*constants%c_s2*constants%c_s2) &
-            - usqr/(2.d0*constants%c_s2))
-      end do
-    endif
-
-  end subroutine LBMEquilf
-
+       do n=1,dist%b
+       do m=1,dist%s
+          tmp = sum(dist%disc%ci(n,:)*ue(m,:), 1)
+          feq(m,n,i,j)= dist%disc%weights(n)*rho(m,i,j)* &
+               (1.5d0*(1.d0-phase(m)%d_k) + tmp/phase(m)%c_s2 &
+               + tmp*tmp/(2.d0*phase(m)%c_s2*phase(m)%c_s2) &
+               - usqr(m)/(2.d0*phase(m)%c_s2))
+       end do
+       end do
+    end if
+    end do
+    end do
+  end subroutine LBMEquilfFlowD2
 end module LBM_Equilibrium_module
