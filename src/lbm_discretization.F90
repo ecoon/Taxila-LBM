@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 March 2011
 !!!       on:            16:33:56 MDT
-!!!     last modified:   30 March 2011
-!!!       at:            08:40:44 MDT
+!!!     last modified:   04 April 2011
+!!!       at:            12:11:45 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -50,6 +50,8 @@ contains
 
     if (associated(disc%ci)) deallocate(disc%ci)
     if (associated(disc%weights)) deallocate(disc%weights)
+    if (associated(disc%mt_mrt)) deallocate(disc%mt_mrt)
+    if (associated(disc%mmt_mrt)) deallocate(disc%mmt_mrt)
   end subroutine DiscretizationDestroy
   
   subroutine DiscretizationSetType(disc, name)

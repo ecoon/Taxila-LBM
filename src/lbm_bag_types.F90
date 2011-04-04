@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            16:59:38 MDT
-!!!     last modified:   30 March 2011
-!!!       at:            10:35:35 MDT
+!!!     last modified:   04 April 2011
+!!!       at:            12:25:25 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -56,6 +56,5 @@ module LBM_Relaxation_Bag_Data_type_module
   
   type, public :: relaxation_bag_data_type
      PetscScalar tau ! relaxation time
-     PetscScalar,dimension(NMAX_DIRECTIONS) :: tau_mrt ! components of S vector for mrt
   end type relaxation_bag_data_type
 end module LBM_Relaxation_Bag_Data_type_module

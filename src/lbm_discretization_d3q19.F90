@@ -59,10 +59,8 @@ contains
     disc%b = 18
     allocate(disc%ci(0:disc%b,1:disc%ndims))
     allocate(disc%weights(0:disc%b))
-    allocate(disc%m(0:disc%b,0:disc%b))                 ! transformation matrix
-    allocate(disc%mt(0:disc%b,0:disc%b))                ! transpose of M
-    allocate(disc%mmt(0:disc%b))                        ! diagonal M dot MT matrix 
-    !allocate(disc%S(0:disc%b))                         ! diagonal relaxation matrix
+    allocate(disc%mt_mrt(0:disc%b,0:disc%b))                ! transpose of M
+    allocate(disc%mmt_mrt(0:disc%b))                        ! diagonal M dot MT matrix 
 
     disc%ci(:,X_DIRECTION) = (/ 0, 1, 0,-1, 0, 0, 0, 1,-1,-1, &
          1, 1,-1,-1, 1, 0, 0, 0, 0/)
@@ -75,60 +73,63 @@ contains
        1.d0/18.d0, 1.d0/18.d0, 1.d0/18.d0, 1.d0/18.d0, 1.d0/18.d0, 1.d0/18.d0, &
        1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, &
        1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0/)
-
-    disc%m(:, 0) = (/  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1 /)
-    disc%m(:, 1) = (/-30,-11,-11,-11,-11,-11,-11,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8 /)
-    disc%m(:, 2) = (/ 12, -4, -4, -4, -4, -4, -4,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1 /)
-    disc%m(:, 3) = (/  0,  1,  0, -1,  0,  0,  0,  1, -1, -1,  1,  1, -1, -1,  1,  0,  0,  0,  0 /)
-    disc%m(:, 4) = (/  0, -4,  0,  4,  0,  0,  0,  1, -1, -1,  1,  1, -1, -1,  1,  0,  0,  0,  0 /)
-    disc%m(:, 5) = (/  0,  0,  1,  0, -1,  0,  0,  1,  1, -1, -1,  0,  0,  0,  0,  1, -1, -1,  1 /)
-    disc%m(:, 6) = (/  0,  0, -4,  0,  4,  0,  0,  1,  1, -1, -1,  0,  0,  0,  0,  1, -1, -1,  1 /)
-    disc%m(:, 7) = (/  0,  0,  0,  0,  0,  1, -1,  0,  0,  0,  0,  1,  1, -1, -1,  1,  1, -1, -1 /)
-    disc%m(:, 8) = (/  0,  0,  0,  0,  0, -4,  4,  0,  0,  0,  0,  1,  1, -1, -1,  1,  1, -1, -1 /)
-    disc%m(:, 9) = (/  0,  2, -1,  2, -1, -1, -1,  1,  1,  1,  1,  1,  1,  1,  1, -2, -2, -2, -2 /)
-    disc%m(:,10) = (/  0, -4,  2, -4,  2,  2,  2,  1,  1,  1,  1,  1,  1,  1,  1, -2, -2, -2, -2 /)
-    disc%m(:,11) = (/  0,  0,  1,  0,  1, -1, -1,  1,  1,  1,  1, -1, -1, -1, -1,  0,  0,  0,  0 /)
-    disc%m(:,12) = (/  0,  0, -2,  0, -2,  2,  2,  1,  1,  1,  1, -1, -1, -1, -1,  0,  0,  0,  0 /)
-    disc%m(:,13) = (/  0,  0,  0,  0,  0,  0,  0,  1, -1,  1, -1,  0,  0,  0,  0,  0,  0,  0,  0 /)
-    disc%m(:,14) = (/  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1, -1,  1, -1 /)
-    disc%m(:,15) = (/  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1, -1,  1, -1,  0,  0,  0,  0 /)
-    disc%m(:,16) = (/  0,  0,  0,  0,  0,  0,  0,  1, -1, -1,  1, -1,  1,  1, -1,  0,  0,  0,  0 /)
-    disc%m(:,17) = (/  0,  0,  0,  0,  0,  0,  0, -1, -1,  1,  1,  0,  0,  0,  0,  1, -1, -1,  1 /)
-    disc%m(:,18) = (/  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1, -1, -1, -1, -1,  1,  1 /)
-
-    disc%mt(:, 0) = (/ 1,-30, 12,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 /) 
-    disc%mt(:, 1) = (/ 1,-11, -4,  1, -4,  0,  0,  0,  0,  2, -4,  0,  0,  0,  0,  0,  0,  0,  0 /)
-    disc%mt(:, 2) = (/ 1,-11, -4,  0,  0,  1, -4,  0,  0, -1,  2,  1, -2,  0,  0,  0,  0,  0,  0 /)
-    disc%mt(:, 3) = (/ 1,-11, -4, -1,  4,  0,  0,  0,  0,  2, -4,  0,  0,  0,  0,  0,  0,  0,  0 /)
-    disc%mt(:, 4) = (/ 1,-11, -4,  0,  0, -1,  4,  0,  0, -1,  2,  1, -2,  0,  0,  0,  0,  0,  0 /)
-    disc%mt(:, 5) = (/ 1,-11, -4,  0,  0,  0,  0,  1, -4, -1,  2, -1,  2,  0,  0,  0,  0,  0,  0 /)
-    disc%mt(:, 6) = (/ 1,-11, -4,  0,  0,  0,  0, -1,  4, -1,  2, -1,  2,  0,  0,  0,  0,  0,  0 /)
-    disc%mt(:, 7) = (/ 1,  8,  1,  1,  1,  1,  1,  0,  0,  1,  1,  1,  1,  1,  0,  0,  1, -1,  0 /)
-    disc%mt(:, 8) = (/ 1,  8,  1, -1, -1,  1,  1,  0,  0,  1,  1,  1,  1, -1,  0,  0, -1, -1,  0 /)
-    disc%mt(:, 9) = (/ 1,  8,  1, -1, -1, -1, -1,  0,  0,  1,  1,  1,  1,  1,  0,  0, -1,  1,  0 /) 
-    disc%mt(:,10) = (/ 1,  8,  1,  1,  1, -1, -1,  0,  0,  1,  1,  1,  1, -1,  0,  0,  1,  1,  0 /)
-    disc%mt(:,11) = (/ 1,  8,  1,  1,  1,  0,  0,  1,  1,  1,  1, -1, -1,  0,  0,  1, -1,  0,  1 /)
-    disc%mt(:,12) = (/ 1,  8,  1, -1, -1,  0,  0,  1,  1,  1,  1, -1, -1,  0,  0, -1,  1,  0,  1 /)
-    disc%mt(:,13) = (/ 1,  8,  1, -1, -1,  0,  0, -1, -1,  1,  1, -1, -1,  0,  0,  1,  1,  0, -1 /)
-    disc%mt(:,14) = (/ 1,  8,  1,  1,  1,  0,  0, -1, -1,  1,  1, -1, -1,  0,  0, -1, -1,  0, -1 /)
-    disc%mt(:,15) = (/ 1,  8,  1,  0,  0,  1,  1,  1,  1, -2, -2,  0,  0,  0,  1,  0,  0,  1, -1 /)
-    disc%mt(:,16) = (/ 1,  8,  1,  0,  0, -1, -1,  1,  1, -2, -2,  0,  0,  0, -1,  0,  0, -1, -1 /)
-    disc%mt(:,17) = (/ 1,  8,  1,  0,  0, -1, -1, -1, -1, -2, -2,  0,  0,  0,  1,  0,  0, -1,  1 /)
-    disc%mt(:,18) = (/ 1,  8,  1,  0,  0,  1,  1, -1, -1, -2, -2,  0,  0,  0, -1,  0,  0,  1,  1 /)
-
-    disc%mmt = (/ 19, 2394, 252, 10, 40, 10, 40, 10, 40, 36, 72, 12, 24, 4, 4, 4, 8, 8, 8 /) 
-
-    !disc%S = (/ /)
     
+    disc%mt_mrt(:, 0) = (/  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1 /)
+    disc%mt_mrt(:, 1) = (/-30,-11,-11,-11,-11,-11,-11,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8 /)
+    disc%mt_mrt(:, 2) = (/ 12, -4, -4, -4, -4, -4, -4,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1 /)
+    disc%mt_mrt(:, 3) = disc%ci(:,X_DIRECTION)
+    disc%mt_mrt(:, 4) = (/  0, -4,  0,  4,  0,  0,  0,  1, -1, -1,  1,  1, -1, -1,  1,  0,  0,  0,  0 /)
+    disc%mt_mrt(:, 5) = disc%ci(:,Y_DIRECTION)
+    disc%mt_mrt(:, 6) = (/  0,  0, -4,  0,  4,  0,  0,  1,  1, -1, -1,  0,  0,  0,  0,  1, -1, -1,  1 /)
+    disc%mt_mrt(:, 7) = disc%ci(:,Z_DIRECTION)
+    disc%mt_mrt(:, 8) = (/  0,  0,  0,  0,  0, -4,  4,  0,  0,  0,  0,  1,  1, -1, -1,  1,  1, -1, -1 /)
+    disc%mt_mrt(:, 9) = (/  0,  2, -1,  2, -1, -1, -1,  1,  1,  1,  1,  1,  1,  1,  1, -2, -2, -2, -2 /)
+    disc%mt_mrt(:,10) = (/  0, -4,  2, -4,  2,  2,  2,  1,  1,  1,  1,  1,  1,  1,  1, -2, -2, -2, -2 /)
+    disc%mt_mrt(:,11) = (/  0,  0,  1,  0,  1, -1, -1,  1,  1,  1,  1, -1, -1, -1, -1,  0,  0,  0,  0 /)
+    disc%mt_mrt(:,12) = (/  0,  0, -2,  0, -2,  2,  2,  1,  1,  1,  1, -1, -1, -1, -1,  0,  0,  0,  0 /)
+    disc%mt_mrt(:,13) = (/  0,  0,  0,  0,  0,  0,  0,  1, -1,  1, -1,  0,  0,  0,  0,  0,  0,  0,  0 /)
+    disc%mt_mrt(:,14) = (/  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1, -1,  1, -1 /)
+    disc%mt_mrt(:,15) = (/  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1, -1,  1, -1,  0,  0,  0,  0 /)
+    disc%mt_mrt(:,16) = (/  0,  0,  0,  0,  0,  0,  0,  1, -1, -1,  1, -1,  1,  1, -1,  0,  0,  0,  0 /)
+    disc%mt_mrt(:,17) = (/  0,  0,  0,  0,  0,  0,  0, -1, -1,  1,  1,  0,  0,  0,  0,  1, -1, -1,  1 /)
+    disc%mt_mrt(:,18) = (/  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1, -1, -1, -1, -1,  1,  1 /)
+
+    disc%mmt_mrt = (/ 19, 2394, 252, 10, 40, 10, 40, 10, 40, 36, 72, 12, 24, 4, 4, 4, 8, 8, 8 /) 
   end subroutine DiscretizationSetup_D3Q19
 
   subroutine DiscretizationSetupPhase_D3Q19(disc, phase)
     use LBM_Phase_module
     type(discretization_type) disc
     type(phase_type) phase
+    PetscScalar oneontau
     
+    oneontau = 1.d0/phase%relax%tau
     phase%alpha_0 = phase%d_k
     phase%alpha_1 = -1.d0/2.d0
+
+
+    if (phase%relax%mode .eq. RELAXATION_MODE_MRT) then
+       !! Curently following the code Qinjun gave me.
+       phase%relax%tau_mrt(0) = oneontau
+       phase%relax%tau_mrt(1) = oneontau
+       phase%relax%tau_mrt(2) = oneontau
+       phase%relax%tau_mrt(3) = oneontau  ! 0.d0
+       phase%relax%tau_mrt(4) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
+       phase%relax%tau_mrt(5) = oneontau  ! 0.d0
+       phase%relax%tau_mrt(6) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
+       phase%relax%tau_mrt(7) = oneontau  !0.d0
+       phase%relax%tau_mrt(8) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
+       phase%relax%tau_mrt(9) = oneontau
+       phase%relax%tau_mrt(10) = oneontau
+       phase%relax%tau_mrt(11) = oneontau
+       phase%relax%tau_mrt(12) = oneontau
+       phase%relax%tau_mrt(13) = oneontau
+       phase%relax%tau_mrt(14) = oneontau
+       phase%relax%tau_mrt(15) = oneontau
+       phase%relax%tau_mrt(16) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
+       phase%relax%tau_mrt(17) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
+       phase%relax%tau_mrt(18) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
+    end if
   end subroutine DiscretizationSetupPhase_D3Q19
 end module LBM_Discretization_D3Q19_module
 
