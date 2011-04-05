@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            13:43:00 MDT
-!!!     last modified:   31 March 2011
-!!!       at:            09:47:37 MDT
+!!!     last modified:   05 April 2011
+!!!       at:            08:46:39 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -153,7 +153,7 @@ contains
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
     sizeofdata = (3+phase%s)*sizeofscalar
     call PetscBagCreate(phase%comm, sizeofdata, phase%bag, ierr)
-    call PetscBagSetName(phase%bag, TRIM(options%my_prefix)//phase%name, "", ierr)
+!    call PetscBagSetName(phase%bag, TRIM(options%my_prefix)//phase%name, "", ierr)
     call PetscBagGetData(phase%bag, phase%data, ierr)
 
     ! register data

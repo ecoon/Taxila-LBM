@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            15:15:25 MDT
-!!!     last modified:   04 April 2011
-!!!       at:            12:27:15 MDT
+!!!     last modified:   05 April 2011
+!!!       at:            08:46:51 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -124,7 +124,7 @@ contains
          'tau'//paramname, 'relaxation time', ierr)
     relax%tau => relax%data%tau
 
-    call PetscBagSetName(relax%bag, TRIM(options%my_prefix)//relax%name, "", ierr)
+!    call PetscBagSetName(relax%bag, TRIM(options%my_prefix)//relax%name, "", ierr)
   end subroutine RelaxationSetFromOptions
 end module LBM_Relaxation_module
 
