@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            16:59:38 MDT
-!!!     last modified:   04 April 2011
-!!!       at:            12:25:25 MDT
+!!!     last modified:   05 April 2011
+!!!       at:            08:35:17 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -33,7 +33,7 @@ module LBM_Component_Bag_Data_type_module
 
   ! physical parameters for a chemical component
   type, public :: component_bag_data_type
-     ! ??? 
+     PetscScalar reactivity ! this is crap, but Porter's gfortran doesn't like empty types
   end type component_bag_data_type
 end module LBM_Component_Bag_Data_type_module
 
