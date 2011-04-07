@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            17:30:22 MST
-!!!     last modified:   29 March 2011
-!!!       at:            18:07:26 MDT
+!!!     last modified:   07 April 2011
+!!!       at:            15:16:38 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -189,47 +189,48 @@
     endif
 
     ! get average values on minus edge
-    if (bc_flags(BOUNDARY_ZM).eq.BC_FLUX) then
-       flux_zm = .TRUE.
-       ! check if poiseuille flux
-       call PetscOptionsGetBool(options%my_prefix,'-bc_flux_zm_poiseuille', &
-            poise_zm, flag, ierr)
-       call PetscOptionsGetReal(options%my_prefix,'-bc_flux_zm_avg', zm3_ave, &
-            flag, ierr)
-       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
-        
-    else if (bc_flags(BOUNDARY_ZM).eq.BC_PRESSURE) then
-       pressure_zm = .TRUE.
-       do m=1,dist%s
-          call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_zm_phase'//char(m+48),&
-               zm3_ave_p(m), flag, ierr)
-          if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
-               '-bc_pressure_zm', zm3_ave_p(1), flag, ierr)
+    if (dist%info%ndims > 2) then
+       if (bc_flags(BOUNDARY_ZM).eq.BC_FLUX) then
+          flux_zm = .TRUE.
+          ! check if poiseuille flux
+          call PetscOptionsGetBool(options%my_prefix,'-bc_flux_zm_poiseuille', &
+               poise_zm, flag, ierr)
+          call PetscOptionsGetReal(options%my_prefix,'-bc_flux_zm_avg', zm3_ave, &
+               flag, ierr)
           if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
-       end do
-    endif
 
-    ! get average values on minus edge
-    if (bc_flags(BOUNDARY_ZP).eq.BC_FLUX) then
-       flux_zp = .TRUE.
-       ! check if poiseuille flux
-       call PetscOptionsGetBool(options%my_prefix,'-bc_flux_zp_poiseuille', &
-            poise_zp, flag, ierr)
-       call PetscOptionsGetReal(options%my_prefix,'-bc_flux_zp_avg', zp3_ave, &
-            flag, ierr)
-       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
-        
-    else if (bc_flags(BOUNDARY_ZP).eq.BC_PRESSURE) then
-       pressure_zp = .TRUE.
-       do m=1,dist%s
-          call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_zp_phase'//char(m+48),&
-               zp3_ave_p(m), flag, ierr)
-          if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
-               '-bc_pressure_zp', zp3_ave_p(1), flag, ierr)
+       else if (bc_flags(BOUNDARY_ZM).eq.BC_PRESSURE) then
+          pressure_zm = .TRUE.
+          do m=1,dist%s
+             call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_zm_phase'//char(m+48),&
+                  zm3_ave_p(m), flag, ierr)
+             if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
+                  '-bc_pressure_zm', zm3_ave_p(1), flag, ierr)
+             if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+          end do
+       endif
+
+       ! get average values on minus edge
+       if (bc_flags(BOUNDARY_ZP).eq.BC_FLUX) then
+          flux_zp = .TRUE.
+          ! check if poiseuille flux
+          call PetscOptionsGetBool(options%my_prefix,'-bc_flux_zp_poiseuille', &
+               poise_zp, flag, ierr)
+          call PetscOptionsGetReal(options%my_prefix,'-bc_flux_zp_avg', zp3_ave, &
+               flag, ierr)
           if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
-       end do
-    endif
 
+       else if (bc_flags(BOUNDARY_ZP).eq.BC_PRESSURE) then
+          pressure_zp = .TRUE.
+          do m=1,dist%s
+             call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_zp_phase'//char(m+48),&
+                  zp3_ave_p(m), flag, ierr)
+             if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
+                  '-bc_pressure_zp', zp3_ave_p(1), flag, ierr)
+             if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+          end do
+       endif
+    end if
 
 ! --- xm boundary
     if (dist%info%xs.eq.1) then
@@ -312,41 +313,43 @@
     end if
 
 ! --- zm boundary
-    if (dist%info%zs.eq.1) then
-       zm_bcvals = 0.0        ! zero out, setting x and y fluxes on z boundary =0
-       if (pressure_zm) then
-          do m=1,dist%s
-             zm_bcvals(m,:,:) = zm3_ave_p(m)
-          end do
-       else if (poise_zm) then
-          zm3_max = 3./2.*zm3_ave
-          do i=dist%info%xs,dist%info%xe
-             do j=dist%info%ys,dist%info%ye
-                zm_bcvals(3,i,j) = 4.*zm3_max/(dist%info%NY-2.)**2*(j-1.5)*(dist%info%NY-0.5-j)
+    if (dist%info%ndims > 2) then
+       if (dist%info%zs.eq.1) then
+          zm_bcvals = 0.0        ! zero out, setting x and y fluxes on z boundary =0
+          if (pressure_zm) then
+             do m=1,dist%s
+                zm_bcvals(m,:,:) = zm3_ave_p(m)
+             end do
+          else if (poise_zm) then
+             zm3_max = 3./2.*zm3_ave
+             do i=dist%info%xs,dist%info%xe
+                do j=dist%info%ys,dist%info%ye
+                   zm_bcvals(3,i,j) = 4.*zm3_max/(dist%info%NY-2.)**2*(j-1.5)*(dist%info%NY-0.5-j)
+                enddo
              enddo
-          enddo
-       else if (flux_zm) then
-          zm_bcvals(3,:,:) = zm3_ave
-       endif
-    end if
+          else if (flux_zm) then
+             zm_bcvals(3,:,:) = zm3_ave
+          endif
+       end if
 
-! --- zm boundary
-    if (dist%info%ze.eq.dist%info%NZ) then
-       zp_bcvals = 0.0        ! zero out, setting x and y fluxes on z boundary =0
-       if (pressure_zp) then
-          do m=1,dist%s
-             zp_bcvals(m,:,:) = zp3_ave_p(m)
-          end do
-       else if (poise_zp) then
-          zp3_max = 3./2.*zp3_ave
-          do i=dist%info%xs,dist%info%xe
-             do j=dist%info%ys,dist%info%ye
-                zp_bcvals(3,i,j) = 4.*zp3_max/(dist%info%NY-2.)**2*(j-1.5)*(dist%info%NY-0.5-j)
+       ! --- zm boundary
+       if (dist%info%ze.eq.dist%info%NZ) then
+          zp_bcvals = 0.0        ! zero out, setting x and y fluxes on z boundary =0
+          if (pressure_zp) then
+             do m=1,dist%s
+                zp_bcvals(m,:,:) = zp3_ave_p(m)
+             end do
+          else if (poise_zp) then
+             zp3_max = 3./2.*zp3_ave
+             do i=dist%info%xs,dist%info%xe
+                do j=dist%info%ys,dist%info%ye
+                   zp_bcvals(3,i,j) = 4.*zp3_max/(dist%info%NY-2.)**2*(j-1.5)*(dist%info%NY-0.5-j)
+                enddo
              enddo
-          enddo
-       else if (flux_zp) then
-          zp_bcvals(3,:,:) = zp3_ave
-       endif
+          else if (flux_zp) then
+             zp_bcvals(3,:,:) = zp3_ave
+          endif
+       end if
     end if
     return
   end subroutine initialize_bcs

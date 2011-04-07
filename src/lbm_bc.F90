@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   30 March 2011
-!!!       at:            10:48:33 MDT
+!!!     last modified:   07 April 2011
+!!!       at:            15:14:33 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -284,27 +284,24 @@ contains
     call VecSetBlockSize(bc%yp, bc%dim, ierr)
     call PetscObjectSetName(bc%yp, 'yp_bc', ierr)
     
-    if (info%ndims > 2) then
-       ! z boundaries
-       if (info%zs.eq.1) then
-          locn = info%xl*info%yl*bc%dim
-       else
-          locn = 0
-       endif
-       call VecCreateMPI(bc%comm, locn, PETSC_DETERMINE, bc%zm, ierr)
-       call VecSetBlockSize(bc%zm, bc%dim, ierr)
-       call PetscObjectSetName(bc%zm, 'zm_bc', ierr)
+    if ((info%ndims > 2).and.(info%zs.eq.1)) then
+       locn = info%xl*info%yl*bc%dim
+    else
+       locn = 0
+    endif
+    call VecCreateMPI(bc%comm, locn, PETSC_DETERMINE, bc%zm, ierr)
+    call VecSetBlockSize(bc%zm, bc%dim, ierr)
+    call PetscObjectSetName(bc%zm, 'zm_bc', ierr)
        
-       if (info%ze.eq.info%NZ) then
-          locn = info%xl*info%yl*bc%dim
-       else
-          locn = 0
-       endif
-       call VecCreateMPI(bc%comm, locn, PETSC_DETERMINE, bc%zp, ierr)
-       call VecSetBlockSize(bc%zp, bc%dim, ierr)
-       call PetscObjectSetName(bc%zp, 'zp_bc', ierr)
-    end if
-
+    if ((info%ndims > 2).and.(info%ze.eq.info%NZ)) then
+       locn = info%xl*info%yl*bc%dim
+    else
+       locn = 0
+    endif
+    call VecCreateMPI(bc%comm, locn, PETSC_DETERMINE, bc%zp, ierr)
+    call VecSetBlockSize(bc%zp, bc%dim, ierr)
+    call PetscObjectSetName(bc%zp, 'zp_bc', ierr)
+ 
     call BCGetArrays(bc, ierr)
   end subroutine BCSetUp
 

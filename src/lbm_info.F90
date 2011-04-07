@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   06 April 2011
-!!!       at:            10:57:19 MDT
+!!!     last modified:   07 April 2011
+!!!       at:            15:18:33 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -226,10 +226,7 @@ contains
           info%gridsize(Z_DIRECTION) = (info%corners(Z_DIRECTION,2) - &
                info%corners(Z_DIRECTION, 1))/dble(info%NZ-1)
        end if
-    else
-       info%gridsize(Z_DIRECTION)= 1.d0
     end if
-
     call MPI_Comm_rank(info%comm, info%rank, ierr)
     call MPI_Comm_size(info%comm, info%nprocs, ierr)
   end subroutine InfoSetFromOptions
