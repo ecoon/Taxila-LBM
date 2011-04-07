@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            09:24:24 MDT
-!!!     last modified:   30 March 2011
-!!!       at:            11:01:47 MDT
+!!!     last modified:   06 April 2011
+!!!       at:            11:45:35 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -187,11 +187,19 @@ contains
             grid%info%corners(X_DIRECTION,1), grid%info%corners(X_DIRECTION,2), &
             grid%info%corners(Y_DIRECTION,1), grid%info%corners(Y_DIRECTION,2), &
             grid%info%corners(Z_DIRECTION,1), grid%info%corners(Z_DIRECTION,2), ierr)
+       call DMDASetUniformCoordinates(grid%da(NFLOWDOF), &
+            grid%info%corners(X_DIRECTION,1), grid%info%corners(X_DIRECTION,2), &
+            grid%info%corners(Y_DIRECTION,1), grid%info%corners(Y_DIRECTION,2), &
+            grid%info%corners(Z_DIRECTION,1), grid%info%corners(Z_DIRECTION,2), ierr)
     else
        call DMDASetUniformCoordinates(grid%da(ONEDOF), &
             grid%info%corners(X_DIRECTION,1), grid%info%corners(X_DIRECTION,2), &
             grid%info%corners(Y_DIRECTION,1), grid%info%corners(Y_DIRECTION,2), &
             PETSC_NULL_SCALAR, PETSC_NULL_SCALAR, ierr)
+       call DMDASetUniformCoordinates(grid%da(NFLOWDOF), &
+            grid%info%corners(X_DIRECTION,1), grid%info%corners(X_DIRECTION,2), &
+            grid%info%corners(Y_DIRECTION,1), grid%info%corners(Y_DIRECTION,2), &
+            grid%info%corners(Z_DIRECTION,1), grid%info%corners(Z_DIRECTION,2), ierr)
     end if
   end subroutine GridSetUp
 

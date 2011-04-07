@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            15:15:25 MDT
-!!!     last modified:   05 April 2011
-!!!       at:            08:46:51 MDT
+!!!     last modified:   06 April 2011
+!!!       at:            11:00:30 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -31,7 +31,7 @@ module LBM_Relaxation_module
      PetscInt b
      PetscInt mode
      PetscScalar,pointer :: tau ! relaxation time
-     PetscScalar,pointer,dimension(:) :: tau_mrt ! components of S vector for mrt
+     PetscScalar,pointer,dimension(:) :: tau_mrt ! species of S vector for mrt
 
      ! bag 
      character(len=MAXWORDLENGTH):: name
@@ -121,7 +121,7 @@ contains
 
     write(paramname, '(I1)') relax%id
     call PetscBagRegisterScalar(relax%bag, relax%data%tau, 1.d0, &
-         'tau'//paramname, 'relaxation time', ierr)
+         trim(options%my_prefix)//'tau'//paramname, 'relaxation time', ierr)
     relax%tau => relax%data%tau
 
 !    call PetscBagSetName(relax%bag, TRIM(options%my_prefix)//relax%name, "", ierr)

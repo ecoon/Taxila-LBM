@@ -39,7 +39,7 @@
        PetscInt transport_disc
        PetscInt ndims
        PetscInt nphases
-       PetscInt ncomponents
+       PetscInt nspecies
        PetscInt flow_relaxation_mode
        PetscInt transport_relaxation_mode
     end type options_type
@@ -73,7 +73,7 @@
       options%transport_disc = NULL_DISCRETIZATION
       options%ndims = 0
       options%nphases = 1
-      options%ncomponents = 1
+      options%nspecies = 1
       options%flow_relaxation_mode = RELAXATION_MODE_SRT
       options%transport_relaxation_mode = RELAXATION_MODE_SRT
     end function OptionsCreate
@@ -171,10 +171,10 @@
       end if
          
       ! set the tran discretization
-      options%ncomponents = 1
+      options%nspecies = 1
       if (help) call PetscPrintf(options%comm, &
-           "  -ncomponents <1>: number of major components\n", ierr)
-      call PetscOptionsGetInt(options%my_prefix,'-ncomponents', options%ncomponents, &
+           "  -nspecies <1>: number of major species\n", ierr)
+      call PetscOptionsGetInt(options%my_prefix,'-nspecies', options%nspecies, &
            flag,ierr)
 
       if (help) call PetscPrintf(options%comm, &
