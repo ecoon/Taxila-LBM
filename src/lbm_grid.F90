@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            09:24:24 MDT
-!!!     last modified:   06 April 2011
-!!!       at:            11:45:35 MDT
+!!!     last modified:   07 April 2011
+!!!       at:            16:38:24 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -182,7 +182,7 @@ contains
     end if
     
     ! set the coordinates, but only on the one-dof (no need for extra memory)
-    if (grid%info%ndims == 3) then
+    if (grid%info%ndims > 2) then
        call DMDASetUniformCoordinates(grid%da(ONEDOF), &
             grid%info%corners(X_DIRECTION,1), grid%info%corners(X_DIRECTION,2), &
             grid%info%corners(Y_DIRECTION,1), grid%info%corners(Y_DIRECTION,2), &
@@ -195,11 +195,11 @@ contains
        call DMDASetUniformCoordinates(grid%da(ONEDOF), &
             grid%info%corners(X_DIRECTION,1), grid%info%corners(X_DIRECTION,2), &
             grid%info%corners(Y_DIRECTION,1), grid%info%corners(Y_DIRECTION,2), &
-            PETSC_NULL_SCALAR, PETSC_NULL_SCALAR, ierr)
+            0.d0, 1.d0, ierr)
        call DMDASetUniformCoordinates(grid%da(NFLOWDOF), &
             grid%info%corners(X_DIRECTION,1), grid%info%corners(X_DIRECTION,2), &
             grid%info%corners(Y_DIRECTION,1), grid%info%corners(Y_DIRECTION,2), &
-            grid%info%corners(Z_DIRECTION,1), grid%info%corners(Z_DIRECTION,2), ierr)
+            0.d0, 1.d0, ierr)
     end if
   end subroutine GridSetUp
 
