@@ -232,11 +232,11 @@ contains
        do d=1,dist%info%ndims
           do n=1,2*dist%info%ndims
              forces(:,d,i,j) = forces(:,d,i,j) &
-                  - rho(m,i,j)*tmp(n,i,j)*dist%disc%ci(n,d)*gw
+                  - rho(:,i,j)*tmp(n,i,j)*dist%disc%ci(n,d)*gw
           end do
           do n=2*dist%info%ndims+1,dist%b
              forces(:,d,i,j) = forces(:,d,i,j) &
-                  - 0.5*rho(m,i,j)*tmp(n,i,j)*dist%disc%ci(n,d)*gw
+                  - 0.5*rho(:,i,j)*tmp(n,i,j)*dist%disc%ci(n,d)*gw
           end do
        end do
     end if
