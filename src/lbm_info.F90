@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   31 March 2011
-!!!       at:            11:04:51 MDT
+!!!     last modified:   06 April 2011
+!!!       at:            10:57:19 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -135,15 +135,18 @@ contains
     call PetscDataTypeGetSize(PETSC_INT, sizeofint, ierr)
     sizeofdata = 3*2*sizeofscalar + 3*sizeofbool + 5*sizeofint
     call PetscBagCreate(info%comm, sizeofdata, info%bag, ierr)
-!    call PetscBagSetName(info%bag, TRIM(options%my_prefix)//info%name, "", ierr)
+    call PetscBagSetName(info%bag, TRIM(options%my_prefix)//info%name, "", ierr)
 
     ! register data
     ! -- grid size
     call PetscBagGetData(info%bag, info%data, ierr)
-    call PetscBagRegisterInt(info%bag, info%data%NX, 0, 'NX', 'grid size in X', ierr)
-    call PetscBagRegisterInt(info%bag, info%data%NY, 0, 'NY', 'grid size in Y', ierr)
+    call PetscBagRegisterInt(info%bag, info%data%NX, 0, trim(options%my_prefix)//'NX', &
+         'grid size in X', ierr)
+    call PetscBagRegisterInt(info%bag, info%data%NY, 0, trim(options%my_prefix)//'NY', &
+         'grid size in Y', ierr)
     if (info%ndims > 2) then
-       call PetscBagRegisterInt(info%bag, info%data%NZ, 0, 'NZ', 'grid size in Z', ierr)
+       call PetscBagRegisterInt(info%bag, info%data%NZ, 0, trim(options%my_prefix)//'NZ', &
+            'grid size in Z', ierr)
     else 
        info%data%NZ = 1
     end if
@@ -152,38 +155,39 @@ contains
     info%NZ => info%data%NZ
 
     ! -- stencil info
-    call PetscBagRegisterInt(info%bag, info%data%stencil_size, 1, 'stencil_size', &
+    call PetscBagRegisterInt(info%bag, info%data%stencil_size, 1, &
+         trim(options%my_prefix)//'stencil_size', &
          'number of grid points in the stencil', ierr)
     info%stencil_size => info%data%stencil_size
     call PetscBagRegisterInt(info%bag, info%data%stencil_type, DMDA_STENCIL_BOX, &
-         'stencil_type', 'stencil type: 0=STAR, 1=BOX', ierr)
+         trim(options%my_prefix)//'stencil_type', 'stencil type: 0=STAR, 1=BOX', ierr)
     info%stencil_type => info%data%stencil_type
 
     ! -- grid perioidicty
     call PetscBagRegisterBool(info%bag, info%data%periodic(X_DIRECTION), PETSC_FALSE, &
-         'bc_periodic_x', 'x-direction periodic?', ierr)
+         trim(options%my_prefix)//'bc_periodic_x', 'x-direction periodic?', ierr)
     call PetscBagRegisterBool(info%bag, info%data%periodic(Y_DIRECTION), PETSC_FALSE, &
-         'bc_periodic_y', 'y-direction periodic?', ierr)
+         trim(options%my_prefix)//'bc_periodic_y', 'y-direction periodic?', ierr)
     if (info%ndims > 2) then
        call PetscBagRegisterBool(info%bag, info%data%periodic(Z_DIRECTION), PETSC_FALSE, &
-            'bc_periodic_z', 'z-direction periodic?', ierr)
+            trim(options%my_prefix)//'bc_periodic_z', 'z-direction periodic?', ierr)
     end if
     info%periodic => info%data%periodic
 
     ! -- grid corners
     call PetscBagRegisterScalar(info%bag, info%data%corners(X_DIRECTION,1), 0.d0, &
-         'x_start', 'lower x coordinate', ierr)
+         trim(options%my_prefix)//'x_start', 'lower x coordinate', ierr)
     call PetscBagRegisterScalar(info%bag, info%data%corners(X_DIRECTION,2), 1.d0, &
-         'x_end', 'upper x coordinate', ierr)
+         trim(options%my_prefix)//'x_end', 'upper x coordinate', ierr)
     call PetscBagRegisterScalar(info%bag, info%data%corners(Y_DIRECTION,1), 0.d0, &
-         'y_start', 'lower y coordinate', ierr)
+         trim(options%my_prefix)//'y_start', 'lower y coordinate', ierr)
     call PetscBagRegisterScalar(info%bag, info%data%corners(Y_DIRECTION,2), 1.d0, &
-         'y_end', 'upper y coordinate', ierr)
+         trim(options%my_prefix)//'y_end', 'upper y coordinate', ierr)
     if (info%ndims > 2) then
        call PetscBagRegisterScalar(info%bag, info%data%corners(Z_DIRECTION,1), 0.d0, &
-            'z_start', 'lower z coordinate', ierr)
+            trim(options%my_prefix)//'z_start', 'lower z coordinate', ierr)
        call PetscBagRegisterScalar(info%bag, info%data%corners(Z_DIRECTION,2), 1.d0, &
-            'z_end', 'upper z coordinate', ierr)
+            trim(options%my_prefix)//'z_end', 'upper z coordinate', ierr)
     end if
     info%corners => info%data%corners
       

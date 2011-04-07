@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            13:43:00 MDT
-!!!     last modified:   05 April 2011
-!!!       at:            08:46:39 MDT
+!!!     last modified:   06 April 2011
+!!!       at:            11:00:12 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -58,7 +58,8 @@ module LBM_Phase_module
   end interface
 
   interface PhaseCreate
-     procedure PhaseCreateOne, PhaseCreateN
+     module procedure PhaseCreateOne
+     module procedure PhaseCreateN
   end interface
 
   public :: PhaseCreate, &
@@ -158,17 +159,17 @@ contains
 
     ! register data
     call PetscBagRegisterScalar(phase%bag, phase%data%gw, 0.d0, &
-         'gw'//paramname, 'Phase-solid interaction potential coefficient', ierr)
+         trim(options%my_prefix)//'gw'//paramname, 'Phase-solid interaction potential coefficient', ierr)
     phase%gw => phase%data%gw
     call PetscBagRegisterScalar(phase%bag, phase%data%mm, 1.d0, &
-         'mm'//paramname, 'molecular mass', ierr)
+         trim(options%my_prefix)//'mm'//paramname, 'molecular mass', ierr)
     phase%mm => phase%data%mm
     phase%d_k = 1.d0 - 2.d0/(3.d0*phase%mm)
 
     do lcv=1,phase%s
        write(paramname, '(I1, I1)') lcv, phase%id
        call PetscBagRegisterScalar(phase%bag, phase%data%gf(lcv), 0.d0, &
-            'g_'//paramname, 'phase-phase interaction potential coefficient', ierr)
+            trim(options%my_prefix)//'g_'//paramname, 'phase-phase interaction potential coefficient', ierr)
     end do
     phase%gf => phase%data%gf(1:options%nphases)
 

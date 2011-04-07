@@ -31,10 +31,10 @@ end module LBM_Phase_Bag_Data_type_module
 module LBM_Component_Bag_Data_type_module
   implicit none
 
-  ! physical parameters for a chemical component
-  type, public :: component_bag_data_type
+  ! physical parameters for a chemical specie
+  type, public :: specie_bag_data_type
      PetscScalar reactivity ! this is crap, but Porter's gfortran doesn't like empty types
-  end type component_bag_data_type
+  end type specie_bag_data_type
 end module LBM_Component_Bag_Data_type_module
 
 module LBM_Info_Bag_Data_type_module

@@ -134,8 +134,8 @@
       lbm%grid%da_sizes(NPHASEXBDOF) = lbm%flow%nphases*(lbm%flow%disc%b+1)
       lbm%grid%da_sizes(NFLOWDOF) = lbm%flow%ndims
       ! if (associated(lbm%transport)) then
-      !    lbm%grid%da_sizes(NCOMPONENTDOF) = lbm%transport%ncomponents
-      !    lbm%grid%da_sizes(NCOMPONENTXBDOF) = lbm%transport%ncomponents*(lbm%transport%b+1)
+      !    lbm%grid%da_sizes(NCOMPONENTDOF) = lbm%transport%nspecies
+      !    lbm%grid%da_sizes(NCOMPONENTXBDOF) = lbm%transport%nspecies*(lbm%transport%b+1)
       ! end if
 
       call GridSetUp(lbm%grid)
