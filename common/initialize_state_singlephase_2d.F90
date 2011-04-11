@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
-!!!     last modified:   08 April 2011
-!!!       at:            11:17:40 MDT
+!!!     last modified:   11 April 2011
+!!!       at:            11:32:49 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -42,38 +42,21 @@
 
     ! local variables
     PetscErrorCode ierr
-    PetscBool flag
-    logical,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: bound
-    PetscScalar,dimension(dist%s):: rho1, rho2         ! left and right fluid densities?
-    PetscInt nmax
-    PetscBool flushx, flushy
     PetscScalar,dimension(dist%s, 1:dist%info%ndims, &
          dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, &
-         dist%info%gzs:dist%info%gze):: forces
+         dist%info%gys:dist%info%gye):: forces
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: nowalls
 
-    PetscInt i,j,m ! local values
-    PetscBool help
-
-    ! input data
-    call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
-
-    
     ! initialize state
-    fi=0.d0
-    u=0.d0
-
-    ! set density
-    rho(1,:,:)=1.d0
-    
-    where(walls.eq.1)
-       rho(1,:,:) = 0
-    end where
+    fi = 0.d0
+    u = 0.d0
+    rho = 1.d0
     
     ! set state at equilibrium       
     forces = 0.d0
-    call LBMEquilfFlow(fi, rho, u, forces, walls, phases, dist)
+    nowalls = 0.d0
+    call LBMEquilfFlow(fi, rho, u, forces, nowalls, phases, dist)
     
     return
   end subroutine initialize_state

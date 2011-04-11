@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
-!!!     last modified:   29 March 2011
-!!!       at:            18:04:14 MDT
+!!!     last modified:   11 April 2011
+!!!       at:            11:29:50 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -52,6 +52,8 @@
          dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, &
          dist%info%gzs:dist%info%gze):: forces
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: walls
 
     PetscInt i,j,m ! local values
     PetscBool help
@@ -106,14 +108,10 @@
        rho(2,:,:)=rho2(2)
     end where
     
-    where(walls.eq.1)
-       rho(1,:,:) = 0
-       rho(2,:,:) = 0
-    end where
-    
     ! set state at equilibrium       
     forces = 0.d0
-    call LBMEquilfFlow(fi, rho, u, forces, walls, phases, dist)
+    nowalls = 0.d0
+    call LBMEquilfFlow(fi, rho, u, forces, nowalls, phases, dist)
     
     return
   end subroutine initialize_state
