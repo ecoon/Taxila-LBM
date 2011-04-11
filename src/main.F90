@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
-!!!     last modified:   30 March 2011
-!!!       at:            12:03:57 MDT
+!!!     last modified:   11 April 2011
+!!!       at:            11:27:23 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -62,10 +62,10 @@ program MAIN
      call LBMInitializeWalls(lbm, initialize_walls)
   end if
   
-  ! bcs
+  ! set boundary conditions
   call BCSetValues(lbm%bc, lbm%flow%distribution, options, initialize_bcs)
   
-  ! fi/state
+  ! set initial conditions
   if (options%restart) then
      call LBMInitializeStateRestarted(lbm, options%istep, options%kwrite)
      istep = options%istep
