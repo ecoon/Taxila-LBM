@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            14:06:07 MDT
-!!!     last modified:   31 March 2011
-!!!       at:            11:29:52 MDT
+!!!     last modified:   11 April 2011
+!!!       at:            13:04:07 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -238,7 +238,12 @@ contains
     do j=distribution%info%ys,distribution%info%ye
     do i=distribution%info%xs,distribution%info%xe
        if (walls(i,j).eq.0) then
+!          print*, 'i,j:', i,j
+!          print*, fi(1,:,i,j)
           rho(:,i,j) = sum(fi(:,:,i,j),2)
+!          print*, rho(1,i,j)
+       else
+          rho(:,i,j) = 0.d0
        end if
     end do
     end do
@@ -400,4 +405,3 @@ contains
     end do
   end subroutine DistributionGatherValueToDirectionD3
 end module LBM_Distribution_Function_module
-    
