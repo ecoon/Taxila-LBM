@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            15:34:44 MDT
-!!!     last modified:   05 April 2011
-!!!       at:            08:46:25 MDT
+!!!     last modified:   12 April 2011
+!!!       at:            12:17:26 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -130,7 +130,7 @@ contains
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
     sizeofdata = 0 !???
     call PetscBagCreate(specie%comm, sizeofdata, specie%bag, ierr)
-!    call PetscBagSetName(specie%bag, TRIM(options%my_prefix)//specie%name, ierr)
+    call PetscBagSetName(specie%bag, TRIM(options%my_prefix)//specie%name, ierr)
 
     ! register data
 
