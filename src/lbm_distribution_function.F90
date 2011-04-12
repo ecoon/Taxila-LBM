@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            14:06:07 MDT
-!!!     last modified:   11 April 2011
-!!!       at:            13:04:07 MDT
+!!!     last modified:   12 April 2011
+!!!       at:            11:56:27 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -19,33 +19,13 @@
 
 module LBM_Distribution_Function_module
   use petsc
+  use LBM_Distribution_Function_type_module
   use LBM_Info_module
   use LBM_Discretization_Type_module
   implicit none
 
   private
 #include "lbm_definitions.h"
-
-  type, public :: distribution_type
-     MPI_Comm comm
-     PetscInt s
-     PetscInt b
-     type(info_type),pointer:: info
-     type(discretization_type),pointer:: disc
-     DM,pointer :: da_fi, da_rho
-
-     Vec fi
-     Vec fi_g
-     PetscScalar,pointer:: fi_a(:)
-
-     Vec rho
-     Vec rho_g
-     PetscScalar,pointer:: rho_a(:)
-
-     PetscScalar,pointer,dimension(:,:,:):: flux
-     PetscBool flux_required
-     character(len=MAXWORDLENGTH) name       
-  end type distribution_type
 
   public:: DistributionCreate, &
        DistributionDestroy, &
@@ -59,9 +39,10 @@ module LBM_Distribution_Function_module
        DistributionRestoreArrays, &
        DistributionCommunicateAll, &       
        DistributionCommunicateFi, &       
-       DistributionCommunicateRho, &       
+       DistributionCommunicateDensity, &       
        DistributionCalcDensity, &
        DistributionCalcFlux, &
+       DistributionStream, &
        DistributionGatherValueToDirection
 
 contains
@@ -197,7 +178,7 @@ contains
     call DMDAVecGetArrayF90(distribution%da_fi, distribution%fi, distribution%fi_a, ierr)
   end subroutine DistributionCommunicateFi
 
-  subroutine DistributionCommunicateRho(distribution)
+  subroutine DistributionCommunicateDensity(distribution)
     type(distribution_type) distribution
     PetscErrorCode ierr
     call DMDAVecRestoreArrayF90(distribution%da_rho, distribution%rho, &
@@ -207,7 +188,7 @@ contains
     call DMDALocalToLocalEnd(distribution%da_rho, distribution%rho, INSERT_VALUES, &
          distribution%rho, ierr)
     call DMDAVecGetArrayF90(distribution%da_rho, distribution%rho, distribution%rho_a, ierr)
-  end subroutine DistributionCommunicateRho
+  end subroutine DistributionCommunicateDensity
 
   subroutine DistributionCalcDensity(distribution, walls)
     type(distribution_type) distribution
@@ -381,6 +362,76 @@ contains
                   distribution%info%ye + distribution%disc%ci(n,Y_DIRECTION))
     end do
   end subroutine DistributionGatherValueToDirectionD2
+
+  ! --- stream the fi
+  subroutine DistributionStream(dist)
+    type(distribution_type) dist
+    call DistributionStream_(dist%fi_a, dist)
+  end subroutine DistributionStream
+
+  subroutine DistributionStream_(fi, dist)
+    type(distribution_type) dist
+    PetscScalar,dimension(1:dist%s, 0:dist%b, 1:dist%info%gxyzl):: fi
+    PetscErrorCode ierr
+    PetscInt m
+
+    select case(dist%info%ndims)
+    case(3)
+       do m=1,dist%s
+          call DistributionStreamComponentD3(fi(m,:,:),dist)
+       end do
+    case(2)
+       do m=1,dist%s
+          call DistributionStreamComponentD2(fi(m,:,:),dist)
+       end do
+    case DEFAULT
+       SETERRQ(1, 1, 'invalid discretization in LBM', ierr)
+    end select
+  end subroutine DistributionStream_
+
+  ! --- stream each specie individually
+  subroutine DistributionStreamComponentD3(fi, dist)
+    ! input variables
+    type(distribution_type) dist
+    PetscScalar,dimension(0:dist%b, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
+
+    ! local
+    PetscScalar,dimension(0:dist%b, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: tmp
+    PetscInt n
+    type(info_type),pointer:: info
+    info => dist%info
+
+    do n=0,dist%b
+       tmp(n,info%xs:info%xe,info%ys:info%ye,info%zs:info%ze) = fi(n, &
+            info%xs-dist%disc%ci(n,X_DIRECTION):info%xe-dist%disc%ci(n,X_DIRECTION), &
+            info%ys-dist%disc%ci(n,Y_DIRECTION):info%ye-dist%disc%ci(n,Y_DIRECTION), &
+            info%zs-dist%disc%ci(n,Z_DIRECTION):info%ze-dist%disc%ci(n,Z_DIRECTION))
+    end do
+    fi = tmp
+  end subroutine DistributionStreamComponentD3
+
+  subroutine DistributionStreamComponentD2(fi, dist)
+    ! input variables
+    type(distribution_type) dist
+    PetscScalar,dimension(0:dist%b, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: fi
+
+    ! local
+    PetscScalar,dimension(0:dist%b, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: tmp
+    PetscInt n
+    type(info_type),pointer:: info
+    info => dist%info
+
+    do n=0,dist%b
+       tmp(n,info%xs:info%xe,info%ys:info%ye) = fi(n, &
+            info%xs-dist%disc%ci(n,X_DIRECTION):info%xe-dist%disc%ci(n,X_DIRECTION), &
+            info%ys-dist%disc%ci(n,Y_DIRECTION):info%ye-dist%disc%ci(n,Y_DIRECTION))
+    end do
+    fi = tmp
+  end subroutine DistributionStreamComponentD2
 
   subroutine DistributionGatherValueToDirectionD3(distribution, val, out)
     type(distribution_type) distribution

@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            17:30:22 MST
-!!!     last modified:   11 April 2011
-!!!       at:            13:40:33 MDT
+!!!     last modified:   12 April 2011
+!!!       at:            12:12:02 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -18,7 +18,7 @@
   subroutine initialize_bcs(bc_flags, xm_bcvals, xp_bcvals, ym_bcvals, & 
        yp_bcvals, zm_bcvals, zp_bcvals, bc_dim, dist, options)
     use petsc
-    use LBM_Distribution_Function_module
+    use LBM_Distribution_Function_type_module
     use LBM_Options_module
     implicit none
 

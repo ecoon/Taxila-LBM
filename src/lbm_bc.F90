@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   11 April 2011
-!!!       at:            13:49:46 MDT
+!!!     last modified:   12 April 2011
+!!!       at:            11:33:46 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -21,7 +21,7 @@ module LBM_BC_module
   use LBM_Options_module
   use LBM_Info_module
   use LBM_Grid_module
-  use LBM_Distribution_Function_module
+  use LBM_Distribution_Function_type_module
   use petsc
   implicit none
   private
