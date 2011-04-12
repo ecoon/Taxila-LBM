@@ -80,7 +80,7 @@ contains
     ! nothing yet
   end subroutine DiscretizationSetUpRelax_D2Q9
 
-  subroutine DiscretizationEquilf_D2Q9(disc, rho, u, walls, relax, dist)
+  subroutine DiscretizationEquilf_D2Q9(disc, rho, u, walls, feq, relax, dist)
     use LBM_Distribution_Function_type_module
     use LBM_Relaxation_module
     type(discretization_type) disc
