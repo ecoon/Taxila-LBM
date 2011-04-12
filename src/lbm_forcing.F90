@@ -16,6 +16,7 @@
 
 module LBM_Forcing_module
   use LBM_Distribution_Function_type_module
+  use LBM_Distribution_Function_module
   use LBM_Phase_module
   use petsc
   implicit none
