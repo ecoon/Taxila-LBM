@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         15 March 2011
 !!!       on:            17:04:20 MDT
-!!!     last modified:   04 April 2011
-!!!       at:            12:10:50 MDT
+!!!     last modified:   12 April 2011
+!!!       at:            11:43:32 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -29,7 +29,7 @@ module LBM_Discretization_Type_module
      PetscScalar,pointer:: weights(:)
      PetscInt,pointer:: mt_mrt(:,:)
      PetscInt,pointer:: mmt_mrt(:)
-
+     PetscInt,pointer:: opposites(:)
   end type discretization_type
 
 end module LBM_Discretization_Type_module

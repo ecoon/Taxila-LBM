@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 March 2011
 !!!       on:            16:33:56 MDT
-!!!     last modified:   04 April 2011
-!!!       at:            12:11:45 MDT
+!!!     last modified:   12 April 2011
+!!!       at:            11:44:49 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -29,7 +29,8 @@ module LBM_Discretization_module
        DiscretizationDestroy, &
        DiscretizationSetType, &
        DiscretizationSetUp, &
-       DiscretizationSetUpPhase
+       DiscretizationSetUpRelax, &
+       DiscretizationEquilf
 
 contains
   function DiscretizationCreate(comm) result(disc)
@@ -50,6 +51,7 @@ contains
 
     if (associated(disc%ci)) deallocate(disc%ci)
     if (associated(disc%weights)) deallocate(disc%weights)
+    if (associated(disc%opposites)) deallocate(disc%opposites)
     if (associated(disc%mt_mrt)) deallocate(disc%mt_mrt)
     if (associated(disc%mmt_mrt)) deallocate(disc%mmt_mrt)
   end subroutine DiscretizationDestroy
@@ -74,19 +76,43 @@ contains
     end select
   end subroutine DiscretizationSetUp
 
-  subroutine DiscretizationSetUpPhase(disc, phase)
-    use LBM_Phase_module
+  subroutine DiscretizationSetUpRelax(disc, relax)
+    use LBM_Relaxation_module
     type(discretization_type) disc
-    type(phase_type) phase
+    type(relaxation_type) relax
     PetscErrorCode ierr
     
     select case(disc%name)
     case(D3Q19_DISCRETIZATION)
-       call DiscretizationSetUpPhase_D3Q19(disc, phase)
+       call DiscretizationSetUpRelax_D3Q19(disc, relax)
     case(D2Q9_DISCRETIZATION)
-       call DiscretizationSetUpPhase_D2Q9(disc, phase)
+       call DiscretizationSetUpRelax_D2Q9(disc, relax)
     case DEFAULT
        SETERRQ(1,1,'invalid discretization in LBM',ierr)
     end select
-  end subroutine DiscretizationSetUpPhase
+  end subroutine DiscretizationSetUpRelax
+
+  subroutine DiscretizationEquilf(disc, rho, u, walls, feq, relax, dist)
+    use LBM_Distribution_Function_type_module
+    use LBM_Relaxation_module
+    type(discretization_type) disc
+    type(distribution_type) dist
+    type(relaxation_type) relax
+
+    PetscScalar,dimension(0:dist%b,dist%info%gxyzl):: feq
+    PetscScalar,dimension(dist%info%gxyzl):: rho
+    PetscScalar,dimension(dist%info%ndims,dist%info%gxyzl):: u
+    PetscScalar,dimension(dist%info%gxyzl):: walls
+
+    PetscErrorCode ierr
+
+    select case(disc%name)
+    case(D3Q19_DISCRETIZATION)
+       call DiscretizationEquilf_D3Q19(disc, rho, u, walls, relax, dist)
+    case(D2Q9_DISCRETIZATION)
+       call DiscretizationEquilf_D2Q9(disc, rho, u, walls, relax, dist)
+    case DEFAULT
+       SETERRQ(1,1,'invalid discretization in LBM',ierr)
+    end select
+  end subroutine DiscretizationEquilf
 end module LBM_Discretization_module

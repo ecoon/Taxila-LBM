@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
-!!!     last modified:   11 April 2011
-!!!       at:            11:32:21 MDT
+!!!     last modified:   12 April 2011
+!!!       at:            12:11:34 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -18,10 +18,10 @@
 
   subroutine initialize_state(fi, rho, u, walls, dist, phases, options)
     use petsc
-    use LBM_Distribution_Function_module
+    use LBM_Distribution_Function_type_module
     use LBM_Phase_module
     use LBM_Options_module
-    use LBM_Equilibrium_module
+    use LBM_Discretization_module
     implicit none
 
     ! input variables
@@ -46,10 +46,6 @@
 
     ! local variables
     PetscErrorCode ierr
-    PetscScalar,dimension(dist%s, 1:dist%info%ndims, &
-         dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, &
-         dist%info%gzs:dist%info%gze):: forces
     PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, &
          dist%info%gzs:dist%info%gze):: nowalls
@@ -60,8 +56,7 @@
     rho = 1.d0
     
     ! set state at equilibrium       
-    forces = 0.d0
     nowalls = 0.d0
-    call LBMEquilfFlow(fi, rho, u, forces, nowalls, phases, dist)
+    call DiscretizationEquilf(dist%disc, rho, u, nowalls, fi, phases(1)%relax, dist)    
     return
   end subroutine initialize_state
