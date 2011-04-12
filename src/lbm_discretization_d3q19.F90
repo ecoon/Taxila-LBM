@@ -152,7 +152,7 @@ contains
     end if
   end subroutine DiscretizationSetupRelax_D3Q19
 
-  subroutine DiscretizationEquilf_D3Q19(disc, rho, u, walls, relax, dist)
+  subroutine DiscretizationEquilf_D3Q19(disc, rho, u, walls, feq, relax, dist)
     use LBM_Distribution_Function_type_module
     use LBM_Relaxation_module
     type(discretization_type) disc
