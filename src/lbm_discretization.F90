@@ -6,7 +6,7 @@
 !!!     created:         14 March 2011
 !!!       on:            16:33:56 MDT
 !!!     last modified:   12 April 2011
-!!!       at:            11:44:49 MDT
+!!!       at:            15:33:41 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -108,10 +108,10 @@ contains
 
     select case(disc%name)
     case(D3Q19_DISCRETIZATION)
-       call DiscretizationEquilf_D3Q19(disc, rho, u, walls, relax, dist)
+       call DiscretizationEquilf_D3Q19(disc, rho, u, walls, feq, relax, dist)
     case(D2Q9_DISCRETIZATION)
-       call DiscretizationEquilf_D2Q9(disc, rho, u, walls, relax, dist)
-    case DEFAULT
+       call DiscretizationEquilf_D2Q9(disc, rho, u, walls, feq, relax, dist)
+    case DEFAULT 
        SETERRQ(1,1,'invalid discretization in LBM',ierr)
     end select
   end subroutine DiscretizationEquilf
