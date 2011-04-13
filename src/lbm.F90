@@ -25,7 +25,7 @@
     use LBM_BC_module
     use LBM_Distribution_Function_module
     use LBM_Flow_module
-!    use LBM_Transport_module
+    use LBM_Transport_module
     use LBM_IO_module
     use LBM_Options_module
     implicit none
@@ -39,7 +39,7 @@
        type(grid_type),pointer:: grid
        type(bc_type),pointer:: bc
        type(flow_type),pointer:: flow
-!       type(transport_type),pointer:: transport
+       type(transport_type),pointer:: transport
        type(io_type),pointer :: io
 
        Vec walls
@@ -74,7 +74,7 @@
       lbm%bc => BCCreate(comm)
       lbm%io => IOCreate(comm)
       lbm%flow => FlowCreate(lbm%comm)
-!      nullify(lbm%transport)
+      nullify(lbm%transport)
 
       lbm%walls = 0
       lbm%walls_g = 0
@@ -93,7 +93,7 @@
 
       call BCDestroy(lbm%bc, ierr)
       if (associated(lbm%flow)) call FlowDestroy(lbm%flow,ierr)
-!      if (associated(lbm%transport)) call TransportDestroy(lbm%transport,ierr)
+      if (associated(lbm%transport)) call TransportDestroy(lbm%transport,ierr)
       call GridDestroy(lbm%grid, ierr)
       call IODestroy(lbm%io, ierr)
       return
@@ -114,10 +114,10 @@
       call GridSetFromOptions(lbm%grid, options, ierr)
       call GridSetName(lbm%grid, lbm%name)
       call FlowSetFromOptions(lbm%flow, options, ierr)
-!      if (options%transport_disc /= NULL_DISCRETIZATION) then
-!         lbm%transport => TransportCreate(lbm%comm)
-!         call TransportSetFromOptions(lbm%transport, options)
-!      end if
+      if (options%transport_disc /= NULL_DISCRETIZATION) then
+         lbm%transport => TransportCreate(lbm%comm)
+         call TransportSetFromOptions(lbm%transport, options)
+      end if
 
       call BCSetFromOptions(lbm%bc, options, ierr)
     end subroutine LBMSetFromOptions
@@ -133,18 +133,18 @@
       lbm%grid%da_sizes(NPHASEDOF) = lbm%flow%nphases
       lbm%grid%da_sizes(NPHASEXBDOF) = lbm%flow%nphases*(lbm%flow%disc%b+1)
       lbm%grid%da_sizes(NFLOWDOF) = lbm%flow%ndims
-      ! if (associated(lbm%transport)) then
-      !    lbm%grid%da_sizes(NCOMPONENTDOF) = lbm%transport%ncomponents
-      !    lbm%grid%da_sizes(NCOMPONENTXBDOF) = lbm%transport%ncomponents*(lbm%transport%b+1)
-      ! end if
+      if (associated(lbm%transport)) then
+         lbm%grid%da_sizes(NCOMPONENTDOF) = lbm%transport%ncomponents
+         lbm%grid%da_sizes(NCOMPONENTXBDOF) = lbm%transport%ncomponents*(lbm%transport%disc%b+1)
+      end if
 
       call GridSetUp(lbm%grid)
       call FlowSetGrid(lbm%flow, lbm%grid)
       call FlowSetUp(lbm%flow)
-      ! if (associated(lbm%transport)) then
-      !    call TransportSetGrid(lbm%transport, lbm%grid)
-      !    call TransportSetUp(lbm%transport)
-      ! end if
+      if (associated(lbm%transport)) then
+         call TransportSetGrid(lbm%transport, lbm%grid)
+         call TransportSetUp(lbm%transport)
+      end if
       call BCSetGrid(lbm%bc, lbm%grid)
       call BCSetUp(lbm%bc)
 
@@ -231,6 +231,8 @@
       timer1 => TimingCreate(lbm%comm, timername)
       do lcv_step = istep+1,kstep
          call LBMStreaming(lbm%flow%distribution)
+         call LBMStreaming(lbm%transport%distribution)
+
          call LBMBounceback(lbm%flow%distribution, lbm%walls_a)
 
 
@@ -246,6 +248,7 @@
 
          ! collision
          call FlowCollision(lbm%flow, lbm%walls_a)
+         call TransportCollision(lbm%transport, lbm%flow%distribution%flux, lbm%walls_a)
 
          ! communicate, update fi
          call DistributionCommunicateFi(lbm%flow%distribution)
