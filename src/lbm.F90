@@ -113,9 +113,11 @@
       call IOSetFromOptions(lbm%io, options, ierr)
       call GridSetFromOptions(lbm%grid, options, ierr)
       call GridSetName(lbm%grid, lbm%name)
+      call FlowSetGrid(lbm%flow, lbm%grid)
       call FlowSetFromOptions(lbm%flow, options, ierr)
 !      if (options%transport_disc /= NULL_DISCRETIZATION) then
 !         lbm%transport => TransportCreate(lbm%comm)
+!         call TransportSetGrid(lbm%transport, lbm%grid)
 !         call TransportSetFromOptions(lbm%transport, options)
 !      end if
 
@@ -139,10 +141,8 @@
       ! end if
 
       call GridSetUp(lbm%grid)
-      call FlowSetGrid(lbm%flow, lbm%grid)
       call FlowSetUp(lbm%flow)
       ! if (associated(lbm%transport)) then
-      !    call TransportSetGrid(lbm%transport, lbm%grid)
       !    call TransportSetUp(lbm%transport)
       ! end if
       call BCSetGrid(lbm%bc, lbm%grid)

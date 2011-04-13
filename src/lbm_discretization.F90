@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 March 2011
 !!!       on:            16:33:56 MDT
-!!!     last modified:   12 April 2011
-!!!       at:            15:33:41 MDT
+!!!     last modified:   13 April 2011
+!!!       at:            11:17:43 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -60,7 +60,7 @@ contains
   
   subroutine DiscretizationSetSizes(disc, stencil_size)
     type(discretization_type) disc
-    PetscInt:: stencil_size
+    PetscInt stencil_size
     disc%stencil_size = stencil_size
   end subroutine DiscretizationSetSizes
 
