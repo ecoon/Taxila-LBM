@@ -53,6 +53,9 @@ contains
     allocate(disc%ci(0:disc%b,1:disc%ndims))
     allocate(disc%weights(0:disc%b))
     allocate(disc%opposites(0:disc%b))
+    allocate(disc%mt_mrt(0:disc%b,0:disc%b))         ! transpose of M
+    allocate(disc%mmt_mrt(0:disc%b))                 ! diagonal M dot MT matrix
+    allocate(disc%ffw(0:2,0:2))  
 
     disc%opposites(ORIGIN) = ORIGIN
     disc%opposites(EAST) = WEST
@@ -70,6 +73,45 @@ contains
     disc%weights = (/ 4.d0/9.d0, &
        1.d0/9.d0,  1.d0/9.d0,  1.d0/9.d0,  1.d0/9.d0, &
        1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0 /)
+
+    disc%mt_mrt(:, 0) = (/  1,  1,  1,  1,  1,  1,  1,  1,  1 /)
+    disc%mt_mrt(:, 1) = (/ -4, -1, -1, -1, -1,  2,  2,  2,  2 /)
+    disc%mt_mrt(:, 2) = (/  4, -2, -2, -2, -2,  1,  1,  1,  1 /)
+    disc%mt_mrt(:, 3) = disc%ci(:,X_DIRECTION)
+    disc%mt_mrt(:, 4) = (/  0, -2,  0,  2,  0,  1, -1, -1,  1 /)
+    disc%mt_mrt(:, 5) = disc%ci(:,Y_DIRECTION)
+    disc%mt_mrt(:, 6) = (/  0,  0, -2,  0,  2,  1,  1, -1, -1 /)
+    disc%mt_mrt(:, 7) = (/  0,  1, -1,  1, -1,  0,  0,  0,  0 /)
+    disc%mt_mrt(:, 8) = (/  0,  0,  0,  0,  0,  1, -1,  1, -1 /)
+
+    disc%mmt_mrt = (/ 9, 36, 36, 6, 12, 6, 12, 4, 4 /)
+
+!!$    disc%ffw = 0.0
+!!$    disc%ffw( 1, 0) = 4./21.
+!!$    disc%ffw( 0, 1) = 4./21.
+!!$    disc%ffw(-1, 0) = 4./21.
+!!$    disc%ffw( 0,-1) = 4./21.
+!!$    disc%ffw( 1, 1) = 4./45.
+!!$    disc%ffw(-1, 1) = 4./45.
+!!$    disc%ffw(-1,-1) = 4./45.
+!!$    disc%ffw( 1,-1) = 4./45.
+!!$    disc%ffw( 2, 0) = 1./60.
+!!$    disc%ffw( 0, 2) = 1./60.
+!!$    disc%ffw(-2, 0) = 1./60.
+!!$    disc%ffw( 0,-2) = 1./60.
+!!$    disc%ffw( 2, 1) = 2./315.
+!!$    disc%ffw( 1, 2) = 2./315.
+!!$    disc%ffw(-1, 2) = 2./315.
+!!$    disc%ffw(-2, 1) = 2./315.
+!!$    disc%ffw(-2,-1) = 2./315.
+!!$    disc%ffw(-1,-2) = 2./315.
+!!$    disc%ffw( 1,-2) = 2./315.
+!!$    disc%ffw( 2,-1) = 2./315.
+!!$    disc%ffw( 2, 2) = 1./5040.
+!!$    disc%ffw(-2, 2) = 1./5040.
+!!$    disc%ffw(-2,-2) = 1./5040.
+!!$    disc%ffw( 2,-2) = 1./5040.
+
   end subroutine DiscretizationSetUp_D2Q9
 
 
@@ -77,7 +119,22 @@ contains
     use LBM_Relaxation_module
     type(discretization_type) disc
     type(relaxation_type) relax
-    ! nothing yet
+    PetscScalar oneontau
+     
+    oneontau = 1.d0/relax%tau
+    if (relax%mode .eq. RELAXATION_MODE_MRT) then
+       !! Curently following the code Qinjun gave me.
+       relax%tau_mrt(0) = 1.d0
+       relax%tau_mrt(1) = 0.1d0
+       relax%tau_mrt(2) = 1.5d0
+       relax%tau_mrt(3) = 1.d0
+       relax%tau_mrt(4) = 0.7d0
+       relax%tau_mrt(5) = 1.d0
+       relax%tau_mrt(6) = 0.7d0
+       relax%tau_mrt(7) = oneontau
+       relax%tau_mrt(8) = oneontau
+    end if
+
   end subroutine DiscretizationSetUpRelax_D2Q9
 
   subroutine DiscretizationEquilf_D2Q9(disc, rho, u, walls, feq, relax, dist)
