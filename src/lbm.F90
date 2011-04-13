@@ -162,9 +162,6 @@
     end subroutine LBMSetUp
 
     subroutine LBMRun(lbm, istep, kstep, kwrite)
-      use LBM_Streaming_module
-      use LBM_Bounceback_module
-
       ! input
       type(lbm_type) lbm
       integer istep
@@ -230,17 +227,14 @@
       timername = trim(lbm%name)//'Simulation'
       timer1 => TimingCreate(lbm%comm, timername)
       do lcv_step = istep+1,kstep
-         call LBMStreaming(lbm%flow%distribution)
-         call LBMStreaming(lbm%transport%distribution)
-
-         call LBMBounceback(lbm%flow%distribution, lbm%walls_a)
-
+         call FlowStream(lbm%flow)
+         call FlowBounceback(lbm%flow, lbm%walls_a)
 
          call BCApplyFlow(lbm%bc, lbm%walls_a, lbm%flow%distribution)
          call FlowUpdateMoments(lbm%flow, lbm%walls_a)
 
          ! update rho ghosts values
-         call DistributionCommunicateRho(lbm%flow%distribution)
+         call DistributionCommunicateDensity(lbm%flow%distribution)
 
          ! calculate forces
          call FlowCalcForces(lbm%flow, lbm%walls_a)
@@ -248,7 +242,6 @@
 
          ! collision
          call FlowCollision(lbm%flow, lbm%walls_a)
-         call TransportCollision(lbm%transport, lbm%flow%distribution%flux, lbm%walls_a)
 
          ! communicate, update fi
          call DistributionCommunicateFi(lbm%flow%distribution)

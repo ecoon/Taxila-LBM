@@ -51,8 +51,8 @@ contains
     do m=1,dist%s
        mmot(m) = phase(m)%mm/phase(m)%tau
        mm(m) = phase(m)%mm
-       alpha_0(m) = phase(m)%alpha_0
-       alpha_1(m) = phase(m)%alpha_1
+       alpha_0(m) = phase(m)%relax%alpha_0
+      alpha_1(m) = phase(m)%relax%alpha_1
     end do
 
     do k=dist%info%zs,dist%info%ze
@@ -72,7 +72,7 @@ contains
        do m=1,dist%s
           tmp = sum(dist%disc%ci(n,:)*ue(m,:), 1)
           feq(m,n,i,j,k)= dist%disc%weights(n)*rho(m,i,j,k)* &
-               (1.5d0*(1.d0-phase(m)%d_k) + tmp/phase(m)%c_s2 &
+               (1.5d0*(1.d0-phase(m)%relax%d_k) + tmp/phase(m)%c_s2 &
                + tmp*tmp/(2.d0*phase(m)%c_s2*phase(m)%c_s2) &
                - usqr(m)/(2.d0*phase(m)%c_s2))
        end do
@@ -125,7 +125,7 @@ contains
        do m=1,dist%s
           tmp = sum(dist%disc%ci(n,:)*ue(m,:), 1)
           feq(m,n,i,j)= dist%disc%weights(n)*rho(m,i,j)* &
-               (1.5d0*(1.d0-phase(m)%d_k) + tmp/phase(m)%c_s2 &
+               (1.5d0*(1.d0-phase(m)%relax%d_k) + tmp/phase(m)%c_s2 &
                + tmp*tmp/(2.d0*phase(m)%c_s2*phase(m)%c_s2) &
                - usqr(m)/(2.d0*phase(m)%c_s2))
        end do

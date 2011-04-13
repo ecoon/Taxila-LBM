@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         16 December 2010
 !!!       on:            14:14:04 MST
-!!!     last modified:   01 March 2011
-!!!       at:            13:26:28 MST
+!!!     last modified:   12 April 2011
+!!!       at:            14:02:47 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -49,16 +49,13 @@ program geometry
   if (.not.flag)   NZ=200 !default values, may be altered
 
 
-  call DMDACreate3d(PETSC_COMM_SELF, DMDA_XYZPERIODIC, DMDA_STENCIL_BOX, NX, NY, NZ, &
-       PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, 1, 0, &
+  call DMDACreate3d(PETSC_COMM_SELF, DMDA_BOUNDARY_NONE, &
+       DMDA_BOUNDARY_NONE, DMDA_BOUNDARY_NONE, DMDA_STENCIL_BOX, &
+       NX, NY, NZ, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, 1, 0, &
        PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, da, ierr)
   call DMSetFromOptions(da, ierr)
   call DMCreateGlobalVector(da, walls_g, ierr)
   call DMDAVecGetArrayF90(da, walls_g, walls, ierr)
-
-  call DMDAGetInfo(da, PETSC_NULL_INTEGER, NX, NY, NZ, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
-       PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
-       PETSC_NULL_INTEGER, ierr)
 
   walls = 0.0
   allocate(pores(NX,NY,NZ))
