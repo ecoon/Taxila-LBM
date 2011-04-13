@@ -24,12 +24,14 @@ module LBM_Discretization_Type_module
      PetscInt name
      PetscInt ndims
      PetscInt b
+     PetscInt stencil_size
 
      PetscInt,pointer:: ci(:,:)
      PetscScalar,pointer:: weights(:)
-     PetscInt,pointer:: mt_mrt(:,:)
-     PetscInt,pointer:: mmt_mrt(:)
      PetscInt,pointer:: opposites(:)
+     PetscScalar,pointer:: mt_mrt(:,:)
+     PetscScalar,pointer:: mmt_mrt(:)
+     PetscScalar,pointer:: ffw(:,:)
   end type discretization_type
 
 end module LBM_Discretization_Type_module
