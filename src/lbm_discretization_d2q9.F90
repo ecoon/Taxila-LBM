@@ -41,7 +41,8 @@ module LBM_Discretization_D2Q9_module
 #include "lbm_definitions.h"
 
   public:: DiscretizationSetUp_D2Q9, &
-       DiscretizationSetUpPhase_D2Q9
+       DiscretizationSetUpRelax_D2Q9, &
+       DiscretizationEquilf_D2Q9
 
 contains
   subroutine DiscretizationSetUp_D2Q9(disc)
@@ -51,6 +52,17 @@ contains
     disc%b = discretization_directions
     allocate(disc%ci(0:disc%b,1:disc%ndims))
     allocate(disc%weights(0:disc%b))
+    allocate(disc%opposites(0:disc%b))
+
+    disc%opposites(ORIGIN) = ORIGIN
+    disc%opposites(EAST) = WEST
+    disc%opposites(WEST) = EAST
+    disc%opposites(NORTH) = SOUTH
+    disc%opposites(SOUTH) = NORTH
+    disc%opposites(NORTHEAST) = SOUTHWEST
+    disc%opposites(SOUTHWEST) = NORTHEAST
+    disc%opposites(SOUTHEAST) = NORTHWEST
+    disc%opposites(NORTHWEST) = SOUTHEAST
 
     disc%ci(:,X_DIRECTION) = (/ 0, 1, 0,-1, 0, 1,-1,-1, 1/)
     disc%ci(:,Y_DIRECTION) = (/ 0, 0, 1, 0,-1, 1, 1,-1,-1/)
@@ -60,13 +72,51 @@ contains
        1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0, 1.d0/36.d0 /)
   end subroutine DiscretizationSetUp_D2Q9
 
-  subroutine DiscretizationSetUpPhase_D2Q9(disc, phase)
-    use LBM_Phase_module
+
+  subroutine DiscretizationSetUpRelax_D2Q9(disc, relax)
+    use LBM_Relaxation_module
     type(discretization_type) disc
-    type(phase_type) phase
-    
-    phase%alpha_0 = (1.d0 + phase%d_k*5.d0)/6.d0
-    phase%alpha_1 = -2.d0/3.d0
-  end subroutine DiscretizationSetUpPhase_D2Q9
+    type(relaxation_type) relax
+    ! nothing yet
+  end subroutine DiscretizationSetUpRelax_D2Q9
+
+  subroutine DiscretizationEquilf_D2Q9(disc, rho, u, walls, feq, relax, dist)
+    use LBM_Distribution_Function_type_module
+    use LBM_Relaxation_module
+    type(discretization_type) disc
+    type(distribution_type) dist
+    type(relaxation_type) relax
+
+    PetscScalar,dimension(0:dist%b, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: feq
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: rho
+    PetscScalar,dimension(1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: u
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: walls
+
+    PetscInt i,j,d,n
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: usqr
+    PetscScalar udote
+
+    usqr = sum(u*u,1)
+
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+    if (walls(i,j).eq.0) then
+       feq(0,i,j) = rho(i,j)*((1.d0 + relax%d_k*5.d0)/6.d0 - 2.d0*usqr(i,j)/3.d0)
+       do n=1,dist%b
+          udote = sum(disc%ci(n,:)*u(:,i,j), 1)
+          feq(n,i,j)= disc%weights(n)*rho(i,j)* &
+               (1.5d0*(1.d0-relax%d_k) + udote/relax%c_s2 &
+               + udote*udote/(2.d0*relax%c_s2*relax%c_s2) &
+               - usqr(i,j)/(2.d0*relax%c_s2))
+       end do
+    end if
+    end do
+    end do
+  end subroutine DiscretizationEquilf_D2Q9
 end module LBM_Discretization_D2Q9_module
 

@@ -15,6 +15,7 @@
 #include "finclude/petscsysdef.h"
 
 module LBM_Forcing_module
+  use LBM_Distribution_Function_type_module
   use LBM_Distribution_Function_module
   use LBM_Phase_module
   use petsc
@@ -74,7 +75,7 @@ contains
              do n=1,2*dist%info%ndims
                 do m=1,dist%s
                    forces(m,d,i,j,k) = forces(m,d,i,j,k) &
-                      - rho(m,i,j,k)*sum(phases(m)%gf(1:dist%s)*tmp(:,n,i,j,k)*dist%disc%ci(n,d),1)
+                      - rho(m,i,j,k)*sum(phases(m)%gf*tmp(:,n,i,j,k)*dist%disc%ci(n,d),1)
                 enddo
              end do
              do n=2*dist%info%ndims+1,dist%b
@@ -113,26 +114,77 @@ contains
        call DistributionGatherValueToDirection(dist, rho(m,:,:), tmp(m,:,:,:))
     end do
 
-    do j=dist%info%ys,dist%info%ye
-    do i=dist%info%xs,dist%info%xe
-       if (walls(i,j).eq.0) then
+    if(dist%info%stencil_size.eq.1) then
+
+      do j=dist%info%ys,dist%info%ye
+      do i=dist%info%xs,dist%info%xe
+        if (walls(i,j).eq.0) then
           do d=1,dist%info%ndims
-             do n=1,2*dist%info%ndims
-                do m=1,dist%s
-                   forces(m,d,i,j) = forces(m,d,i,j) &
-                      - rho(m,i,j)*sum(phases(m)%gf*tmp(:,n,i,j)*dist%disc%ci(n,d),1)
-                enddo
-             end do
-             do n=2*dist%info%ndims+1,dist%b
-                do m=1,dist%s
-                   forces(m,d,i,j) = forces(m,d,i,j) &
-                    - 0.5*rho(m,i,j)*sum(phases(m)%gf*tmp(:,n,i,j)*dist%disc%ci(n,d),1)
-                enddo
-             end do
+            do n=1,2*dist%info%ndims
+            do m=1,dist%s
+              forces(m,d,i,j) = forces(m,d,i,j) &
+                   - rho(m,i,j)*sum(phases(m)%gf*tmp(:,n,i,j)*dist%disc%ci(n,d),1)
+            enddo
+            end do
+            do n=2*dist%info%ndims+1,dist%b
+            do m=1,dist%s
+              forces(m,d,i,j) = forces(m,d,i,j) &
+                   - 0.25*rho(m,i,j)*sum(phases(m)%gf*tmp(:,n,i,j)*dist%disc%ci(n,d),1)
+            enddo
+            end do
           end do
-       end if
-    end do
-    end do
+        end if
+      end do
+      end do
+       
+    end if 
+
+!!$    if(dist%info%stencil_size.eq.1) then
+!!$   
+!!$      do j=dist%info%ys,dist%info%ye
+!!$      do i=dist%info%xs,dist%info%xe
+!!$        if (walls(i,j).eq.0) then
+!!$          
+!!$          ! phase 1, x-component
+!!$          forces(1,1,i,j) = forces(1,1,i,j) &
+!!$               - ( phases(1)%gf(1)*rho(1,i,j)*( 1./3.*rho(1,i+1,j) - 1./3.*rho(1,i-1,j) &
+!!$                                               +1./12.*rho(1,i+1,j+1) - 1./12.*rho(1,i-1,j-1) &
+!!$                                               -1./12.*rho(1,i-1,j+1) + 1./12.*rho(1,i+1,j-1) ) & 
+!!$               +   phases(1)%gf(2)*rho(1,i,j)*( 1./3.*rho(2,i+1,j) - 1./3.*rho(2,i-1,j) &
+!!$                                               +1./12.*rho(2,i+1,j+1) - 1./12.*rho(2,i-1,j-1) &
+!!$                                               -1./12.*rho(2,i-1,j+1) + 1./12.*rho(2,i+1,j-1) ))
+!!$          ! phase 1, y-component
+!!$          forces(1,2,i,j) = forces(1,2,i,j) &
+!!$               - ( phases(1)%gf(1)*rho(1,i,j)*( 1./3.*rho(1,i,j+1) - 1./3.*rho(1,i,j-1) &
+!!$                                               +1./12.*rho(1,i+1,j+1) - 1./12.*rho(1,i-1,j-1) &
+!!$                                               +1./12.*rho(1,i-1,j+1) - 1./12.*rho(1,i+1,j-1) ) & 
+!!$               +   phases(1)%gf(2)*rho(1,i,j)*( 1./3.*rho(2,i,j+1) - 1./3.*rho(2,i,j-1) &
+!!$                                               +1./12.*rho(2,i+1,j+1) - 1./12.*rho(2,i-1,j-1) &
+!!$                                               +1./12.*rho(2,i-1,j+1) - 1./12.*rho(2,i+1,j-1) ))
+!!$
+!!$          ! phase 2, x-component
+!!$          forces(2,1,i,j) = forces(2,1,i,j) &
+!!$               - ( phases(2)%gf(1)*rho(2,i,j)*( 1./3.*rho(1,i+1,j) - 1./3.*rho(1,i-1,j) &
+!!$                                               +1./12.*rho(1,i+1,j+1) - 1./12.*rho(1,i-1,j-1) &
+!!$                                               -1./12.*rho(1,i-1,j+1) + 1./12.*rho(1,i+1,j-1) ) & 
+!!$               +   phases(2)%gf(2)*rho(2,i,j)*( 1./3.*rho(2,i+1,j) - 1./3.*rho(2,i-1,j) &
+!!$                                               +1./12.*rho(2,i+1,j+1) - 1./12.*rho(2,i-1,j-1) &
+!!$                                               -1./12.*rho(2,i-1,j+1) + 1./12.*rho(2,i+1,j-1) ))
+!!$          ! phase 2, y-component
+!!$          forces(2,2,i,j) = forces(2,2,i,j) &
+!!$               - ( phases(2)%gf(1)*rho(2,i,j)*( 1./3.*rho(1,i,j+1) - 1./3.*rho(1,i,j-1) &
+!!$                                               +1./12.*rho(1,i+1,j+1) - 1./12.*rho(1,i-1,j-1) &
+!!$                                               +1./12.*rho(1,i-1,j+1) - 1./12.*rho(1,i+1,j-1) ) & 
+!!$               +   phases(2)%gf(2)*rho(2,i,j)*( 1./3.*rho(2,i,j+1) - 1./3.*rho(2,i,j-1) &
+!!$                                               +1./12.*rho(2,i+1,j+1) - 1./12.*rho(2,i-1,j-1) &
+!!$                                               +1./12.*rho(2,i-1,j+1) - 1./12.*rho(2,i+1,j-1) ))
+!!$
+!!$
+!!$        endif
+!!$      enddo
+!!$      enddo
+!!$
+!!$    endif
   end subroutine LBMAddFluidFluidForcesD2
 
   ! --- Fluid-solid interaction forces, from
@@ -232,11 +284,11 @@ contains
        do d=1,dist%info%ndims
           do n=1,2*dist%info%ndims
              forces(:,d,i,j) = forces(:,d,i,j) &
-                  - rho(m,i,j)*tmp(n,i,j)*dist%disc%ci(n,d)*gw
+                  - rho(:,i,j)*tmp(n,i,j)*dist%disc%ci(n,d)*gw
           end do
           do n=2*dist%info%ndims+1,dist%b
              forces(:,d,i,j) = forces(:,d,i,j) &
-                  - 0.5*rho(m,i,j)*tmp(n,i,j)*dist%disc%ci(n,d)*gw
+                  - 0.5*rho(:,i,j)*tmp(n,i,j)*dist%disc%ci(n,d)*gw
           end do
        end do
     end if

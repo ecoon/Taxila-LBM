@@ -50,7 +50,9 @@ module LBM_Discretization_D3Q19_module
 #include "lbm_definitions.h"
 
   public:: DiscretizationSetup_D3Q19, &
-       DiscretizationSetupPhase_D3Q19
+       DiscretizationSetupRelax_D3Q19, &
+       DiscretizationEquilf_D3Q19
+
 contains
   subroutine DiscretizationSetup_D3Q19(disc)
     type(discretization_type) disc
@@ -59,8 +61,29 @@ contains
     disc%b = 18
     allocate(disc%ci(0:disc%b,1:disc%ndims))
     allocate(disc%weights(0:disc%b))
+    allocate(disc%opposites(0:disc%b))
     allocate(disc%mt_mrt(0:disc%b,0:disc%b))                ! transpose of M
     allocate(disc%mmt_mrt(0:disc%b))                        ! diagonal M dot MT matrix 
+
+    disc%opposites(ORIGIN) = ORIGIN
+    disc%opposites(EAST) = WEST
+    disc%opposites(WEST) = EAST
+    disc%opposites(NORTH) = SOUTH
+    disc%opposites(SOUTH) = NORTH
+    disc%opposites(UP) = DOWN
+    disc%opposites(DOWN) = UP
+    disc%opposites(NORTHEAST) = SOUTHWEST
+    disc%opposites(SOUTHWEST) = NORTHEAST
+    disc%opposites(SOUTHEAST) = NORTHWEST
+    disc%opposites(NORTHWEST) = SOUTHEAST
+    disc%opposites(NORTHUP) = SOUTHDOWN
+    disc%opposites(SOUTHDOWN) = NORTHUP
+    disc%opposites(SOUTHUP) = NORTHDOWN
+    disc%opposites(NORTHDOWN) = SOUTHUP
+    disc%opposites(EASTUP) = WESTDOWN
+    disc%opposites(WESTDOWN) = EASTUP
+    disc%opposites(WESTUP) = EASTDOWN
+    disc%opposites(EASTDOWN) = WESTUP
 
     disc%ci(:,X_DIRECTION) = (/ 0, 1, 0,-1, 0, 0, 0, 1,-1,-1, &
          1, 1,-1,-1, 1, 0, 0, 0, 0/)
@@ -97,39 +120,78 @@ contains
     disc%mmt_mrt = (/ 19, 2394, 252, 10, 40, 10, 40, 10, 40, 36, 72, 12, 24, 4, 4, 4, 8, 8, 8 /) 
   end subroutine DiscretizationSetup_D3Q19
 
-  subroutine DiscretizationSetupPhase_D3Q19(disc, phase)
-    use LBM_Phase_module
+  subroutine DiscretizationSetupRelax_D3Q19(disc, relax)
+    use LBM_Relaxation_module
     type(discretization_type) disc
-    type(phase_type) phase
+    type(relaxation_type) relax
     PetscScalar oneontau
     
-    oneontau = 1.d0/phase%relax%tau
-    phase%alpha_0 = phase%d_k
-    phase%alpha_1 = -1.d0/2.d0
+    oneontau = 1.d0/relax%tau
 
-
-    if (phase%relax%mode .eq. RELAXATION_MODE_MRT) then
+    if (relax%mode .eq. RELAXATION_MODE_MRT) then
        !! Curently following the code Qinjun gave me.
-       phase%relax%tau_mrt(0) = oneontau
-       phase%relax%tau_mrt(1) = oneontau
-       phase%relax%tau_mrt(2) = oneontau
-       phase%relax%tau_mrt(3) = oneontau  ! 0.d0
-       phase%relax%tau_mrt(4) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
-       phase%relax%tau_mrt(5) = oneontau  ! 0.d0
-       phase%relax%tau_mrt(6) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
-       phase%relax%tau_mrt(7) = oneontau  !0.d0
-       phase%relax%tau_mrt(8) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
-       phase%relax%tau_mrt(9) = oneontau
-       phase%relax%tau_mrt(10) = oneontau
-       phase%relax%tau_mrt(11) = oneontau
-       phase%relax%tau_mrt(12) = oneontau
-       phase%relax%tau_mrt(13) = oneontau
-       phase%relax%tau_mrt(14) = oneontau
-       phase%relax%tau_mrt(15) = oneontau
-       phase%relax%tau_mrt(16) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
-       phase%relax%tau_mrt(17) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
-       phase%relax%tau_mrt(18) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
+       relax%tau_mrt(0) = oneontau
+       relax%tau_mrt(1) = oneontau
+       relax%tau_mrt(2) = oneontau
+       relax%tau_mrt(3) = oneontau  ! 0.d0
+       relax%tau_mrt(4) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
+       relax%tau_mrt(5) = oneontau  ! 0.d0
+       relax%tau_mrt(6) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
+       relax%tau_mrt(7) = oneontau  !0.d0
+       relax%tau_mrt(8) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
+       relax%tau_mrt(9) = oneontau
+       relax%tau_mrt(10) = oneontau
+       relax%tau_mrt(11) = oneontau
+       relax%tau_mrt(12) = oneontau
+       relax%tau_mrt(13) = oneontau
+       relax%tau_mrt(14) = oneontau
+       relax%tau_mrt(15) = oneontau
+       relax%tau_mrt(16) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
+       relax%tau_mrt(17) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
+       relax%tau_mrt(18) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
     end if
-  end subroutine DiscretizationSetupPhase_D3Q19
+  end subroutine DiscretizationSetupRelax_D3Q19
+
+  subroutine DiscretizationEquilf_D3Q19(disc, rho, u, walls, feq, relax, dist)
+    use LBM_Distribution_Function_type_module
+    use LBM_Relaxation_module
+    type(discretization_type) disc
+    type(distribution_type) dist
+    type(relaxation_type) relax
+
+    PetscScalar,dimension(0:dist%b, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: feq
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: rho
+    PetscScalar,dimension(1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: u
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
+
+    PetscInt i,j,k,d,n,m
+
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: usqr
+    PetscScalar udote
+
+    usqr = sum(u*u,1)
+
+    do k=dist%info%zs,dist%info%ze
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+    if (walls(i,j,k).eq.0) then
+       feq(0,i,j,k) = rho(i,j,k)*(relax%d_k - usqr(i,j,k)/2.d0)
+       do n=1,dist%b
+          udote = sum(disc%ci(n,:)*u(:,i,j,k), 1)
+          feq(n,i,j,k)= disc%weights(n)*rho(i,j,k)* &
+               (1.5d0*(1.d0-relax%d_k) + udote/relax%c_s2 &
+               + udote*udote/(2.d0*relax%c_s2*relax%c_s2) &
+               - usqr(i,j,k)/(2.d0*relax%c_s2))
+       end do
+    end if
+    end do
+    end do
+    end do
+  end subroutine DiscretizationEquilf_D3Q19
 end module LBM_Discretization_D3Q19_module
 
