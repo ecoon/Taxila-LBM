@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
-!!!     last modified:   29 March 2011
-!!!       at:            18:04:14 MDT
+!!!     last modified:   12 April 2011
+!!!       at:            12:11:12 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -18,10 +18,10 @@
 
   subroutine initialize_state(fi, rho, u, walls, dist, phases, options)
     use petsc
-    use LBM_Distribution_Function_module
+    use LBM_Distribution_Function_type_module
     use LBM_Phase_module
     use LBM_Options_module
-    use LBM_Equilibrium_module
+    use LBM_Discretization_module
     implicit none
 
     ! input variables
@@ -48,10 +48,8 @@
     PetscScalar,dimension(dist%s):: rho1, rho2         ! left and right fluid densities?
     PetscInt nmax
     PetscBool flushx, flushy
-    PetscScalar,dimension(dist%s, 1:dist%info%ndims, &
-         dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, &
-         dist%info%gzs:dist%info%gze):: forces
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: nowalls
 
     PetscInt i,j,m ! local values
     PetscBool help
@@ -106,14 +104,11 @@
        rho(2,:,:)=rho2(2)
     end where
     
-    where(walls.eq.1)
-       rho(1,:,:) = 0
-       rho(2,:,:) = 0
-    end where
-    
     ! set state at equilibrium       
-    forces = 0.d0
-    call LBMEquilfFlow(fi, rho, u, forces, walls, phases, dist)
-    
+    nowalls = 0.d0
+    do m=1,dist%s
+       call DiscretizationEquilf(dist%disc, rho(m,:,:), u(m,:,:,:), &
+            nowalls, fi(m,:,:,:), phases(m)%relax, dist)    
+    end do
     return
   end subroutine initialize_state

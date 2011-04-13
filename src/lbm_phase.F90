@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            13:43:00 MDT
-!!!     last modified:   31 March 2011
-!!!       at:            09:47:37 MDT
+!!!     last modified:   12 April 2011
+!!!       at:            12:17:00 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -36,10 +36,7 @@ module LBM_Phase_module
      PetscScalar,pointer,dimension(:) :: gf ! phase-phase force coefs
      PetscScalar,pointer :: tau ! relaxation time
 
-     ! dependent parameters
-     PetscScalar alpha_0, alpha_1 
-     PetscScalar d_k
-     PetscScalar c_s2
+     ! dependent parameters, for equilf and collision
      type(relaxation_type),pointer:: relax
 
      ! bag 
@@ -58,7 +55,8 @@ module LBM_Phase_module
   end interface
 
   interface PhaseCreate
-     procedure PhaseCreateOne, PhaseCreateN
+     module procedure PhaseCreateOne
+     module procedure PhaseCreateN
   end interface
 
   public :: PhaseCreate, &
@@ -105,11 +103,6 @@ contains
     nullify(phase%gf)
     nullify(phase%tau)
     nullify(phase%relax)
-
-    phase%alpha_0 = 0.
-    phase%alpha_1 = 0.
-    phase%d_k = 0.
-    phase%c_s2 = 1.d0/3.d0
 
     phase%name = ''
     nullify(phase%data)
@@ -158,17 +151,17 @@ contains
 
     ! register data
     call PetscBagRegisterScalar(phase%bag, phase%data%gw, 0.d0, &
-         'gw'//paramname, 'Phase-solid interaction potential coefficient', ierr)
+         trim(options%my_prefix)//'gw'//paramname, 'Phase-solid interaction potential coefficient', ierr)
     phase%gw => phase%data%gw
     call PetscBagRegisterScalar(phase%bag, phase%data%mm, 1.d0, &
-         'mm'//paramname, 'molecular mass', ierr)
+         trim(options%my_prefix)//'mm'//paramname, 'molecular mass', ierr)
     phase%mm => phase%data%mm
-    phase%d_k = 1.d0 - 2.d0/(3.d0*phase%mm)
+    phase%relax%d_k = 1.d0 - 2.d0/(3.d0*phase%mm)
 
     do lcv=1,phase%s
        write(paramname, '(I1, I1)') lcv, phase%id
        call PetscBagRegisterScalar(phase%bag, phase%data%gf(lcv), 0.d0, &
-            'g_'//paramname, 'phase-phase interaction potential coefficient', ierr)
+            trim(options%my_prefix)//'g_'//paramname, 'phase-phase interaction potential coefficient', ierr)
     end do
     phase%gf => phase%data%gf(1:options%nphases)
 

@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   30 March 2011
-!!!       at:            10:48:33 MDT
+!!!     last modified:   12 April 2011
+!!!       at:            11:33:46 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -21,7 +21,7 @@ module LBM_BC_module
   use LBM_Options_module
   use LBM_Info_module
   use LBM_Grid_module
-  use LBM_Distribution_Function_module
+  use LBM_Distribution_Function_type_module
   use petsc
   implicit none
   private
@@ -284,27 +284,24 @@ contains
     call VecSetBlockSize(bc%yp, bc%dim, ierr)
     call PetscObjectSetName(bc%yp, 'yp_bc', ierr)
     
-    if (info%ndims > 2) then
-       ! z boundaries
-       if (info%zs.eq.1) then
-          locn = info%xl*info%yl*bc%dim
-       else
-          locn = 0
-       endif
-       call VecCreateMPI(bc%comm, locn, PETSC_DETERMINE, bc%zm, ierr)
-       call VecSetBlockSize(bc%zm, bc%dim, ierr)
-       call PetscObjectSetName(bc%zm, 'zm_bc', ierr)
+    if ((info%ndims > 2).and.(info%zs.eq.1)) then
+       locn = info%xl*info%yl*bc%dim
+    else
+       locn = 0
+    endif
+    call VecCreateMPI(bc%comm, locn, PETSC_DETERMINE, bc%zm, ierr)
+    call VecSetBlockSize(bc%zm, bc%dim, ierr)
+    call PetscObjectSetName(bc%zm, 'zm_bc', ierr)
        
-       if (info%ze.eq.info%NZ) then
-          locn = info%xl*info%yl*bc%dim
-       else
-          locn = 0
-       endif
-       call VecCreateMPI(bc%comm, locn, PETSC_DETERMINE, bc%zp, ierr)
-       call VecSetBlockSize(bc%zp, bc%dim, ierr)
-       call PetscObjectSetName(bc%zp, 'zp_bc', ierr)
-    end if
-
+    if ((info%ndims > 2).and.(info%ze.eq.info%NZ)) then
+       locn = info%xl*info%yl*bc%dim
+    else
+       locn = 0
+    endif
+    call VecCreateMPI(bc%comm, locn, PETSC_DETERMINE, bc%zp, ierr)
+    call VecSetBlockSize(bc%zp, bc%dim, ierr)
+    call PetscObjectSetName(bc%zp, 'zp_bc', ierr)
+ 
     call BCGetArrays(bc, ierr)
   end subroutine BCSetUp
 
@@ -1313,7 +1310,7 @@ contains
 
     directions(:) = 0
     ! XM BOUNDARY
-    if ((bc%flags(BOUNDARY_XM).eq.BC_PRESSURE).and.(dist%info%xs.eq.1)) then
+    if ((bc%flags(BOUNDARY_XM).eq.BC_FLUX).and.(dist%info%xs.eq.1)) then
        call BCSetLocalDirectionsD2Q9(BOUNDARY_XM, directions, cardinals)
        do j=dist%info%ys,dist%info%ye
           i = 1
@@ -1326,7 +1323,7 @@ contains
 
     directions(:) = 0
     ! XP BOUNDARY
-    if ((bc%flags(BOUNDARY_XP).eq.BC_PRESSURE).and.(dist%info%xe.eq.dist%info%NX)) then
+    if ((bc%flags(BOUNDARY_XP).eq.BC_FLUX).and.(dist%info%xe.eq.dist%info%NX)) then
        call BCSetLocalDirectionsD2Q9(BOUNDARY_XP, directions, cardinals)
        do j=dist%info%ys,dist%info%ye
           i = dist%info%NX
@@ -1339,7 +1336,7 @@ contains
 
     directions(:) = 0
     ! YM BOUNDARY
-    if ((bc%flags(BOUNDARY_YM).eq.BC_PRESSURE).and.(dist%info%ys.eq.1)) then
+    if ((bc%flags(BOUNDARY_YM).eq.BC_FLUX).and.(dist%info%ys.eq.1)) then
        call BCSetLocalDirectionsD2Q9(BOUNDARY_YM, directions, cardinals)
        do i=dist%info%xs,dist%info%xe
           j = 1
@@ -1352,7 +1349,7 @@ contains
 
     directions(:) = 0
     ! YP BOUNDARY
-    if ((bc%flags(BOUNDARY_YP).eq.BC_PRESSURE).and.(dist%info%ye.eq.dist%info%NY)) then
+    if ((bc%flags(BOUNDARY_YP).eq.BC_FLUX).and.(dist%info%ye.eq.dist%info%NY)) then
        call BCSetLocalDirectionsD2Q9(BOUNDARY_YP, directions, cardinals)
        do i=dist%info%xs,dist%info%xe
           j = dist%info%NY
@@ -1374,15 +1371,15 @@ contains
     PetscInt i
     
     select case(boundary)
-    case (BOUNDARY_XP)
+    case (BOUNDARY_YP)
        ! identity mapping
        do i=0,discretization_directions
           directions(i) = i
        end do
-       cardinals(CARDINAL_NORMAL) = X_DIRECTION
-       cardinals(CARDINAL_CROSS) = Y_DIRECTION
+       cardinals(CARDINAL_NORMAL) = Y_DIRECTION
+       cardinals(CARDINAL_CROSS) = X_DIRECTION
 
-    case (BOUNDARY_XM)
+    case (BOUNDARY_YM)
        ! inverted mapping around the origin
        directions(ORIGIN) = ORIGIN
        directions(EAST) = WEST
@@ -1394,10 +1391,10 @@ contains
        directions(NORTHWEST) = SOUTHEAST
        directions(SOUTHEAST) = NORTHWEST
 
-       cardinals(CARDINAL_NORMAL) = X_DIRECTION
-       cardinals(CARDINAL_CROSS) = Y_DIRECTION
+       cardinals(CARDINAL_NORMAL) = Y_DIRECTION
+       cardinals(CARDINAL_CROSS) = X_DIRECTION
 
-    case (BOUNDARY_YP)
+    case (BOUNDARY_XP)
        ! map x -> y
        directions(ORIGIN) = ORIGIN
        directions(EAST) = NORTH
@@ -1409,10 +1406,10 @@ contains
        directions(NORTHWEST) = SOUTHEAST
        directions(SOUTHEAST) = NORTHWEST
 
-       cardinals(CARDINAL_NORMAL) = Y_DIRECTION
-       cardinals(CARDINAL_CROSS) = X_DIRECTION
+       cardinals(CARDINAL_NORMAL) = X_DIRECTION
+       cardinals(CARDINAL_CROSS) = Y_DIRECTION
 
-    case (BOUNDARY_YM)
+    case (BOUNDARY_XM)
        ! map x -> y
        directions(ORIGIN) = ORIGIN
        directions(EAST) = SOUTH
@@ -1424,8 +1421,8 @@ contains
        directions(NORTHWEST) = NORTHWEST
        directions(SOUTHEAST) = SOUTHEAST
 
-       cardinals(CARDINAL_NORMAL) = Y_DIRECTION
-       cardinals(CARDINAL_CROSS) = X_DIRECTION
+       cardinals(CARDINAL_NORMAL) = X_DIRECTION
+       cardinals(CARDINAL_CROSS) = Y_DIRECTION
 
     end select
   end subroutine BCSetLocalDirectionsD2Q9
@@ -1455,7 +1452,7 @@ contains
     do m=1,dist%s
        rhotmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) + fi(m,directions(WEST)) &
             + 2.*(fi(m,directions(NORTH)) + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST))) 
-       rhotmp = rhotmp/(1. + fvals(cardinals(CARDINAL_NORMAL)))
+       rhotmp = rhotmp/(1. - fvals(cardinals(CARDINAL_NORMAL)))
        
        ! Choice should not affect the momentum significantly
        ftmp(directions(SOUTH)) = fi(m,directions(NORTH))
@@ -1463,21 +1460,21 @@ contains
        ftmp(directions(SOUTHWEST)) = fi(m,directions(NORTHEAST))
 
        fi(m,directions(SOUTH)) = 1./3.*ftmp(directions(SOUTH)) &
-            - 2./3.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
+            + 2./3.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
             - 2./3.*(ftmp(directions(SOUTHEAST)) + ftmp(directions(SOUTHWEST))) &
             + 2./3.*(fi(m,directions(NORTH)) + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST)))
 
        fi(m,directions(SOUTHWEST)) = 1./3.*ftmp(directions(SOUTHWEST)) &
-            + 1./2.*rhotmp*fvals(cardinals(CARDINAL_CROSS)) &
-            - 1./6.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
+            - 1./2.*rhotmp*fvals(cardinals(CARDINAL_CROSS)) &
+            + 1./6.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
             + 1./2.*(fi(m,directions(EAST)) - fi(m,directions(WEST))) &
             + 1./6.*(fi(m,directions(NORTH)) - ftmp(directions(SOUTH))) &
             - 1./3.*(fi(m,directions(NORTHWEST)) - ftmp(directions(SOUTHEAST))) &
             + 2./3.*fi(m,directions(NORTHEAST))
 
        fi(m,directions(SOUTHEAST)) = 1./3.*ftmp(directions(SOUTHEAST)) &
-            - 1./2.*rhotmp*fvals(cardinals(CARDINAL_CROSS)) &
-            - 1./6.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
+            + 1./2.*rhotmp*fvals(cardinals(CARDINAL_CROSS)) &
+            + 1./6.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
             - 1./2.*(fi(m,directions(EAST)) - fi(m,directions(WEST))) &
             + 1./6.*(fi(m,directions(NORTH)) - ftmp(directions(SOUTH))) &
             - 1./3.*(fi(m,directions(NORTHEAST)) - ftmp(directions(SOUTHWEST))) &
