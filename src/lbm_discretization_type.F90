@@ -31,7 +31,7 @@ module LBM_Discretization_Type_module
      PetscInt,pointer:: opposites(:)
      PetscScalar,pointer:: mt_mrt(:,:)
      PetscScalar,pointer:: mmt_mrt(:)
-     PetscScalar,pointer:: ffw(:,:)
+     PetscScalar,pointer:: ffw(:)
   end type discretization_type
 
 end module LBM_Discretization_Type_module
