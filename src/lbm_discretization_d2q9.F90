@@ -55,7 +55,7 @@ contains
     allocate(disc%opposites(0:disc%b))
     allocate(disc%mt_mrt(0:disc%b,0:disc%b))         ! transpose of M
     allocate(disc%mmt_mrt(0:disc%b))                 ! diagonal M dot MT matrix
-    allocate(disc%ffw(0:2,0:2))  
+    allocate(disc%ffw(1:4*disc%stencil_size))  
 
     disc%opposites(ORIGIN) = ORIGIN
     disc%opposites(EAST) = WEST
@@ -86,31 +86,29 @@ contains
 
     disc%mmt_mrt = (/ 9, 36, 36, 6, 12, 6, 12, 4, 4 /)
 
-!!$    disc%ffw = 0.0
-!!$    disc%ffw( 1, 0) = 4./21.
-!!$    disc%ffw( 0, 1) = 4./21.
-!!$    disc%ffw(-1, 0) = 4./21.
-!!$    disc%ffw( 0,-1) = 4./21.
-!!$    disc%ffw( 1, 1) = 4./45.
-!!$    disc%ffw(-1, 1) = 4./45.
-!!$    disc%ffw(-1,-1) = 4./45.
-!!$    disc%ffw( 1,-1) = 4./45.
-!!$    disc%ffw( 2, 0) = 1./60.
-!!$    disc%ffw( 0, 2) = 1./60.
-!!$    disc%ffw(-2, 0) = 1./60.
-!!$    disc%ffw( 0,-2) = 1./60.
-!!$    disc%ffw( 2, 1) = 2./315.
-!!$    disc%ffw( 1, 2) = 2./315.
-!!$    disc%ffw(-1, 2) = 2./315.
-!!$    disc%ffw(-2, 1) = 2./315.
-!!$    disc%ffw(-2,-1) = 2./315.
-!!$    disc%ffw(-1,-2) = 2./315.
-!!$    disc%ffw( 1,-2) = 2./315.
-!!$    disc%ffw( 2,-1) = 2./315.
-!!$    disc%ffw( 2, 2) = 1./5040.
-!!$    disc%ffw(-2, 2) = 1./5040.
-!!$    disc%ffw(-2,-2) = 1./5040.
-!!$    disc%ffw( 2,-2) = 1./5040.
+    disc%ffw = 0.0
+    if(disc%stencil_size.eq.1) then
+      disc%ffw(1) = 1./3.
+      disc%ffw(2) = 1./12.
+    end if
+    
+    if(disc%stencil_size.eq.2) then 
+      disc%ffw(1) = 4./21.
+      disc%ffw(2) = 4./45.
+      disc%ffw(4) = 1./60.
+      disc%ffw(5) = 2./315.
+      disc%ffw(8) = 1./5040.
+    end if
+
+    if(disc%stencil_size.eq.3) then 
+      disc%ffw( 1) = 262./1785.
+      disc%ffw( 2) = 93./1190.
+      disc%ffw( 4) = 7./340.
+      disc%ffw( 5) = 6./595.
+      disc%ffw( 8) = 9./9520.
+      disc%ffw( 9) = 2./5355.
+      disc%ffw(10) = 1./7140.
+    end if
 
   end subroutine DiscretizationSetUp_D2Q9
 
@@ -125,12 +123,12 @@ contains
     if (relax%mode .eq. RELAXATION_MODE_MRT) then
        !! Curently following the code Qinjun gave me.
        relax%tau_mrt(0) = 1.d0
-       relax%tau_mrt(1) = 0.1d0
+       relax%tau_mrt(1) = 0.7d0
        relax%tau_mrt(2) = 1.5d0
        relax%tau_mrt(3) = 1.d0
-       relax%tau_mrt(4) = 0.7d0
+       relax%tau_mrt(4) = 0.8d0
        relax%tau_mrt(5) = 1.d0
-       relax%tau_mrt(6) = 0.7d0
+       relax%tau_mrt(6) = 0.8d0
        relax%tau_mrt(7) = oneontau
        relax%tau_mrt(8) = oneontau
     end if

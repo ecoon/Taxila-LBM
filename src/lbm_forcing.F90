@@ -108,6 +108,10 @@ contains
     PetscInt i,j,m,n,d
     PetscScalar,dimension(1:dist%s, 0:dist%b,  dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: tmp
+    PetscScalar,dimension(dist%s, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: drhodx
+    PetscScalar,dimension(dist%s, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: drhody
     PetscErrorCode ierr
 
     do m=1,dist%s
@@ -139,131 +143,150 @@ contains
 !!$       
 !!$    end if 
 
-    !if(dist%info%stencil_size.eq.1) then
-   
+    !! Calculate drhodx and drhody
+    if(dist%info%stencil_size.eq.1) then
       do j=dist%info%ys,dist%info%ye
       do i=dist%info%xs,dist%info%xe
         if (walls(i,j).eq.0) then
-          
-          ! phase 1, x-component
-          forces(1,1,i,j) = forces(1,1,i,j) &
-               - ( phases(1)%gf(1)*rho(1,i,j)*( 4./21.*rho(1,i+1,j) - 4./21.*rho(1,i-1,j) &
-                                               +4./45.*rho(1,i+1,j+1) - 4./45.*rho(1,i-1,j-1) &
-                                               -4./45.*rho(1,i-1,j+1) + 4./45.*rho(1,i+1,j-1) ) & 
-               +   phases(1)%gf(2)*rho(1,i,j)*( 4./21.*rho(2,i+1,j) - 4./21.*rho(2,i-1,j) &
-                                               +4./45.*rho(2,i+1,j+1) - 4./45.*rho(2,i-1,j-1) &
-                                               -4./45.*rho(2,i-1,j+1) + 4./45.*rho(2,i+1,j-1) ))
-          ! phase 1, y-component
-          forces(1,2,i,j) = forces(1,2,i,j) &
-               - ( phases(1)%gf(1)*rho(1,i,j)*( 4./21.*rho(1,i,j+1) - 4./21.*rho(1,i,j-1) &
-                                               +4./45.*rho(1,i+1,j+1) - 4./45.*rho(1,i-1,j-1) &
-                                               +4./45.*rho(1,i-1,j+1) - 4./45.*rho(1,i+1,j-1) ) & 
-               +   phases(1)%gf(2)*rho(1,i,j)*( 4./21.*rho(2,i,j+1) - 4./21.*rho(2,i,j-1) &
-                                               +4./45.*rho(2,i+1,j+1) - 4./45.*rho(2,i-1,j-1) &
-                                               +4./45.*rho(2,i-1,j+1) - 4./45.*rho(2,i+1,j-1) ))
+          drhodx(:,i,j) = dist%disc%ffw(1)*(rho(:,i+1,j  )-rho(:,i-1,j)) &
+                         +dist%disc%ffw(2)*(rho(:,i+1,j+1)-rho(:,i-1,j+1)-rho(:,i-1,j-1)+rho(:,i+1,j-1))
 
-          ! phase 2, x-component
-          forces(2,1,i,j) = forces(2,1,i,j) &
-               - ( phases(2)%gf(1)*rho(2,i,j)*( 4./21.*rho(1,i+1,j) - 4./21.*rho(1,i-1,j) &
-                                               +4./45.*rho(1,i+1,j+1) - 4./45.*rho(1,i-1,j-1) &
-                                               -4./45.*rho(1,i-1,j+1) + 4./45.*rho(1,i+1,j-1) ) & 
-               +   phases(2)%gf(2)*rho(2,i,j)*( 4./21.*rho(2,i+1,j) - 4./21.*rho(2,i-1,j) &
-                                               +4./45.*rho(2,i+1,j+1) - 4./45.*rho(2,i-1,j-1) &
-                                               -4./45.*rho(2,i-1,j+1) + 4./45.*rho(2,i+1,j-1) ))
-          ! phase 2, y-component
-          forces(2,2,i,j) = forces(2,2,i,j) &
-               - ( phases(2)%gf(1)*rho(2,i,j)*( 4./21.*rho(1,i,j+1) - 4./21.*rho(1,i,j-1) &
-                                               +4./45.*rho(1,i+1,j+1) - 4./45.*rho(1,i-1,j-1) &
-                                               +4./45.*rho(1,i-1,j+1) - 4./45.*rho(1,i+1,j-1) ) & 
-               +   phases(2)%gf(2)*rho(2,i,j)*( 4./21.*rho(2,i,j+1) - 4./21.*rho(2,i,j-1) &
-                                               +4./45.*rho(2,i+1,j+1) - 4./45.*rho(2,i-1,j-1) &
-                                               +4./45.*rho(2,i-1,j+1) - 4./45.*rho(2,i+1,j-1) ))
-
-
-        endif
-      enddo
-      enddo
- 
-    !endif
+          drhody(:,i,j) = dist%disc%ffw(1)*(rho(:,i  ,j+1)-rho(:,i,j-1)) &
+                         +dist%disc%ffw(2)*(rho(:,i+1,j+1)+rho(:,i-1,j+1)-rho(:,i-1,j-1)-rho(:,i+1,j-1))
+        end if
+      end do
+      end do
+    end if
 
     if(dist%info%stencil_size.eq.2) then
-   
       do j=dist%info%ys,dist%info%ye
       do i=dist%info%xs,dist%info%xe
         if (walls(i,j).eq.0) then
-          
-          ! phase 1, x-component
-          forces(1,1,i,j) = forces(1,1,i,j) &
-               - ( phases(1)%gf(1)*rho(1,i,j)*( 1./60.*rho(1,i+2,j) - 1./60.*rho(1,i-2,j) &
-                                               +2./315.*rho(1,i+2,j+1) + 2./315.*rho(1,i+1,j+2) &
-                                               -2./315.*rho(1,i-1,j+2) - 2./315.*rho(1,i-2,j+1) &
-                                               -2./315.*rho(1,i-2,j-1) - 2./315.*rho(1,i-1,j-2) &
-                                               +2./315.*rho(1,i+1,j-2) + 2./315.*rho(1,i+2,j-1) &
-                                               +1./5040.*rho(1,i+2,j+2) - 1./5040.*rho(1,i-2,j+2) & 
-                                               -1./5040.*rho(1,i-2,j-2) + 1./5040.*rho(1,i+2,j-2) ) &
-               +   phases(1)%gf(2)*rho(1,i,j)*( 1./60.*rho(2,i+2,j) - 1./60.*rho(2,i-2,j) &
-                                               +2./315.*rho(2,i+2,j+1) + 2./315.*rho(2,i+1,j+2) &
-                                               -2./315.*rho(2,i-1,j+2) - 2./315.*rho(2,i-2,j+1) &
-                                               -2./315.*rho(2,i-2,j-1) - 2./315.*rho(2,i-1,j-2) &
-                                               +2./315.*rho(2,i+1,j-2) + 2./315.*rho(2,i+2,j-1) &
-                                               +1./5040.*rho(2,i+2,j+2) - 1./5040.*rho(2,i-2,j+2) & 
-                                               -1./5040.*rho(2,i-2,j-2) + 1./5040.*rho(2,i+2,j-2) ))
-          ! phase 1, y-component
-          forces(1,2,i,j) = forces(1,2,i,j) &
-               - ( phases(1)%gf(1)*rho(1,i,j)*( 1./60.*rho(1,i,j+2) - 1./60.*rho(1,i,j-2) &
-                                               +2./315.*rho(1,i+2,j+1) + 2./315.*rho(1,i+1,j+2) &
-                                               +2./315.*rho(1,i-1,j+2) + 2./315.*rho(1,i-2,j+1) &
-                                               -2./315.*rho(1,i-2,j-1) - 2./315.*rho(1,i-1,j-2) &
-                                               -2./315.*rho(1,i+1,j-2) - 2./315.*rho(1,i+2,j-1) &
-                                               +1./5040.*rho(1,i+2,j+2) + 1./5040.*rho(1,i-2,j+2) & 
-                                               -1./5040.*rho(1,i-2,j-2) - 1./5040.*rho(1,i+2,j-2) ) & 
-               +   phases(1)%gf(2)*rho(1,i,j)*( 1./60.*rho(2,i,j+2) - 1./60.*rho(2,i,j-2) &
-                                               +2./315.*rho(2,i+2,j+1) + 2./315.*rho(2,i+1,j+2) &
-                                               +2./315.*rho(2,i-1,j+2) + 2./315.*rho(2,i-2,j+1) &
-                                               -2./315.*rho(2,i-2,j-1) - 2./315.*rho(2,i-1,j-2) &
-                                               -2./315.*rho(2,i+1,j-2) - 2./315.*rho(2,i+2,j-1) &
-                                               +1./5040.*rho(2,i+2,j+2) + 1./5040.*rho(2,i-2,j+2) & 
-                                               -1./5040.*rho(2,i-2,j-2) - 1./5040.*rho(2,i+2,j-2) ))
+          drhodx(:,i,j) = dist%disc%ffw(1)*(rho(:,i+1,j  )-rho(:,i-1,j  )) &
+                         +dist%disc%ffw(2)*(rho(:,i+1,j+1)-rho(:,i-1,j+1)-rho(:,i-1,j-1)+rho(:,i+1,j-1)) &
+                    +2.d0*dist%disc%ffw(4)*(rho(:,i+2,j  )-rho(:,i-2,j  )) &
+                    +2.d0*dist%disc%ffw(5)*(rho(:,i+2,j+1)-rho(:,i-2,j+1)-rho(:,i-2,j-1)+rho(:,i+2,j-1)) &
+                         +dist%disc%ffw(5)*(rho(:,i+1,j+2)-rho(:,i-1,j+2)-rho(:,i-1,j-2)+rho(:,i+1,j-2)) &
+                    +2.d0*dist%disc%ffw(8)*(rho(:,i+2,j+2)-rho(:,i-2,j+2)-rho(:,i-2,j-2)+rho(:,i+2,j-2))
 
-          ! phase 2, x-component
-          forces(2,1,i,j) = forces(2,1,i,j) &
-               - ( phases(2)%gf(1)*rho(2,i,j)*( 1./60.*rho(1,i+2,j) - 1./60.*rho(1,i-2,j) &
-                                               +2./315.*rho(1,i+2,j+1) + 2./315.*rho(1,i+1,j+2) &
-                                               -2./315.*rho(1,i-1,j+2) - 2./315.*rho(1,i-2,j+1) &
-                                               -2./315.*rho(1,i-2,j-1) - 2./315.*rho(1,i-1,j-2) &
-                                               +2./315.*rho(1,i+1,j-2) + 2./315.*rho(1,i+2,j-1) &
-                                               +1./5040.*rho(1,i+2,j+2) - 1./5040.*rho(1,i-2,j+2) & 
-                                               -1./5040.*rho(1,i-2,j-2) + 1./5040.*rho(1,i+2,j-2) ) & 
-               +   phases(2)%gf(2)*rho(2,i,j)*( 1./60.*rho(2,i+2,j) - 1./60.*rho(2,i-2,j) &
-                                               +2./315.*rho(2,i+2,j+1) + 2./315.*rho(2,i+1,j+2) &
-                                               -2./315.*rho(2,i-1,j+2) - 2./315.*rho(2,i-2,j+1) &
-                                               -2./315.*rho(2,i-2,j-1) - 2./315.*rho(2,i-1,j-2) &
-                                               +2./315.*rho(2,i+1,j-2) + 2./315.*rho(2,i+2,j-1) &
-                                               +1./5040.*rho(2,i+2,j+2) - 1./5040.*rho(2,i-2,j+2) & 
-                                               -1./5040.*rho(2,i-2,j-2) + 1./5040.*rho(2,i+2,j-2) ))
-          ! phase 2, y-component
-          forces(2,2,i,j) = forces(2,2,i,j) &
-               - ( phases(2)%gf(1)*rho(2,i,j)*( 1./60.*rho(1,i,j+2) - 1./60.*rho(1,i,j-2) &
-                                               +2./315.*rho(1,i+2,j+1) + 2./315.*rho(1,i+1,j+2) &
-                                               +2./315.*rho(1,i-1,j+2) + 2./315.*rho(1,i-2,j+1) &
-                                               -2./315.*rho(1,i-2,j-1) - 2./315.*rho(1,i-1,j-2) &
-                                               -2./315.*rho(1,i+1,j-2) - 2./315.*rho(1,i+2,j-1) &
-                                               +1./5040.*rho(1,i+2,j+2) + 1./5040.*rho(1,i-2,j+2) & 
-                                               -1./5040.*rho(1,i-2,j-2) - 1./5040.*rho(1,i+2,j-2) ) & 
-               +   phases(2)%gf(2)*rho(2,i,j)*(  1./60.*rho(2,i,j+2) - 1./60.*rho(2,i,j-2) &
-                                               +2./315.*rho(2,i+2,j+1) + 2./315.*rho(2,i+1,j+2) &
-                                               +2./315.*rho(2,i-1,j+2) + 2./315.*rho(2,i-2,j+1) &
-                                               -2./315.*rho(2,i-2,j-1) - 2./315.*rho(2,i-1,j-2) &
-                                               -2./315.*rho(2,i+1,j-2) - 2./315.*rho(2,i+2,j-1) &
-                                               +1./5040.*rho(2,i+2,j+2) + 1./5040.*rho(2,i-2,j+2) & 
-                                               -1./5040.*rho(2,i-2,j-2) - 1./5040.*rho(2,i+2,j-2) ))
+          drhody(:,i,j) = dist%disc%ffw(1)*(rho(:,i  ,j+1)-rho(:,i  ,j-1)) &
+                         +dist%disc%ffw(2)*(rho(:,i+1,j+1)+rho(:,i-1,j+1)-rho(:,i-1,j-1)-rho(:,i+1,j-1)) &
+                    +2.d0*dist%disc%ffw(4)*(rho(:,i  ,j+2)-rho(:,i  ,j-2)) &
+                         +dist%disc%ffw(5)*(rho(:,i+2,j+1)+rho(:,i-2,j+1)-rho(:,i-2,j-1)-rho(:,i+2,j-1)) &
+                    +2.d0*dist%disc%ffw(5)*(rho(:,i+1,j+2)+rho(:,i-1,j+2)-rho(:,i-1,j-2)-rho(:,i+1,j-2)) &
+                    +2.d0*dist%disc%ffw(8)*(rho(:,i+2,j+2)+rho(:,i-2,j+2)-rho(:,i-2,j-2)-rho(:,i+2,j-2))
+        end if
+      end do
+      end do
+    end if
 
+    if(dist%info%stencil_size.eq.3) then
+      do j=dist%info%ys,dist%info%ye
+      do i=dist%info%xs,dist%info%xe
+        if (walls(i,j).eq.0) then
+          drhodx(:,i,j) = dist%disc%ffw( 1)*(rho(:,i+1,j  )-rho(:,i-1,j  )) &
+                         +dist%disc%ffw( 2)*(rho(:,i+1,j+1)-rho(:,i-1,j+1)-rho(:,i-1,j-1)+rho(:,i+1,j-1)) &
+                    +2.d0*dist%disc%ffw( 4)*(rho(:,i+2,j  )-rho(:,i-2,j  )) &
+                    +2.d0*dist%disc%ffw( 5)*(rho(:,i+2,j+1)-rho(:,i-2,j+1)-rho(:,i-2,j-1)+rho(:,i+2,j-1)) &
+                         +dist%disc%ffw( 5)*(rho(:,i+1,j+2)-rho(:,i-1,j+2)-rho(:,i-1,j-2)+rho(:,i+1,j-2)) &
+                    +2.d0*dist%disc%ffw( 8)*(rho(:,i+2,j+2)-rho(:,i-2,j+2)-rho(:,i-2,j-2)+rho(:,i+2,j-2)) &
+                    +3.d0*dist%disc%ffw( 9)*(rho(:,i+3,j  )-rho(:,i-3,j  )) &
+                    +3.d0*dist%disc%ffw(10)*(rho(:,i+3,j+1)-rho(:,i-3,j+1)-rho(:,i-3,j-1)+rho(:,i+3,j-1)) &
+                         +dist%disc%ffw(10)*(rho(:,i+1,j+3)-rho(:,i-1,j+3)-rho(:,i-1,j-3)+rho(:,i+1,j-3))
 
-        endif
-      enddo
-      enddo
+          drhody(:,i,j) = dist%disc%ffw( 1)*(rho(:,i  ,j+1)-rho(:,i  ,j-1)) &
+                         +dist%disc%ffw( 2)*(rho(:,i+1,j+1)+rho(:,i-1,j+1)-rho(:,i-1,j-1)-rho(:,i+1,j-1)) &
+                    +2.d0*dist%disc%ffw( 4)*(rho(:,i  ,j+2)-rho(:,i  ,j-2)) &
+                         +dist%disc%ffw( 5)*(rho(:,i+2,j+1)+rho(:,i-2,j+1)-rho(:,i-2,j-1)-rho(:,i+2,j-1)) &
+                    +2.d0*dist%disc%ffw( 5)*(rho(:,i+1,j+2)+rho(:,i-1,j+2)-rho(:,i-1,j-2)-rho(:,i+1,j-2)) &
+                    +2.d0*dist%disc%ffw( 8)*(rho(:,i+2,j+2)+rho(:,i-2,j+2)-rho(:,i-2,j-2)-rho(:,i+2,j-2)) &
+                    +3.d0*dist%disc%ffw( 9)*(rho(:,i  ,j+3)-rho(:,i  ,j-3)) &
+                         +dist%disc%ffw(10)*(rho(:,i+3,j+1)+rho(:,i-3,j+1)-rho(:,i-3,j-1)-rho(:,i+3,j-1)) &
+                    +3.d0*dist%disc%ffw(10)*(rho(:,i+1,j+3)+rho(:,i-1,j+3)-rho(:,i-1,j-3)-rho(:,i+1,j-3))
+        end if
+      end do
+      end do
+    end if
 
-    endif
+    !! Calculate fluid-fluid forces
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+      if (walls(i,j).eq.0) then
+           
+        ! phase 1, x-component
+        forces(1,1,i,j) = -( phases(1)%gf(1)*rho(1,i,j)*drhodx(1,i,j) &
+                           + phases(1)%gf(2)*rho(1,i,j)*drhodx(2,i,j) )
+        ! phase 1, y-component
+        forces(1,2,i,j) = -( phases(1)%gf(1)*rho(1,i,j)*drhody(1,i,j) & 
+                            +phases(1)%gf(2)*rho(1,i,j)*drhody(2,i,j) )
+        ! phase 2, x-component
+        forces(2,1,i,j) = -( phases(2)%gf(1)*rho(2,i,j)*drhodx(1,i,j) &
+                            +phases(2)%gf(2)*rho(2,i,j)*drhodx(2,i,j) )
+        ! phase 2, y-component
+        forces(2,2,i,j) = -( phases(2)%gf(1)*rho(2,i,j)*drhody(1,i,j) & 
+                            +phases(2)%gf(2)*rho(2,i,j)*drhody(2,i,j) )
+
+      endif
+    enddo
+    enddo
+
+! print stuff
+!!$    write(*,*) 'rho(1,:,:):'
+!!$    do j=dist%info%ys,dist%info%ye
+!!$    do i=dist%info%xs,dist%info%xe
+!!$      write(*,"(1f8.4)",advance="no") rho(1,i,j)
+!!$    end do
+!!$    write(*,*) ''
+!!$    end do
+!!$    write(*,*) 'rho(2,:,:):'
+!!$    do j=dist%info%ys,dist%info%ye
+!!$    do i=dist%info%xs,dist%info%xe
+!!$      write(*,"(1f8.4)",advance="no") rho(2,i,j)
+!!$    end do
+!!$    write(*,*) ''
+!!$    end do
+!!$    write(*,*) 'forces(1,1,:,:):'
+!!$    do j=dist%info%ys,dist%info%ye
+!!$    do i=dist%info%xs,dist%info%xe
+!!$      write(*,"(1f8.4)",advance="no") forces(1,1,i,j)
+!!$    end do
+!!$    write(*,*) ''
+!!$    end do
+!!$    write(*,*) 'forces(1,2,:,:):'
+!!$    do j=dist%info%ys,dist%info%ye
+!!$    do i=dist%info%xs,dist%info%xe
+!!$      write(*,"(1f8.4)",advance="no") forces(1,2,i,j)
+!!$    end do
+!!$    write(*,*) ''
+!!$    end do
+!!$    write(*,*) 'drhodx(1,:,:):'
+!!$    do j=dist%info%ys,dist%info%ye
+!!$    do i=dist%info%xs,dist%info%xe
+!!$      write(*,"(1f8.4)",advance="no") drhodx(1,i,j)
+!!$    end do
+!!$    write(*,*) ''
+!!$    end do
+!!$    write(*,*) 'drhodx(2,:,:):'
+!!$    do j=dist%info%ys,dist%info%ye
+!!$    do i=dist%info%xs,dist%info%xe
+!!$      write(*,"(1f8.4)",advance="no") drhodx(2,i,j)
+!!$    end do
+!!$    write(*,*) ''
+!!$    end do
+!!$    write(*,*) 'drhody(1,:,:):'
+!!$    do j=dist%info%ys,dist%info%ye
+!!$    do i=dist%info%xs,dist%info%xe
+!!$      write(*,"(1f8.4)",advance="no") drhody(1,i,j)
+!!$    end do
+!!$    write(*,*) ''
+!!$    end do
+!!$    write(*,*) 'drhody(2,:,:):'
+!!$    do j=dist%info%ys,dist%info%ye
+!!$    do i=dist%info%xs,dist%info%xe
+!!$      write(*,"(1f8.4)",advance="no") drhody(2,i,j)
+!!$    end do
+!!$    write(*,*) ''
+!!$    end do
 
 
   end subroutine LBMAddFluidFluidForcesD2
