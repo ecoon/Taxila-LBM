@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         09 December 2010
 !!!       on:            14:16:32 MST
-!!!     last modified:   04 April 2011
-!!!       at:            12:18:29 MDT
+!!!     last modified:   13 April 2011
+!!!       at:            17:25:36 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -42,6 +42,7 @@
        PetscInt nspecies
        PetscInt flow_relaxation_mode
        PetscInt transport_relaxation_mode
+       PetscBool transport_reactive_matrix
     end type options_type
 
     public :: OptionsCreate, &
@@ -73,9 +74,10 @@
       options%transport_disc = NULL_DISCRETIZATION
       options%ndims = 0
       options%nphases = 1
-      options%nspecies = 1
+      options%nspecies = 0
       options%flow_relaxation_mode = RELAXATION_MODE_SRT
       options%transport_relaxation_mode = RELAXATION_MODE_SRT
+      options%transport_reactive_matrix = PETSC_FALSE
     end function OptionsCreate
 
     subroutine OptionsSetPrefix(options, prefix)
@@ -171,17 +173,6 @@
       end if
          
       ! set the tran discretization
-      options%nspecies = 1
-      if (help) call PetscPrintf(options%comm, &
-           "  -nspecies <1>: number of major species\n", ierr)
-      call PetscOptionsGetInt(options%my_prefix,'-nspecies', options%nspecies, &
-           flag,ierr)
-
-      if (help) call PetscPrintf(options%comm, &
-           "  -transport_relaxation_mode <0>: transport relaxation as SRT=0, MRT=1\n", ierr)
-      call PetscOptionsGetInt(options%my_prefix, '-transport_relaxation_mode', &
-           options%transport_relaxation_mode, flag, ierr)
-
       if (help) call PetscPrintf(options%comm, &
            "  -transport_discretization 'd3q19': discretization type\n", ierr)
       call PetscOptionsGetString(options%my_prefix, '-transport_discretization', &
@@ -205,6 +196,23 @@
          else if (tmpdims /= options%ndims) then
             SETERRQ(1,1,"Discretization dimensions don't match", ierr)
          end if
+
+         options%nspecies = 1
+         if (help) call PetscPrintf(options%comm, &
+              "  -nspecies <1>: number of major species\n", ierr)
+         call PetscOptionsGetInt(options%my_prefix,'-nspecies', options%nspecies, &
+              flag,ierr)
+         
+         if (help) call PetscPrintf(options%comm, &
+              "  -transport_relaxation_mode <0>: transport relaxation as SRT=0, MRT=1\n", &
+              ierr)
+         call PetscOptionsGetInt(options%my_prefix, '-transport_relaxation_mode', &
+              options%transport_relaxation_mode, flag, ierr)
+
+         if (help) call PetscPrintf(options%comm, &
+              "  -reactive_matrix: allow dissolution/precipitation\n", ierr)
+         call PetscOptionsGetBool(options%my_prefix,'-reactive_matrix', &
+              options%transport_reactive_matrix, flag, ierr)
       end if
       return
     end subroutine OptionsSetUp

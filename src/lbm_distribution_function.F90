@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            14:06:07 MDT
-!!!     last modified:   12 April 2011
-!!!       at:            11:56:27 MDT
+!!!     last modified:   13 April 2011
+!!!       at:            17:21:13 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -43,6 +43,7 @@ module LBM_Distribution_Function_module
        DistributionCalcDensity, &
        DistributionCalcFlux, &
        DistributionStream, &
+       DistributionBounceback, &
        DistributionGatherValueToDirection
 
 contains
@@ -432,6 +433,77 @@ contains
     end do
     fi = tmp
   end subroutine DistributionStreamComponentD2
+
+  subroutine DistributionBounceback(dist, walls)
+    type(distribution_type) dist
+    PetscScalar,dimension(dist%info%gxyzl):: walls
+    PetscErrorCode ierr
+
+    select case(dist%info%ndims)
+    case(3)
+       call DistributionBouncebackD3(dist, dist%fi_a, walls)
+    case(2)
+       call DistributionBouncebackD2(dist, dist%fi_a, walls)
+    case DEFAULT 
+       SETERRQ(1, 1, 'invalid discretization in LBM', ierr)
+    end select
+  end subroutine DistributionBounceback
+
+  subroutine DistributionBouncebackD3(dist, fi, walls)
+    type(distribution_type) dist
+    PetscScalar,dimension(dist%s,0:dist%b, &
+         dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, &
+         dist%info%gzs:dist%info%gze):: fi
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, &
+         dist%info%gzs:dist%info%gze):: walls
+
+    PetscInt i,j,k,n
+    PetscInt tmp(dist%s, 0:dist%b)
+
+    do k=dist%info%zs,dist%info%ze
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+    if (walls(i,j,k).eq.1) then
+       call DistributionBouncebackSite(dist, fi(:,:,i,j,k))
+    end if
+    end do
+    end do
+    end do
+  end subroutine DistributionBouncebackD3
+
+  subroutine DistributionBouncebackD2(dist, fi, walls)
+    type(distribution_type) dist
+    PetscScalar,dimension(dist%s,0:dist%b,&
+         dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: fi
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: walls
+
+    PetscInt i,j,n
+    PetscInt tmp(dist%s, 0:dist%b)
+
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+    if (walls(i,j).eq.1) then
+       call DistributionBouncebackSite(dist, fi(:,:,i,j))
+    end if
+    end do
+    end do
+  end subroutine DistributionBouncebackD2
+
+  subroutine DistributionBouncebackSite(dist, fi)
+    type(distribution_type) dist
+    PetscScalar,dimension(dist%s,0:dist%b):: fi
+    PetscScalar,dimension(dist%s,0:dist%b):: tmp
+    PetscInt n
+
+    do n=0,dist%b
+       tmp(:,n) = fi(:,dist%disc%opposites(n))
+    end do
+    fi(:,:) = tmp
+  end subroutine DistributionBouncebackSite
 
   subroutine DistributionGatherValueToDirectionD3(distribution, val, out)
     type(distribution_type) distribution

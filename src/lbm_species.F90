@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            15:34:44 MDT
-!!!     last modified:   13 April 2011
-!!!       at:            10:33:20 MDT
+!!!     last modified:   14 April 2011
+!!!       at:            16:58:10 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -29,6 +29,7 @@ module LBM_Specie_module
      ! sizes and identifiers (set pre-bag)
      PetscInt s
      PetscInt id
+     PetscInt phase
 
      ! bagged parameters
 
@@ -51,7 +52,8 @@ module LBM_Specie_module
   end interface
 
   interface SpecieCreate
-     procedure SpecieCreateOne, SpecieCreateN
+     module procedure SpecieCreateOne
+     module procedure SpecieCreateN
   end interface
 
   public :: SpecieCreate, &
@@ -75,13 +77,16 @@ contains
     MPI_Comm comm
     PetscInt n
     type(specie_type),pointer,dimension(:):: specie
+    type(specie_type),pointer:: aspecie
     PetscInt lcv
     allocate(specie(n))
 
     do lcv=1,n
-       specie(lcv)%comm = comm
-       call SpecieInitialize(specie(lcv))
-       specie(lcv)%relax => RelaxationCreate(comm)
+       aspecie => specie(lcv)
+       aspecie%comm = comm
+       call SpecieInitialize(aspecie)
+       aspecie%relax => RelaxationCreate(comm)
+       call SpecieSetID(aspecie, lcv)
     end do
   end function SpecieCreateN
 
@@ -113,6 +118,7 @@ contains
     type(specie_type) specie
     PetscInt id
     specie%id = id
+    call RelaxationSetID(specie%relax, id)
   end subroutine SpecieSetID
 
   subroutine SpecieSetFromOptions(specie, options, ierr)
