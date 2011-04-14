@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   12 April 2011
-!!!       at:            11:33:46 MDT
+!!!     last modified:   13 April 2011
+!!!       at:            10:23:10 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -31,6 +31,7 @@ module LBM_BC_module
      MPI_Comm comm
      type(grid_type),pointer:: grid
      PetscInt, dimension(6):: flags ! enum for boundary conditions
+     PetscInt, dimension(6):: transport_flags ! enum for boundary conditions
      PetscInt dim
      PetscScalar,pointer,dimension(:):: xm_a, xp_a
      PetscScalar,pointer,dimension(:):: ym_a, yp_a
@@ -50,6 +51,7 @@ module LBM_BC_module
        BCSetUp, &
        BCSetValues, &
        BCApplyFlow, &
+       BCApplyTransport, &
        BCZeroForces, &
        BCGetArrays, &
        BCRestoreArrays, &
@@ -72,6 +74,7 @@ contains
     nullify(bc%zm_a)
     nullify(bc%zp_a)
     bc%flags = 0
+    bc%transport_flags = 0
     bc%dim = 0
     
     bc%xm = 0
@@ -142,6 +145,14 @@ contains
          flag, ierr)
     if (bcvalue) bc%flags(BOUNDARY_XM) = BC_FLUX
 
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_concentration_xm', bcvalue, flag, ierr)
+    if (bcvalue) bc%transport_flags(BOUNDARY_XM) = BC_CONCENTRATION
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_zero_conc_gradient_xm', bcvalue, flag, ierr)
+    if (bcvalue) bc%transport_flags(BOUNDARY_XM) = BC_ZERO_CONC_GRADIENT
+
     ! xp boundary
     bcvalue = PETSC_FALSE
     call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_xp', bcvalue, flag, ierr)
@@ -157,10 +168,20 @@ contains
     if (bcvalue) bc%flags(BOUNDARY_XP) = BC_FLUX
 
     bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_concentration_xp', bcvalue, flag, ierr)
+    if (bcvalue) bc%transport_flags(BOUNDARY_XP) = BC_CONCENTRATION
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_zero_conc_gradient_xp', bcvalue, flag, ierr)
+    if (bcvalue) bc%transport_flags(BOUNDARY_XP) = BC_ZERO_CONC_GRADIENT
+
+    bcvalue = PETSC_FALSE
     call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_x', bcvalue, flag, ierr)
     if (bcvalue) then
        bc%flags(BOUNDARY_XM) = BC_PERIODIC
        bc%flags(BOUNDARY_XP) = BC_PERIODIC
+       bc%transport_flags(BOUNDARY_XM) = BC_PERIODIC
+       bc%transport_flags(BOUNDARY_XP) = BC_PERIODIC
     end if
 
     ! ym boundary
@@ -176,6 +197,14 @@ contains
     call PetscOptionsGetBool(options%my_prefix, '-bc_flux_ym_poiseuille', bcvalue, &
          flag, ierr)
     if (bcvalue) bc%flags(BOUNDARY_YM) = BC_FLUX
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_concentration_ym', bcvalue, flag, ierr)
+    if (bcvalue) bc%transport_flags(BOUNDARY_YM) = BC_CONCENTRATION
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_zero_conc_gradient_ym', bcvalue, flag, ierr)
+    if (bcvalue) bc%transport_flags(BOUNDARY_YM) = BC_ZERO_CONC_GRADIENT
 
     ! yp boundary
     bcvalue = PETSC_FALSE
@@ -193,10 +222,20 @@ contains
     if (bcvalue) bc%flags(BOUNDARY_YP) = BC_FLUX
 
     bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_concentration_yp', bcvalue, flag, ierr)
+    if (bcvalue) bc%transport_flags(BOUNDARY_YP) = BC_CONCENTRATION
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_zero_conc_gradient_yp', bcvalue, flag, ierr)
+    if (bcvalue) bc%transport_flags(BOUNDARY_YP) = BC_ZERO_CONC_GRADIENT
+
+    bcvalue = PETSC_FALSE
     call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_y', bcvalue, flag, ierr)
     if (bcvalue) then
        bc%flags(BOUNDARY_YM) = BC_PERIODIC
        bc%flags(BOUNDARY_YP) = BC_PERIODIC
+       bc%transport_flags(BOUNDARY_YM) = BC_PERIODIC
+       bc%transport_flags(BOUNDARY_YP) = BC_PERIODIC    
     end if
 
     if (options%ndims > 2) then
@@ -214,6 +253,14 @@ contains
             flag, ierr)
        if (bcvalue) bc%flags(BOUNDARY_ZM) = BC_FLUX
 
+       bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix, '-bc_concentration_zm', bcvalue, flag, ierr)
+       if (bcvalue) bc%transport_flags(BOUNDARY_ZM) = BC_CONCENTRATION
+
+       bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix, '-bc_zero_conc_gradient_zm', bcvalue, flag, ierr)
+       if (bcvalue) bc%transport_flags(BOUNDARY_ZM) = BC_ZERO_CONC_GRADIENT
+
        ! zp boundary
        bcvalue = PETSC_FALSE
        call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_zp', bcvalue, flag, ierr)
@@ -229,10 +276,20 @@ contains
        if (bcvalue) bc%flags(BOUNDARY_ZP) = BC_FLUX
 
        bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix, '-bc_concentration_zp', bcvalue, flag, ierr)
+       if (bcvalue) bc%transport_flags(BOUNDARY_ZP) = BC_CONCENTRATION
+
+       bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix, '-bc_zero_conc_gradient_zp', bcvalue, flag, ierr)
+       if (bcvalue) bc%transport_flags(BOUNDARY_ZP) = BC_ZERO_CONC_GRADIENT
+
+       bcvalue = PETSC_FALSE
        call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_z', bcvalue, flag, ierr)
        if (bcvalue) then
           bc%flags(BOUNDARY_ZM) = BC_PERIODIC
           bc%flags(BOUNDARY_ZP) = BC_PERIODIC
+          bc%transport_flags(BOUNDARY_ZM) = BC_PERIODIC
+          bc%transport_flags(BOUNDARY_ZP) = BC_PERIODIC    
        end if
     end if
   end subroutine BCSetFromOptions
@@ -452,6 +509,29 @@ contains
        endif
     enddo
   end subroutine BCApplyFlow
+
+  subroutine BCApplyTransport(bc, walls, dist)
+    type(bc_type) bc
+    type(distribution_type) dist
+    PetscScalar,dimension(1:dist%info%gxyzl):: walls
+
+    logical,dimension(0:10):: bcs_done    
+    PetscInt lcv_sides
+    bcs_done=.FALSE.
+    bcs_done(BC_PERIODIC) = .TRUE.   ! periodic done by default
+
+    do lcv_sides = 1,6
+       if (.not.bcs_done(bc%transport_flags(lcv_sides))) then
+          select case (bc%transport_flags(lcv_sides))
+          case (BC_CONCENTRATION)         ! pseudo-periodic
+             !call BCConcentration(bc,dist%fi_a,walls,dist)
+          case (BC_ZERO_CONC_GRADIENT)         ! flux
+             !call BCZeroConcentrationGradient(bc, dist%fi_a, walls, dist)
+          end select
+          bcs_done(bc%transport_flags(lcv_sides)) = .TRUE. ! only do each bc type once
+       endif
+    enddo
+  end subroutine BCApplyTransport
 
   subroutine BCPressure(bc, fi, walls, dist)
     type(bc_type) bc

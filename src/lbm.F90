@@ -25,7 +25,7 @@
     use LBM_BC_module
     use LBM_Distribution_Function_module
     use LBM_Flow_module
-!    use LBM_Transport_module
+    use LBM_Transport_module
     use LBM_IO_module
     use LBM_Options_module
     implicit none
@@ -39,7 +39,7 @@
        type(grid_type),pointer:: grid
        type(bc_type),pointer:: bc
        type(flow_type),pointer:: flow
-!       type(transport_type),pointer:: transport
+       type(transport_type),pointer:: transport
        type(io_type),pointer :: io
 
        Vec walls
@@ -74,7 +74,7 @@
       lbm%bc => BCCreate(comm)
       lbm%io => IOCreate(comm)
       lbm%flow => FlowCreate(lbm%comm)
-!      nullify(lbm%transport)
+      nullify(lbm%transport)
 
       lbm%walls = 0
       lbm%walls_g = 0
@@ -93,7 +93,7 @@
 
       call BCDestroy(lbm%bc, ierr)
       if (associated(lbm%flow)) call FlowDestroy(lbm%flow,ierr)
-!      if (associated(lbm%transport)) call TransportDestroy(lbm%transport,ierr)
+      if (associated(lbm%transport)) call TransportDestroy(lbm%transport,ierr)
       call GridDestroy(lbm%grid, ierr)
       call IODestroy(lbm%io, ierr)
       return
@@ -115,11 +115,11 @@
       call GridSetName(lbm%grid, lbm%name)
       call FlowSetGrid(lbm%flow, lbm%grid)
       call FlowSetFromOptions(lbm%flow, options, ierr)
-!      if (options%transport_disc /= NULL_DISCRETIZATION) then
-!         lbm%transport => TransportCreate(lbm%comm)
-!         call TransportSetGrid(lbm%transport, lbm%grid)
-!         call TransportSetFromOptions(lbm%transport, options)
-!      end if
+      if (options%transport_disc /= NULL_DISCRETIZATION) then
+         lbm%transport => TransportCreate(lbm%comm)
+         call TransportSetGrid(lbm%transport, lbm%grid)
+         call TransportSetFromOptions(lbm%transport, options, ierr)
+      end if
 
       call BCSetFromOptions(lbm%bc, options, ierr)
     end subroutine LBMSetFromOptions
@@ -135,16 +135,16 @@
       lbm%grid%da_sizes(NPHASEDOF) = lbm%flow%nphases
       lbm%grid%da_sizes(NPHASEXBDOF) = lbm%flow%nphases*(lbm%flow%disc%b+1)
       lbm%grid%da_sizes(NFLOWDOF) = lbm%flow%ndims
-      ! if (associated(lbm%transport)) then
-      !    lbm%grid%da_sizes(NCOMPONENTDOF) = lbm%transport%nspecies
-      !    lbm%grid%da_sizes(NCOMPONENTXBDOF) = lbm%transport%nspecies*(lbm%transport%b+1)
-      ! end if
+      if (associated(lbm%transport)) then
+         lbm%grid%da_sizes(NSPECIEDOF) = lbm%transport%nspecies
+         lbm%grid%da_sizes(NSPECIEXBDOF) = lbm%transport%nspecies*(lbm%transport%disc%b+1)
+      end if
 
       call GridSetUp(lbm%grid)
       call FlowSetUp(lbm%flow)
-      ! if (associated(lbm%transport)) then
-      !    call TransportSetUp(lbm%transport)
-      ! end if
+      if (associated(lbm%transport)) then
+         call TransportSetUp(lbm%transport)
+      end if
       call BCSetGrid(lbm%bc, lbm%grid)
       call BCSetUp(lbm%bc)
 
@@ -185,20 +185,22 @@
               INSERT_VALUES, lbm%flow%distribution%fi, ierr)
          call DMDALocalToLocalEnd(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi, &
               INSERT_VALUES, lbm%flow%distribution%fi, ierr)
-
-         ! if (associated(lbm%transport)) then
-         !    call DMDALocalToLocalBegin(lbm%grid%da(NCOMPONENTXBDOF), &
-         !         lbm%transport%distribution%fi, INSERT_VALUES, &
-         !         lbm%transport%distribution%fi, ierr)
-         !    call DMDALocalToLocalEnd(lbm%grid%da(NCOMPONENTXBDOF), &
-         !         lbm%transport%distribution%fi, INSERT_VALUES, &
-         !         lbm%transport%distribution%fi, ierr)
-         ! end if
+         if (associated(lbm%transport)) then
+            call DMDALocalToLocalBegin(lbm%grid%da(NSPECIEXBDOF), &
+                 lbm%transport%distribution%fi, INSERT_VALUES, &
+                 lbm%transport%distribution%fi, ierr)
+            call DMDALocalToLocalEnd(lbm%grid%da(NSPECIEXBDOF), &
+                 lbm%transport%distribution%fi, INSERT_VALUES, &
+                 lbm%transport%distribution%fi, ierr)
+         end if
 
          ! get arrays
          call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
          call FlowGetArrays(lbm%flow)
          call BCGetArrays(lbm%bc, ierr)
+         if (associated(lbm%transport)) then
+            call TransportGetArrays(lbm%transport)
+         end if
 
          ! update values and view
          if (lbm%grid%info%rank.eq.0) then
@@ -206,6 +208,10 @@
          endif
          call FlowUpdateMoments(lbm%flow, lbm%walls_a)
          call FlowOutputDiagnostics(lbm%flow, lbm%walls_a, lbm%io)
+         if (associated(lbm%transport)) then
+            call TransportUpdateMoments(lbm%transport, lbm%walls_a)
+            call TransportOutputDiagnostics(lbm%transport, lbm%walls_a, lbm%io)
+         end if
 
          ! view walls
          call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
@@ -227,24 +233,48 @@
       timername = trim(lbm%name)//'Simulation'
       timer1 => TimingCreate(lbm%comm, timername)
       do lcv_step = istep+1,kstep
+         ! streaming
          call FlowStream(lbm%flow)
+         if (associated(lbm%transport)) then
+            call TransportStream(lbm%transport)
+         end if
+
+         ! internal fluid-solid boundary conditions
          call FlowBounceback(lbm%flow, lbm%walls_a)
+         if (associated(lbm%transport)) then
+            call TransportReact(lbm%transport, lbm%walls_a)
+         end if
 
+         ! external boundary conditions
          call BCApplyFlow(lbm%bc, lbm%walls_a, lbm%flow%distribution)
+         if (associated(lbm%transport)) then
+            call BCApplyTransport(lbm%bc, lbm%walls_a, lbm%transport%distribution)
+         end if
+
+         ! update moments for rho, psi
          call FlowUpdateMoments(lbm%flow, lbm%walls_a)
+         if (associated(lbm%transport)) then
+            call TransportUpdateMoments(lbm%transport, lbm%walls_a)
+         end if
 
-         ! update rho ghosts values
+         ! add in momentum forcing terms
          call DistributionCommunicateDensity(lbm%flow%distribution)
-
-         ! calculate forces
          call FlowCalcForces(lbm%flow, lbm%walls_a)
          call BCZeroForces(lbm%bc, lbm%flow%forces, lbm%flow%distribution)
 
+         ! reaction?
+
          ! collision
          call FlowCollision(lbm%flow, lbm%walls_a)
+         if (associated(lbm%transport)) then
+            call TransportCollision(lbm%transport, lbm%walls_a, lbm%flow)
+         end if
 
          ! communicate, update fi
          call DistributionCommunicateFi(lbm%flow%distribution)
+         if (associated(lbm%transport)) then
+            call DistributionCommunicateFi(lbm%transport%distribution)
+         end if
 
          ! check for output
          if(mod(lcv_step,kwrite).eq.0) then
@@ -252,6 +282,9 @@
                write(*,*) 'outputing step', lcv_step, 'to file', lbm%io%counter
             endif
             call FlowOutputDiagnostics(lbm%flow, lbm%walls_a, lbm%io)
+            if (associated(lbm%transport)) then
+               call TransportOutputDiagnostics(lbm%transport, lbm%walls_a, lbm%io)
+            end if
             call IOIncrementCounter(lbm%io)
          endif
       end do
@@ -259,7 +292,6 @@
       timerunits = 'timestep'
       call TimingEndPerUnit(timer1, (kstep-istep+1), timerunits)
       call TimingDestroy(timer1)
-
       return
     end subroutine LBMRun
 

@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            09:24:24 MDT
-!!!     last modified:   07 April 2011
-!!!       at:            16:38:24 MDT
+!!!     last modified:   13 April 2011
+!!!       at:            10:25:04 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -175,10 +175,10 @@ contains
     call PetscObjectSetName(grid%da(NPHASEXBDOF), trim(grid%name)//'DA_NPHASEXB', ierr)
     call PetscObjectSetName(grid%da(NFLOWDOF), trim(grid%name)//'DA_NFLOW', ierr)
     if (grid%nda > 4) then
-       call PetscObjectSetName(grid%da(NCOMPONENTDOF), &
-            trim(grid%name)//'DA_NCOMPONENT', ierr)
-       call PetscObjectSetName(grid%da(NCOMPONENTXBDOF), &
-            trim(grid%name)//'DA_NCOMPONENTXB', ierr)
+       call PetscObjectSetName(grid%da(NSPECIEDOF), &
+            trim(grid%name)//'DA_NSPECIE', ierr)
+       call PetscObjectSetName(grid%da(NSPECIEXBDOF), &
+            trim(grid%name)//'DA_NSPECIEXB', ierr)
     end if
     
     ! set the coordinates, but only on the one-dof (no need for extra memory)
