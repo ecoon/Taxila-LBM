@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            15:34:44 MDT
-!!!     last modified:   12 April 2011
-!!!       at:            12:17:26 MDT
+!!!     last modified:   13 April 2011
+!!!       at:            10:33:20 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -15,9 +15,9 @@
 #include "finclude/petscsysdef.h"
 #include "finclude/petscbagdef.h"
 
-module LBM_Component_module
+module LBM_Specie_module
   use petsc
-  use LBM_Component_Bag_Data_type_module
+  use LBM_Specie_Bag_Data_type_module
   use LBM_Relaxation_module
   implicit none
 
@@ -27,6 +27,7 @@ module LBM_Component_module
   type, public :: specie_type
      MPI_Comm comm
      ! sizes and identifiers (set pre-bag)
+     PetscInt s
      PetscInt id
 
      ! bagged parameters
@@ -42,34 +43,35 @@ module LBM_Component_module
 
   interface PetscBagGetData
      subroutine PetscBagGetData(bag, data, ierr)
-       use LBM_Component_Bag_Data_type_module
+       use LBM_Specie_Bag_Data_type_module
        PetscBag bag
        type(specie_bag_data_type),pointer :: data
        PetscErrorCode ierr
      end subroutine PetscBagGetData
   end interface
 
-  interface ComponentCreate
-     procedure ComponentCreateOne, ComponentCreateN
+  interface SpecieCreate
+     procedure SpecieCreateOne, SpecieCreateN
   end interface
 
-  public :: ComponentCreate, &
-       ComponentDestroy, &
-       ComponentSetSizes, &
-       ComponentSetName, &
-       ComponentSetFromOptions
+  public :: SpecieCreate, &
+       SpecieDestroy, &
+       SpecieSetSizes, &
+       SpecieSetID, &
+       SpecieSetName, &
+       SpecieSetFromOptions
 
 contains
-  function ComponentCreateOne(comm) result(specie)
+  function SpecieCreateOne(comm) result(specie)
     MPI_Comm comm
     type(specie_type),pointer :: specie
     allocate(specie)
     specie%comm = comm
-    call ComponentInitialize(specie)
+    call SpecieInitialize(specie)
     specie%relax => RelaxationCreate(comm)
-  end function ComponentCreateOne
+  end function SpecieCreateOne
 
-  function ComponentCreateN(comm, n) result(specie)
+  function SpecieCreateN(comm, n) result(specie)
     MPI_Comm comm
     PetscInt n
     type(specie_type),pointer,dimension(:):: specie
@@ -78,43 +80,42 @@ contains
 
     do lcv=1,n
        specie(lcv)%comm = comm
-       call ComponentInitialize(specie(lcv))
+       call SpecieInitialize(specie(lcv))
        specie(lcv)%relax => RelaxationCreate(comm)
     end do
-  end function ComponentCreateN
+  end function SpecieCreateN
 
-  subroutine ComponentInitialize(specie)
+  subroutine SpecieInitialize(specie)
     type(specie_type) specie
     specie%s = -1
-    specie%b = -1
     specie%id = 0
     specie%name = ''
     nullify(specie%data)
     specie%bag = 0
-  end subroutine ComponentInitialize
+  end subroutine SpecieInitialize
   
-  subroutine ComponentSetSizes(specie, s, b)
+  subroutine SpecieSetSizes(specie, s, b)
     type(specie_type) :: specie
     PetscInt s,b
     specie%s = s
     call RelaxationSetSizes(specie%relax, s, b)
-  end subroutine ComponentSetSizes
+  end subroutine SpecieSetSizes
 
-  subroutine ComponentSetName(specie, name)
+  subroutine SpecieSetName(specie, name)
     type(specie_type) specie
     character(len=MAXWORDLENGTH):: name
     
     specie%name = name
     call RelaxationSetName(specie%relax, name)
-  end subroutine ComponentSetName
+  end subroutine SpecieSetName
 
-  subroutine ComponentSetID(specie, id)
+  subroutine SpecieSetID(specie, id)
     type(specie_type) specie
     PetscInt id
     specie%id = id
-  end subroutine ComponentSetID
+  end subroutine SpecieSetID
 
-  subroutine ComponentSetFromOptions(specie, options, ierr)
+  subroutine SpecieSetFromOptions(specie, options, ierr)
     use LBM_Options_module
     type(specie_type) specie
     type(options_type) options
@@ -135,11 +136,11 @@ contains
     ! register data
 
     call RelaxationSetFromOptions(specie%relax, options, ierr)
-  end subroutine ComponentSetFromOptions
+  end subroutine SpecieSetFromOptions
 
-  subroutine ComponentDestroy(specie, ierr)
+  subroutine SpecieDestroy(specie, ierr)
     type(specie_type) specie
     PetscErrorCode ierr
     if (specie%bag /= 0) call PetscBagDestroy(specie%bag, ierr)
-  end subroutine ComponentDestroy
-end module LBM_Component_module
+  end subroutine SpecieDestroy
+end module LBM_Specie_module
