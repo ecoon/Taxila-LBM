@@ -242,7 +242,7 @@
          ! internal fluid-solid boundary conditions
          call FlowBounceback(lbm%flow, lbm%walls_a)
          if (associated(lbm%transport)) then
-            call TransportReact(lbm%transport, lbm%walls_a)
+            call TransportReactWithWalls(lbm%transport, lbm%walls_a)
          end if
 
          ! external boundary conditions
