@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
-!!!     last modified:   11 April 2011
-!!!       at:            11:27:23 MDT
+!!!     last modified:   18 April 2011
+!!!       at:            12:16:59 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -32,6 +32,7 @@ program MAIN
   character(len=MAXWORDLENGTH) prefix
   
   external initialize_bcs
+  external initialize_bcs_transport
   external initialize_state
   external initialize_walls
   type(lbm_type),pointer:: lbm
@@ -63,8 +64,12 @@ program MAIN
   end if
   
   ! set boundary conditions
-  call BCSetValues(lbm%bc, lbm%flow%distribution, options, initialize_bcs)
-  
+  call BCSetValues(lbm%flow%bc, lbm%flow%distribution, options, initialize_bcs)
+  if (associated(lbm%transport)) then
+     call BCSetValues(lbm%transport%bc, lbm%transport%distribution, &
+          options, initialize_bcs_transport)
+  end if
+
   ! set initial conditions
   if (options%restart) then
      call LBMInitializeStateRestarted(lbm, options%istep, options%kwrite)

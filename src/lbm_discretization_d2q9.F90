@@ -35,6 +35,7 @@ end module LBM_Discretization_Directions_D2Q9_module
 module LBM_Discretization_D2Q9_module
   use LBM_Discretization_Type_module
   use LBM_Discretization_Directions_D2Q9_module
+  use LBM_Distribution_Function_type_module
   implicit none
 
   private
@@ -42,7 +43,10 @@ module LBM_Discretization_D2Q9_module
 
   public:: DiscretizationSetUp_D2Q9, &
        DiscretizationSetUpRelax_D2Q9, &
-       DiscretizationEquilf_D2Q9
+       DiscretizationEquilf_D2Q9, &
+       DiscApplyBCDirichletToBoundary_D2Q9, &
+       DiscApplyBCFluxToBoundary_D2Q9, &
+       DiscSetLocalDirections_D2Q9
 
 contains
   subroutine DiscretizationSetUp_D2Q9(disc)
@@ -136,7 +140,6 @@ contains
   end subroutine DiscretizationSetUpRelax_D2Q9
 
   subroutine DiscretizationEquilf_D2Q9(disc, rho, u, walls, feq, relax, dist)
-    use LBM_Distribution_Function_type_module
     use LBM_Relaxation_module
     type(discretization_type) disc
     type(distribution_type) dist
@@ -173,5 +176,169 @@ contains
     end do
     end do
   end subroutine DiscretizationEquilf_D2Q9
+
+  subroutine DiscApplyBCDirichletToBoundary_D2Q9(disc, fi, pvals, directions, dist, nbcs)
+    type(discretization_type) disc
+    type(distribution_type) dist
+    PetscInt nbcs
+    PetscScalar,intent(inout),dimension(1:dist%s, 0:dist%b):: fi
+    PetscInt,intent(in),dimension(0:dist%b):: directions
+    PetscScalar,intent(in),dimension(nbcs):: pvals
+
+    PetscScalar vtmp
+    PetscScalar,dimension(0:dist%b)::ftmp
+    integer m
+    vtmp = 0
+
+    ! written for the NORTH boundary.
+    do m=1,dist%s
+       ftmp = 0.0
+       vtmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) + fi(m,directions(WEST)) &
+            + 2.*(fi(m,directions(NORTH)) + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST)))
+       vtmp = vtmp/pvals(m)-1.0       
+       
+       ! Choice should not affect the momentum significantly
+       ftmp(directions(SOUTH)) = fi(m,directions(NORTH))
+       ftmp(directions(SOUTHWEST)) = fi(m,directions(NORTHEAST))
+       ftmp(directions(SOUTHEAST)) = fi(m,directions(NORTHWEST))
+              
+       fi(m,directions(SOUTH)) = 1./3.*ftmp(directions(SOUTH)) &
+            - 2./3.*pvals(m)*vtmp &
+            - 2./3.*(ftmp(directions(SOUTHWEST)) + ftmp(directions(SOUTHEAST))) &
+            + 2./3.*(fi(m,directions(NORTH)) + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST)))
+       
+       fi(m,directions(SOUTHWEST)) = 1./3.*ftmp(directions(SOUTHWEST)) &
+            - 1./6.*pvals(m)*vtmp &
+            + 1./2.*(fi(m,directions(EAST)) - fi(m,directions(WEST))) &
+            + 1./6.*(fi(m,directions(NORTH)) - ftmp(directions(SOUTH))) &
+            - 1./3.*(fi(m,directions(NORTHWEST)) - ftmp(directions(SOUTHEAST))) &
+            + 2./3.*fi(m,directions(NORTHEAST))
+       
+       fi(m,directions(SOUTHEAST)) = 1./3.*ftmp(directions(SOUTHEAST)) &
+            - 1./6.*pvals(m)*vtmp &
+            - 1./2.*(fi(m,directions(EAST)) - fi(m,directions(WEST))) &
+            + 1./6.*(fi(m,directions(NORTH)) - ftmp(directions(SOUTH))) &
+            - 1./3.*(fi(m,directions(NORTHEAST)) - ftmp(directions(SOUTHWEST))) &
+            + 2./3.*fi(m,directions(NORTHWEST))
+       
+    enddo
+    return
+  end subroutine DiscApplyBCDirichletToBoundary_D2Q9
+
+  subroutine DiscApplyBCFluxToBoundary_D2Q9(disc, fi, fvals, directions, cardinals, &
+       dist, nbcs)
+    type(discretization_type) disc
+    type(distribution_type) dist
+    PetscInt nbcs
+    PetscScalar,intent(inout),dimension(1:dist%s, 0:dist%b):: fi
+    PetscInt,intent(in),dimension(0:dist%b):: directions
+    PetscScalar,intent(in),dimension(nbcs):: fvals
+    PetscInt,intent(in),dimension(1:dist%info%ndims):: cardinals
+
+    PetscScalar rhotmp
+    PetscScalar,dimension(0:dist%b)::ftmp
+    PetscInt m
+    ftmp = 0.0
+    rhotmp = 0.0
+
+    ! written for the NORTH boundary.
+    do m=1,dist%s
+       rhotmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) + fi(m,directions(WEST)) &
+            + 2.*(fi(m,directions(NORTH)) + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST))) 
+       rhotmp = rhotmp/(1. - fvals(cardinals(CARDINAL_NORMAL)))
+       
+       ! Choice should not affect the momentum significantly
+       ftmp(directions(SOUTH)) = fi(m,directions(NORTH))
+       ftmp(directions(SOUTHEAST)) = fi(m,directions(NORTHWEST))
+       ftmp(directions(SOUTHWEST)) = fi(m,directions(NORTHEAST))
+
+       fi(m,directions(SOUTH)) = 1./3.*ftmp(directions(SOUTH)) &
+            + 2./3.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
+            - 2./3.*(ftmp(directions(SOUTHEAST)) + ftmp(directions(SOUTHWEST))) &
+            + 2./3.*(fi(m,directions(NORTH)) + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST)))
+
+       fi(m,directions(SOUTHWEST)) = 1./3.*ftmp(directions(SOUTHWEST)) &
+            - 1./2.*rhotmp*fvals(cardinals(CARDINAL_CROSS)) &
+            + 1./6.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
+            + 1./2.*(fi(m,directions(EAST)) - fi(m,directions(WEST))) &
+            + 1./6.*(fi(m,directions(NORTH)) - ftmp(directions(SOUTH))) &
+            - 1./3.*(fi(m,directions(NORTHWEST)) - ftmp(directions(SOUTHEAST))) &
+            + 2./3.*fi(m,directions(NORTHEAST))
+
+       fi(m,directions(SOUTHEAST)) = 1./3.*ftmp(directions(SOUTHEAST)) &
+            + 1./2.*rhotmp*fvals(cardinals(CARDINAL_CROSS)) &
+            + 1./6.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
+            - 1./2.*(fi(m,directions(EAST)) - fi(m,directions(WEST))) &
+            + 1./6.*(fi(m,directions(NORTH)) - ftmp(directions(SOUTH))) &
+            - 1./3.*(fi(m,directions(NORTHEAST)) - ftmp(directions(SOUTHWEST))) &
+            + 2./3.*fi(m,directions(NORTHWEST)) 
+
+    enddo
+    return
+  end subroutine DiscApplyBCFluxToBoundary_D2Q9
+
+  subroutine DiscSetLocalDirections_D2Q9(disc, boundary, directions, cardinals)
+    type(discretization_type) disc
+    PetscInt,intent(in):: boundary
+    PetscInt,intent(out),dimension(0:discretization_directions) :: directions
+    PetscInt,intent(out),dimension(1:discretization_dims) :: cardinals
+
+    PetscInt i
+    
+    select case(boundary)
+    case (BOUNDARY_YP)
+       ! identity mapping
+       do i=0,discretization_directions
+          directions(i) = i
+       end do
+       cardinals(CARDINAL_NORMAL) = Y_DIRECTION
+       cardinals(CARDINAL_CROSS) = X_DIRECTION
+
+    case (BOUNDARY_YM)
+       ! inverted mapping around the origin
+       directions(ORIGIN) = ORIGIN
+       directions(EAST) = WEST
+       directions(WEST) = EAST
+       directions(NORTH) = SOUTH
+       directions(SOUTH) = NORTH
+       directions(NORTHEAST) = SOUTHWEST
+       directions(SOUTHWEST) = NORTHEAST
+       directions(NORTHWEST) = SOUTHEAST
+       directions(SOUTHEAST) = NORTHWEST
+
+       cardinals(CARDINAL_NORMAL) = Y_DIRECTION
+       cardinals(CARDINAL_CROSS) = X_DIRECTION
+
+    case (BOUNDARY_XP)
+       ! map x -> y
+       directions(ORIGIN) = ORIGIN
+       directions(EAST) = NORTH
+       directions(WEST) = SOUTH
+       directions(NORTH) = EAST
+       directions(SOUTH) = WEST
+       directions(NORTHEAST) = NORTHEAST
+       directions(SOUTHWEST) = SOUTHWEST
+       directions(NORTHWEST) = SOUTHEAST
+       directions(SOUTHEAST) = NORTHWEST
+
+       cardinals(CARDINAL_NORMAL) = X_DIRECTION
+       cardinals(CARDINAL_CROSS) = Y_DIRECTION
+
+    case (BOUNDARY_XM)
+       ! map x -> y
+       directions(ORIGIN) = ORIGIN
+       directions(EAST) = SOUTH
+       directions(WEST) = NORTH
+       directions(NORTH) = WEST
+       directions(SOUTH) = EAST
+       directions(NORTHEAST) = SOUTHWEST
+       directions(SOUTHWEST) = NORTHEAST
+       directions(NORTHWEST) = NORTHWEST
+       directions(SOUTHEAST) = SOUTHEAST
+
+       cardinals(CARDINAL_NORMAL) = X_DIRECTION
+       cardinals(CARDINAL_CROSS) = Y_DIRECTION
+    end select
+  end subroutine DiscSetLocalDirections_D2Q9
 end module LBM_Discretization_D2Q9_module
 

@@ -22,12 +22,12 @@
     use Timing_module
     use LBM_Discretization_module
     use LBM_Grid_module
-    use LBM_BC_module
     use LBM_Distribution_Function_module
     use LBM_Flow_module
     use LBM_Transport_module
     use LBM_IO_module
     use LBM_Options_module
+    use LBM_BC_module
     implicit none
 
     private
@@ -37,7 +37,6 @@
        MPI_Comm comm
        type(options_type),pointer:: options
        type(grid_type),pointer:: grid
-       type(bc_type),pointer:: bc
        type(flow_type),pointer:: flow
        type(transport_type),pointer:: transport
        type(io_type),pointer :: io
@@ -71,7 +70,6 @@
 
       lbm%options => OptionsCreate(comm)
       lbm%grid => GridCreate(comm)
-      lbm%bc => BCCreate(comm)
       lbm%io => IOCreate(comm)
       lbm%flow => FlowCreate(lbm%comm)
       nullify(lbm%transport)
@@ -91,7 +89,6 @@
       if (lbm%walls /= 0) call VecDestroy(lbm%walls,ierr)
       if (lbm%walls_g /= 0) call VecDestroy(lbm%walls_g,ierr)
 
-      call BCDestroy(lbm%bc, ierr)
       if (associated(lbm%flow)) call FlowDestroy(lbm%flow,ierr)
       if (associated(lbm%transport)) call TransportDestroy(lbm%transport,ierr)
       call GridDestroy(lbm%grid, ierr)
@@ -120,8 +117,6 @@
          call TransportSetGrid(lbm%transport, lbm%grid)
          call TransportSetFromOptions(lbm%transport, options, ierr)
       end if
-
-      call BCSetFromOptions(lbm%bc, options, ierr)
     end subroutine LBMSetFromOptions
 
     subroutine LBMSetUp(lbm)
@@ -145,8 +140,6 @@
       if (associated(lbm%transport)) then
          call TransportSetUp(lbm%transport)
       end if
-      call BCSetGrid(lbm%bc, lbm%grid)
-      call BCSetUp(lbm%bc)
 
       ! get vectors
       call DMCreateLocalVector(lbm%grid%da(ONEDOF), lbm%walls, ierr)
@@ -196,10 +189,9 @@
 
          ! get arrays
          call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-         call FlowGetArrays(lbm%flow)
-         call BCGetArrays(lbm%bc, ierr)
+         call FlowGetArrays(lbm%flow, ierr)
          if (associated(lbm%transport)) then
-            call TransportGetArrays(lbm%transport)
+            call TransportGetArrays(lbm%transport, ierr)
          end if
 
          ! update values and view
@@ -225,8 +217,7 @@
       else
          ! just get arrays
          call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-         call FlowGetArrays(lbm%flow)
-         call BCGetArrays(lbm%bc, ierr)
+         call FlowGetArrays(lbm%flow, ierr)
       endif
       call IOIncrementCounter(lbm%io)
 
@@ -246,9 +237,9 @@
          end if
 
          ! external boundary conditions
-         call BCApplyFlow(lbm%bc, lbm%walls_a, lbm%flow%distribution)
+         call FlowApplyBCs(lbm%flow, lbm%walls_a)
          if (associated(lbm%transport)) then
-            call BCApplyTransport(lbm%bc, lbm%walls_a, lbm%transport%distribution)
+            call TransportApplyBCs(lbm%transport, lbm%walls_a)
          end if
 
          ! update moments for rho, psi
@@ -260,7 +251,7 @@
          ! add in momentum forcing terms
          call DistributionCommunicateDensity(lbm%flow%distribution)
          call FlowCalcForces(lbm%flow, lbm%walls_a)
-         call BCZeroForces(lbm%bc, lbm%flow%forces, lbm%flow%distribution)
+         call BCZeroForces(lbm%flow%bc, lbm%flow%forces, lbm%flow%distribution)
 
          ! reaction?
 
@@ -327,12 +318,12 @@
       PetscErrorCode ierr
 
       call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-      call FlowGetArrays(lbm%flow)
+      call FlowGetArrays(lbm%flow, ierr)
       call init_subroutine(lbm%flow%distribution%fi_a, lbm%flow%distribution%rho_a, &
            lbm%flow%distribution%flux, lbm%walls_a, lbm%flow%distribution, &
            lbm%flow%phases, lbm%options)
       call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-      call FlowRestoreArrays(lbm%flow)
+      call FlowRestoreArrays(lbm%flow, ierr)
       return
     end subroutine LBMInitializeState
 
