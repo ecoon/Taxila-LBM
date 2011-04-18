@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            15:34:44 MDT
-!!!     last modified:   14 April 2011
-!!!       at:            16:58:10 MDT
+!!!     last modified:   18 April 2011
+!!!       at:            15:15:29 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -67,18 +67,22 @@ contains
   function SpecieCreateOne(comm) result(specie)
     MPI_Comm comm
     type(specie_type),pointer :: specie
+    character(len=MAXWORDLENGTH):: name
     allocate(specie)
     specie%comm = comm
     call SpecieInitialize(specie)
     specie%relax => RelaxationCreate(comm)
+    name = 'specie1'
+    call SpecieSetName(specie, name)
   end function SpecieCreateOne
-
+ 
   function SpecieCreateN(comm, n) result(specie)
     MPI_Comm comm
     PetscInt n
     type(specie_type),pointer,dimension(:):: specie
     type(specie_type),pointer:: aspecie
     PetscInt lcv
+    character(len=MAXWORDLENGTH):: name
     allocate(specie(n))
 
     do lcv=1,n
@@ -87,6 +91,8 @@ contains
        call SpecieInitialize(aspecie)
        aspecie%relax => RelaxationCreate(comm)
        call SpecieSetID(aspecie, lcv)
+       name = 'specie'//char(lcv+48)
+       call SpecieSetName(aspecie, name)
     end do
   end function SpecieCreateN
 

@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            13:43:00 MDT
-!!!     last modified:   12 April 2011
-!!!       at:            12:17:00 MDT
+!!!     last modified:   18 April 2011
+!!!       at:            15:15:21 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -70,10 +70,13 @@ contains
   function PhaseCreateOne(comm) result(phase)
     MPI_Comm comm
     type(phase_type),pointer :: phase
+    character(len=MAXWORDLENGTH):: name
     allocate(phase)
     phase%comm = comm
     call PhaseInitialize(phase)
     phase%relax => RelaxationCreate(comm)
+    name = 'phase1'
+    call PhaseSetName(phase, name)
   end function PhaseCreateOne
 
   function PhaseCreateN(comm, n) result(phases)
@@ -81,8 +84,10 @@ contains
     PetscInt n
     type(phase_type),pointer,dimension(:):: phases
     type(phase_type),pointer:: aphase
+    character(len=MAXWORDLENGTH):: name
     PetscInt lcv
     allocate(phases(1:n))
+    name = ''
 
     do lcv=1,n
        aphase => phases(lcv)
@@ -90,6 +95,8 @@ contains
        call PhaseInitialize(aphase)
        aphase%relax => RelaxationCreate(comm)
        call PhaseSetID(aphase, lcv)
+       name = 'phase'//char(lcv+48)
+       call PhaseSetName(aphase, name)
     end do
   end function PhaseCreateN
 
@@ -119,7 +126,6 @@ contains
   subroutine PhaseSetName(phase, name)
     type(phase_type) phase
     character(len=MAXWORDLENGTH):: name
-    
     phase%name = name
     call RelaxationSetName(phase%relax, name)
   end subroutine PhaseSetName
