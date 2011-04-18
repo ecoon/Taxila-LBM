@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            14:06:07 MDT
-!!!     last modified:   13 April 2011
-!!!       at:            17:21:13 MDT
+!!!     last modified:   18 April 2011
+!!!       at:            13:52:57 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -138,14 +138,14 @@ contains
     call PetscObjectSetName(distribution%rho_g, trim(distribution%name)//'rho', ierr)
   end subroutine DistributionSetUp
 
-  subroutine DistributionGetArrays(distribution)
+  subroutine DistributionGetArrays(distribution, ierr)
     type(distribution_type) distribution
     PetscErrorCode ierr
     call DMDAVecGetArrayF90(distribution%da_rho, distribution%rho, distribution%rho_a, ierr)
     call DMDAVecGetArrayF90(distribution%da_fi, distribution%fi, distribution%fi_a, ierr)
   end subroutine DistributionGetArrays
 
-  subroutine DistributionRestoreArrays(distribution)
+  subroutine DistributionRestoreArrays(distribution, ierr)
     type(distribution_type) distribution
     PetscErrorCode ierr
     call DMDAVecRestoreArrayF90(distribution%da_rho,distribution%rho,distribution%rho_a,ierr)
@@ -155,7 +155,7 @@ contains
   subroutine DistributionCommunicateAll(distribution)
     type(distribution_type) distribution
     PetscErrorCode ierr
-    call DistributionRestoreArrays(distribution)
+    call DistributionRestoreArrays(distribution, ierr)
     call DMDALocalToLocalBegin(distribution%da_fi, distribution%fi, INSERT_VALUES, &
          distribution%fi, ierr)
     call DMDALocalToLocalEnd(distribution%da_fi, distribution%fi, INSERT_VALUES, &
@@ -164,7 +164,7 @@ contains
          distribution%rho, ierr)
     call DMDALocalToLocalEnd(distribution%da_rho, distribution%rho, INSERT_VALUES, &
          distribution%rho, ierr)
-    call DistributionGetArrays(distribution)
+    call DistributionGetArrays(distribution, ierr)
   end subroutine DistributionCommunicateAll
 
   subroutine DistributionCommunicateFi(distribution)
