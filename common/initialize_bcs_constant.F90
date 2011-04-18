@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            17:30:22 MST
-!!!     last modified:   12 April 2011
-!!!       at:            12:11:52 MDT
+!!!     last modified:   18 April 2011
+!!!       at:            14:26:35 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -114,7 +114,7 @@
             flag, ierr)
        if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
         
-    else if (bc_flags(BOUNDARY_XM).eq.BC_PRESSURE) then
+    else if (bc_flags(BOUNDARY_XM).eq.BC_DIRICHLET) then
        pressure_xm = .TRUE.
        do m=1,dist%s
           call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_xm_phase'//char(m+48),&
@@ -135,7 +135,7 @@
             flag, ierr)
        if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
         
-    else if (bc_flags(BOUNDARY_XP).eq.BC_PRESSURE) then
+    else if (bc_flags(BOUNDARY_XP).eq.BC_DIRICHLET) then
        pressure_xp = .TRUE.
        do m=1,dist%s
           call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_xp_phase'//char(m+48),&
@@ -156,7 +156,7 @@
             flag, ierr)
        if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
         
-    else if (bc_flags(BOUNDARY_YM).eq.BC_PRESSURE) then
+    else if (bc_flags(BOUNDARY_YM).eq.BC_DIRICHLET) then
        pressure_ym = .TRUE.
        do m=1,dist%s
           call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_ym_phase'//char(m+48),&
@@ -177,7 +177,7 @@
             flag, ierr)
        if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
         
-    else if (bc_flags(BOUNDARY_YP).eq.BC_PRESSURE) then
+    else if (bc_flags(BOUNDARY_YP).eq.BC_DIRICHLET) then
        pressure_yp = .TRUE.
        do m=1,dist%s
           call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_yp_phase'//char(m+48),&
@@ -199,7 +199,7 @@
                flag, ierr)
           if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
 
-       else if (bc_flags(BOUNDARY_ZM).eq.BC_PRESSURE) then
+       else if (bc_flags(BOUNDARY_ZM).eq.BC_DIRICHLET) then
           pressure_zm = .TRUE.
           do m=1,dist%s
              call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_zm_phase'//char(m+48),&
@@ -220,7 +220,7 @@
                flag, ierr)
           if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
 
-       else if (bc_flags(BOUNDARY_ZP).eq.BC_PRESSURE) then
+       else if (bc_flags(BOUNDARY_ZP).eq.BC_DIRICHLET) then
           pressure_zp = .TRUE.
           do m=1,dist%s
              call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_zp_phase'//char(m+48),&

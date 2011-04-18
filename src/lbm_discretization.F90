@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 March 2011
 !!!       on:            16:33:56 MDT
-!!!     last modified:   13 April 2011
-!!!       at:            11:50:13 MDT
+!!!     last modified:   18 April 2011
+!!!       at:            13:25:50 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -31,7 +31,10 @@ module LBM_Discretization_module
        DiscretizationSetSizes, &
        DiscretizationSetUp, &
        DiscretizationSetUpRelax, &
-       DiscretizationEquilf
+       DiscretizationEquilf, &
+       DiscSetLocalDirections, &
+       DiscApplyBCDirichletToBoundary, &
+       DiscApplyBCFluxToBoundary
 
 contains
   function DiscretizationCreate(comm) result(disc)
@@ -123,4 +126,64 @@ contains
        SETERRQ(1,1,'invalid discretization in LBM',ierr)
     end select
   end subroutine DiscretizationEquilf
+
+  subroutine DiscSetLocalDirections(disc, boundary, directions, cardinals)
+    type(discretization_type) disc
+    PetscInt,intent(in):: boundary
+    PetscInt,intent(out),dimension(0:disc%b) :: directions
+    PetscInt,intent(out),dimension(1:disc%ndims) :: cardinals
+    PetscErrorCode ierr
+
+    select case(disc%name)
+    case(D3Q19_DISCRETIZATION)
+       call DiscSetLocalDirections_D3Q19(disc, boundary, directions, cardinals)
+    case(D2Q9_DISCRETIZATION)
+       call DiscSetLocalDirections_D2Q9(disc, boundary, directions, cardinals)
+    case DEFAULT 
+       SETERRQ(1,1,'invalid discretization in LBM',ierr)
+    end select
+  end subroutine DiscSetLocalDirections
+
+  subroutine DiscApplyBCDirichletToBoundary(disc, fi, vals, directions, dist, nbcs)
+    use LBM_Distribution_Function_type_module
+    type(discretization_type) disc
+    type(distribution_type) dist
+    PetscInt nbcs
+    PetscInt,intent(in),dimension(0:dist%b):: directions
+    PetscScalar,intent(inout),dimension(1:dist%s, 0:dist%b):: fi
+    PetscScalar,intent(in),dimension(nbcs):: vals
+    PetscErrorCode ierr
+
+    select case(disc%name)
+    case(D3Q19_DISCRETIZATION)
+       call DiscApplyBCDirichletToBoundary_D3Q19(disc, fi, vals, directions, dist, nbcs)
+    case(D2Q9_DISCRETIZATION)
+       call DiscApplyBCDirichletToBoundary_D2Q9(disc, fi, vals, directions, dist, nbcs)
+    case DEFAULT 
+       SETERRQ(1,1,'invalid discretization in LBM',ierr)
+    end select
+  end subroutine DiscApplyBCDirichletToBoundary
+
+  subroutine DiscApplyBCFluxToBoundary(disc, fi, vals, directions, cardinals, dist, nbcs)
+    use LBM_Distribution_Function_type_module
+    type(discretization_type) disc
+    type(distribution_type) dist
+    PetscInt nbcs
+    PetscInt,intent(in),dimension(0:disc%b):: directions
+    PetscInt,intent(in),dimension(0:disc%ndims):: cardinals
+    PetscScalar,intent(inout),dimension(1:dist%s, 0:disc%b):: fi
+    PetscScalar,intent(in),dimension(nbcs):: vals
+    PetscErrorCode ierr
+
+    select case(disc%name)
+    case(D3Q19_DISCRETIZATION)
+       call DiscApplyBCFluxToBoundary_D3Q19(disc, fi, vals, directions, cardinals, &
+            dist, nbcs)
+    case(D2Q9_DISCRETIZATION)
+       call DiscApplyBCFluxToBoundary_D2Q9(disc, fi, vals, directions, cardinals, &
+            dist, nbcs)
+    case DEFAULT 
+       SETERRQ(1,1,'invalid discretization in LBM',ierr)
+    end select
+  end subroutine DiscApplyBCFluxToBoundary
 end module LBM_Discretization_module

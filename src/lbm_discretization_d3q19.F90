@@ -44,6 +44,7 @@ end module LBM_Discretization_Directions_D3Q19_module
 module LBM_Discretization_D3Q19_module
   use LBM_Discretization_Type_module
   use LBM_Discretization_Directions_D3Q19_module
+  use LBM_Distribution_Function_type_module
   implicit none
 
   private
@@ -51,7 +52,10 @@ module LBM_Discretization_D3Q19_module
 
   public:: DiscretizationSetup_D3Q19, &
        DiscretizationSetupRelax_D3Q19, &
-       DiscretizationEquilf_D3Q19
+       DiscretizationEquilf_D3Q19, &
+       DiscApplyBCDirichletToBoundary_D3Q19, &
+       DiscApplyBCFluxToBoundary_D3Q19, &
+       DiscSetLocalDirections_D3Q19
 
 contains
   subroutine DiscretizationSetup_D3Q19(disc)
@@ -153,13 +157,12 @@ contains
   end subroutine DiscretizationSetupRelax_D3Q19
 
   subroutine DiscretizationEquilf_D3Q19(disc, rho, u, walls, feq, relax, dist)
-    use LBM_Distribution_Function_type_module
     use LBM_Relaxation_module
     type(discretization_type) disc
     type(distribution_type) dist
     type(relaxation_type) relax
 
-    PetscScalar,dimension(0:dist%b, dist%info%gxs:dist%info%gxe, &
+    PetscScalar,dimension(0:disc%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: feq
     PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: rho
@@ -181,7 +184,7 @@ contains
     do i=dist%info%xs,dist%info%xe
     if (walls(i,j,k).eq.0) then
        feq(0,i,j,k) = rho(i,j,k)*(relax%d_k - usqr(i,j,k)/2.d0)
-       do n=1,dist%b
+       do n=1,disc%b
           udote = sum(disc%ci(n,:)*u(:,i,j,k), 1)
           feq(n,i,j,k)= disc%weights(n)*rho(i,j,k)* &
                (1.5d0*(1.d0-relax%d_k) + udote/relax%c_s2 &
@@ -193,5 +196,343 @@ contains
     end do
     end do
   end subroutine DiscretizationEquilf_D3Q19
+
+  subroutine DiscApplyBCDirichletToBoundary_D3Q19(disc, fi, pvals, directions, dist, nbcs)
+    type(discretization_type) disc
+    type(distribution_type) dist
+    PetscInt nbcs
+    PetscInt,intent(in),dimension(0:disc%b):: directions
+    PetscScalar,intent(inout),dimension(1:dist%s, 0:disc%b):: fi
+    PetscScalar,intent(in),dimension(nbcs):: pvals
+
+    PetscScalar wtmp
+    PetscScalar,dimension(0:disc%b)::ftmp
+    integer m
+    
+    wtmp = 0
+
+    do m=1,dist%s
+       ftmp = 0.0
+       wtmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) &
+            + fi(m,directions(NORTH)) + fi(m,directions(WEST)) &
+            + fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
+            + fi(m,directions(NORTHWEST)) + fi(m,directions(SOUTHWEST)) &
+            + fi(m,directions(SOUTHEAST)) + 2.*(fi(m,directions(DOWN)) &
+            + fi(m,directions(WESTDOWN)) + fi(m,directions(EASTDOWN)) &
+            + fi(m,directions(SOUTHDOWN)) + fi(m,directions(NORTHDOWN)))
+       wtmp = 1.0-wtmp/pvals(m)
+       
+       ! Choice should not affect the momentum significantly
+       ftmp(directions(UP)) = fi(m,directions(DOWN))
+       ftmp(directions(EASTUP)) = fi(m,directions(WESTDOWN))
+       ftmp(directions(WESTUP)) = fi(m,directions(EASTDOWN))
+       ftmp(directions(NORTHUP)) = fi(m,directions(SOUTHDOWN))
+       ftmp(directions(SOUTHUP)) = fi(m,directions(NORTHDOWN))
+       
+       fi(m,directions(UP)) = 2./3.*ftmp(directions(UP)) &
+            + 1./3.*pvals(m)*wtmp &
+            - 1./3.*(ftmp(directions(EASTUP))+ ftmp(directions(WESTUP)) &
+            + ftmp(directions(NORTHUP)) + ftmp(directions(SOUTHUP))) &
+            + 1./3.*(fi(m,directions(DOWN)) &
+            + fi(m,directions(WESTDOWN)) + fi(m,directions(EASTDOWN)) &
+            + fi(m,directions(SOUTHDOWN)) + fi(m,directions(NORTHDOWN)))
+       
+       fi(m,directions(EASTUP)) = 1./3.*ftmp(directions(EASTUP)) &
+            + 1./6.*pvals(m)*wtmp &
+            - 1./2.*(fi(m,directions(EAST)) &
+            - fi(m,directions(WEST)) + fi(m,directions(NORTHEAST)) &
+            - fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
+            + fi(m,directions(SOUTHEAST))) &
+            - 1./6.*(ftmp(directions(UP)) - fi(m,directions(DOWN)) &
+            + ftmp(directions(NORTHUP)) + ftmp(directions(SOUTHUP)) &
+            - fi(m,directions(SOUTHDOWN)) - fi(m,directions(NORTHDOWN))) &
+            + 1./3.*(ftmp(directions(WESTUP)) - fi(m,directions(EASTDOWN))) &
+            + 2./3.*fi(m,directions(WESTDOWN))
+       
+       fi(m,directions(WESTUP)) = 1./3.*ftmp(directions(WESTUP)) &
+            + 1./6.*pvals(m)*wtmp &
+            + 1./2.*(fi(m,directions(EAST)) &
+            - fi(m,directions(WEST)) + fi(m,directions(NORTHEAST)) &
+            - fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
+            + fi(m,directions(SOUTHEAST))) &
+            - 1./6.*(ftmp(directions(UP)) - fi(m,directions(DOWN)) &
+            + ftmp(directions(NORTHUP)) + ftmp(directions(SOUTHUP)) &
+            - fi(m,directions(SOUTHDOWN)) - fi(m,directions(NORTHDOWN))) &
+            + 1./3.*(ftmp(directions(EASTUP)) - fi(m,directions(WESTDOWN))) &
+            + 2./3.*fi(m,directions(EASTDOWN))
+       
+       fi(m,directions(NORTHUP)) = 1./3.*ftmp(directions(NORTHUP)) &
+            + 1./6.*pvals(m)*wtmp &
+            - 1./2.*(fi(m,directions(NORTH)) &
+            - fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
+            + fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
+            - fi(m,directions(SOUTHEAST))) &
+            - 1./6.*(ftmp(directions(UP)) - fi(m,directions(DOWN)) &
+            + ftmp(directions(EASTUP)) + ftmp(directions(WESTUP)) &
+            - fi(m,directions(WESTDOWN)) - fi(m,directions(EASTDOWN))) &
+            + 1./3.*(ftmp(directions(SOUTHUP)) - fi(m,directions(NORTHDOWN))) &
+            + 2./3.*fi(m,directions(SOUTHDOWN))
+       
+       fi(m,directions(SOUTHUP)) = 1./3.*ftmp(directions(SOUTHUP)) &
+            + 1./6.*pvals(m)*wtmp &
+            + 1./2.*(fi(m,directions(NORTH)) &
+            - fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
+            + fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
+            - fi(m,directions(SOUTHEAST))) &
+            - 1./6.*(ftmp(directions(UP)) - fi(m,directions(DOWN)) &
+            + ftmp(directions(EASTUP)) + ftmp(directions(WESTUP)) &
+            - fi(m,directions(WESTDOWN)) - fi(m,directions(EASTDOWN))) &
+            + 1./3.*(ftmp(directions(NORTHUP)) - fi(m,directions(SOUTHDOWN))) &
+            + 2./3.*fi(m,directions(NORTHDOWN))
+    enddo
+    return
+  end subroutine DiscApplyBCDirichletToBoundary_D3Q19
+
+  subroutine DiscApplyBCFluxToBoundary_D3Q19(disc, fi, fvals, directions, cardinals, &
+       dist, nbcs)
+    type(discretization_type) disc
+    type(distribution_type) dist
+    PetscInt nbcs
+    PetscScalar,intent(inout),dimension(1:dist%s, 0:disc%b):: fi
+    PetscScalar,intent(in),dimension(nbcs):: fvals
+    PetscInt,intent(in),dimension(0:disc%b):: directions
+    PetscInt,intent(in),dimension(1:dist%info%ndims):: cardinals
+
+    PetscScalar rhotmp
+    PetscScalar,dimension(0:disc%b)::ftmp
+    PetscInt m
+
+    ftmp = 0.0
+    rhotmp = 0.0
+
+    do m=1,dist%s
+       rhotmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) &
+            + fi(m,directions(NORTH)) + fi(m,directions(WEST)) &
+            + fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
+            + fi(m,directions(NORTHWEST)) + fi(m,directions(SOUTHWEST)) &
+            + fi(m,directions(SOUTHEAST)) + 2.*(fi(m,directions(DOWN)) &
+            + fi(m,directions(WESTDOWN)) + fi(m,directions(EASTDOWN)) &
+            + fi(m,directions(SOUTHDOWN)) + fi(m,directions(NORTHDOWN))) 
+       rhotmp = rhotmp/(1. - fvals(cardinals(CARDINAL_NORMAL)))
+       
+       ! Choice should not affect the momentum significantly
+       ftmp(directions(UP)) = fi(m,directions(DOWN))
+       ftmp(directions(EASTUP)) = fi(m,directions(WESTDOWN))
+       ftmp(directions(WESTUP)) = fi(m,directions(EASTDOWN))
+       ftmp(directions(NORTHUP)) = fi(m,directions(SOUTHDOWN))
+       ftmp(directions(SOUTHUP)) = fi(m,directions(NORTHDOWN))
+
+       fi(m,directions(UP)) = 2./3.*ftmp(directions(UP)) &
+            + 1./3.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
+            - 1./3.*(ftmp(directions(EASTUP))+ ftmp(directions(WESTUP)) &
+            + ftmp(directions(NORTHUP)) + ftmp(directions(SOUTHUP))) &
+            + 1./3.*(fi(m,directions(DOWN)) &
+            + fi(m,directions(WESTDOWN)) + fi(m,directions(EASTDOWN)) &
+            + fi(m,directions(SOUTHDOWN)) + fi(m,directions(NORTHDOWN)))
+       
+       fi(m,directions(EASTUP)) = 1./3.*ftmp(directions(EASTUP)) &
+            + 1./2.*rhotmp*fvals(cardinals(CARDINAL_CROSS)) &
+            + 1./6.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
+            - 1./2.*(fi(m,directions(EAST)) &
+            - fi(m,directions(WEST)) + fi(m,directions(NORTHEAST)) &
+            - fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
+            + fi(m,directions(SOUTHEAST))) &
+            - 1./6.*(ftmp(directions(UP)) - fi(m,directions(DOWN)) &
+            + ftmp(directions(NORTHUP)) + ftmp(directions(SOUTHUP)) &
+            - fi(m,directions(SOUTHDOWN)) - fi(m,directions(NORTHDOWN))) &
+            + 1./3.*(ftmp(directions(WESTUP)) - fi(m,directions(EASTDOWN))) &
+            + 2./3.*fi(m,directions(WESTDOWN)) 
+
+       fi(m,directions(WESTUP)) = 1./3.*ftmp(directions(WESTUP)) &
+            - 1./2.*rhotmp*fvals(cardinals(CARDINAL_CROSS)) &
+            + 1./6.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
+            + 1./2.*(fi(m,directions(EAST)) &
+            - fi(m,directions(WEST)) + fi(m,directions(NORTHEAST)) &
+            - fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
+            + fi(m,directions(SOUTHEAST))) &
+            - 1./6.*(ftmp(directions(UP)) - fi(m,directions(DOWN)) &
+            + ftmp(directions(NORTHUP)) + ftmp(directions(SOUTHUP)) &
+            - fi(m,directions(SOUTHDOWN)) - fi(m,directions(NORTHDOWN))) &
+            + 1./3.*(ftmp(directions(EASTUP)) - fi(m,directions(WESTDOWN))) &
+            + 2./3.*fi(m,directions(EASTDOWN))
+       
+       fi(m,directions(NORTHUP)) = 1./3.*ftmp(directions(NORTHUP)) &
+            + 1./2.*rhotmp*fvals(cardinals(CARDINAL_RESULTANT)) &
+            + 1./6.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
+            - 1./2.*(fi(m,directions(NORTH)) &
+            - fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
+            + fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
+            - fi(m,directions(SOUTHEAST))) &
+            - 1./6.*(ftmp(directions(UP)) - fi(m,directions(DOWN)) &
+            + ftmp(directions(EASTUP)) + ftmp(directions(WESTUP)) &
+            - fi(m,directions(WESTDOWN)) - fi(m,directions(EASTDOWN))) &
+            + 1./3.*(ftmp(directions(SOUTHUP)) - fi(m,directions(NORTHDOWN))) &
+            + 2./3.*fi(m,directions(SOUTHDOWN))
+       
+       fi(m,directions(SOUTHUP)) = 1./3.*ftmp(directions(SOUTHUP)) &
+            - 1./2.*rhotmp*fvals(cardinals(CARDINAL_RESULTANT)) &
+            + 1./6.*rhotmp*fvals(cardinals(CARDINAL_NORMAL)) &
+            + 1./2.*(fi(m,directions(NORTH)) &
+            - fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
+            + fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
+            - fi(m,directions(SOUTHEAST))) &
+            - 1./6.*(ftmp(directions(UP)) - fi(m,directions(DOWN)) &
+            + ftmp(directions(EASTUP)) + ftmp(directions(WESTUP)) &
+            - fi(m,directions(WESTDOWN)) - fi(m,directions(EASTDOWN))) &
+            + 1./3.*(ftmp(directions(NORTHUP)) - fi(m,directions(SOUTHDOWN))) &
+            + 2./3.*fi(m,directions(NORTHDOWN))
+    enddo
+    return
+  end subroutine DiscApplyBCFluxToBoundary_D3Q19
+
+  subroutine DiscSetLocalDirections_D3Q19(disc, boundary, directions, cardinals)
+    type(discretization_type) disc
+    PetscInt,intent(in):: boundary
+    PetscInt,intent(out),dimension(0:discretization_directions) :: directions
+    PetscInt,intent(out),dimension(1:discretization_dims) :: cardinals
+    PetscInt i
+    
+    select case(boundary)
+    case (BOUNDARY_ZM)
+       ! identity mapping
+       do i=0,discretization_directions
+          directions(i) = i
+       end do
+       cardinals(CARDINAL_NORMAL) = Z_DIRECTION
+       cardinals(CARDINAL_CROSS) = X_DIRECTION
+       cardinals(CARDINAL_RESULTANT) = Y_DIRECTION
+
+    case (BOUNDARY_ZP)
+       ! inverted mapping around the origin
+       directions(ORIGIN) = ORIGIN
+       directions(EAST) = WEST
+       directions(WEST) = EAST
+       directions(NORTH) = SOUTH
+       directions(SOUTH) = NORTH
+       directions(UP) = DOWN
+       directions(DOWN) = UP
+       directions(NORTHEAST) = SOUTHWEST
+       directions(SOUTHWEST) = NORTHEAST
+       directions(NORTHWEST) = SOUTHEAST
+       directions(SOUTHEAST) = NORTHWEST
+       directions(NORTHUP) = SOUTHDOWN
+       directions(SOUTHDOWN) = NORTHUP
+       directions(NORTHDOWN) = SOUTHUP
+       directions(SOUTHUP) = NORTHDOWN
+       directions(EASTUP) = WESTDOWN
+       directions(WESTDOWN) = EASTUP
+       directions(EASTDOWN) = WESTUP
+       directions(WESTUP) = EASTDOWN
+
+       cardinals(CARDINAL_NORMAL) = Z_DIRECTION
+       cardinals(CARDINAL_CROSS) = X_DIRECTION
+       cardinals(CARDINAL_RESULTANT) = Y_DIRECTION
+
+    case (BOUNDARY_XM)
+       ! map z -> x -> y
+       directions(ORIGIN) = ORIGIN
+       directions(EAST) = NORTH
+       directions(WEST) = SOUTH
+       directions(NORTH) = UP
+       directions(SOUTH) = DOWN
+       directions(UP) = EAST
+       directions(DOWN) = WEST
+       directions(NORTHEAST) = NORTHUP
+       directions(SOUTHWEST) = SOUTHDOWN
+       directions(NORTHWEST) = SOUTHUP
+       directions(SOUTHEAST) = NORTHDOWN
+       directions(NORTHUP) = EASTUP
+       directions(SOUTHDOWN) = WESTDOWN
+       directions(NORTHDOWN) = WESTUP
+       directions(SOUTHUP) = EASTDOWN
+       directions(EASTUP) = NORTHEAST
+       directions(WESTDOWN) = SOUTHWEST
+       directions(EASTDOWN) = NORTHWEST
+       directions(WESTUP) = SOUTHEAST
+
+       cardinals(CARDINAL_NORMAL) = X_DIRECTION
+       cardinals(CARDINAL_CROSS) = Y_DIRECTION
+       cardinals(CARDINAL_RESULTANT) = Z_DIRECTION
+
+    case (BOUNDARY_XP)
+       ! map z -> x -> y and invert
+       directions(ORIGIN) = ORIGIN
+       directions(EAST) = SOUTH
+       directions(WEST) = NORTH
+       directions(NORTH) = DOWN
+       directions(SOUTH) = UP
+       directions(UP) = WEST
+       directions(DOWN) = EAST
+       directions(NORTHEAST) = SOUTHDOWN
+       directions(SOUTHWEST) = NORTHUP
+       directions(NORTHWEST) = NORTHDOWN
+       directions(SOUTHEAST) = SOUTHUP
+       directions(NORTHUP) = WESTDOWN
+       directions(SOUTHDOWN) = EASTUP
+       directions(NORTHDOWN) = EASTDOWN
+       directions(SOUTHUP) = WESTUP
+       directions(EASTUP) = SOUTHWEST
+       directions(WESTDOWN) = NORTHEAST
+       directions(EASTDOWN) = SOUTHEAST
+       directions(WESTUP) = NORTHWEST
+
+       cardinals(CARDINAL_NORMAL) = X_DIRECTION
+       cardinals(CARDINAL_CROSS) = Y_DIRECTION
+       cardinals(CARDINAL_RESULTANT) = Z_DIRECTION
+
+    case (BOUNDARY_YM)       
+       ! cycle x <-- y <-- z
+       directions(ORIGIN) = ORIGIN
+       directions(EAST) = UP
+       directions(WEST) = DOWN
+       directions(NORTH) = EAST
+       directions(SOUTH) = WEST
+       directions(UP) = NORTH
+       directions(DOWN) = SOUTH
+       directions(NORTHEAST) = EASTUP
+       directions(SOUTHWEST) = WESTDOWN
+       directions(NORTHWEST) = EASTDOWN
+       directions(SOUTHEAST) = WESTUP
+       directions(NORTHUP) = NORTHEAST
+       directions(SOUTHDOWN) = SOUTHWEST
+       directions(NORTHDOWN) = SOUTHEAST
+       directions(SOUTHUP) = NORTHWEST
+       directions(EASTUP) = NORTHUP
+       directions(WESTDOWN) = SOUTHDOWN
+       directions(EASTDOWN) = SOUTHUP
+       directions(WESTUP) = NORTHDOWN
+
+       cardinals(CARDINAL_NORMAL) = Y_DIRECTION
+       cardinals(CARDINAL_CROSS) = Z_DIRECTION
+       cardinals(CARDINAL_RESULTANT) = X_DIRECTION
+
+    case (BOUNDARY_YP)       
+       ! cycle x <-- y <-- z, then invert
+       directions(ORIGIN) = ORIGIN
+       directions(EAST) = DOWN
+       directions(WEST) = UP
+       directions(NORTH) = WEST
+       directions(SOUTH) = EAST
+       directions(UP) = SOUTH
+       directions(DOWN) = NORTH
+       directions(NORTHEAST) = WESTDOWN
+       directions(SOUTHWEST) = EASTUP
+       directions(NORTHWEST) = WESTUP
+       directions(SOUTHEAST) = EASTDOWN
+       directions(NORTHUP) = SOUTHWEST
+       directions(SOUTHDOWN) = NORTHEAST
+       directions(NORTHDOWN) = NORTHWEST
+       directions(SOUTHUP) = SOUTHEAST
+       directions(EASTUP) = SOUTHDOWN
+       directions(WESTDOWN) = NORTHUP
+       directions(EASTDOWN) = NORTHDOWN
+       directions(WESTUP) = SOUTHUP
+
+       cardinals(CARDINAL_NORMAL) = Y_DIRECTION
+       cardinals(CARDINAL_CROSS) = Z_DIRECTION
+       cardinals(CARDINAL_RESULTANT) = X_DIRECTION
+
+    end select
+  end subroutine DiscSetLocalDirections_D3Q19
 end module LBM_Discretization_D3Q19_module
 

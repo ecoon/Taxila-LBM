@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         04 April 2011
 !!!       on:            14:35:39 MDT
-!!!     last modified:   13 April 2011
-!!!       at:            17:29:58 MDT
+!!!     last modified:   18 April 2011
+!!!       at:            13:53:36 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -24,6 +24,7 @@ module LBM_Transport_module
   use LBM_Grid_module
   use LBM_Distribution_Function_type_module
   use LBM_Distribution_Function_module
+  use LBM_BC_module
   implicit none
 
   private
@@ -39,6 +40,7 @@ module LBM_Transport_module
      type(specie_type),pointer,dimension(:):: species
      type(grid_type),pointer:: grid
      type(distribution_type),pointer:: distribution
+     type(bc_type),pointer:: bc
      PetscInt relaxation_mode
      
      PetscBool io_fi
@@ -65,6 +67,7 @@ module LBM_Transport_module
        TransportStream, &
        TransportReactWithWalls, &
        TransportCollision, &
+       TransportApplyBCs, &
        TransportOutputDiagnostics
 contains
 
@@ -76,10 +79,11 @@ contains
     transport%comm = comm
     transport%nspecies = -1
     transport%ndims = -1
-    nullify(transport%disc)
     nullify(transport%species)
     nullify(transport%grid)
-    nullify(transport%distribution)
+    transport%disc => DiscretizationCreate(transport%comm)
+    transport%distribution => DistributionCreate(transport%comm)
+    transport%bc => BCCreate(transport%comm)
     transport%relaxation_mode = RELAXATION_MODE_SRT
 
     transport%solidmass = 0
@@ -108,6 +112,7 @@ contains
     if (associated(transport%distribution)) then
        call DistributionDestroy(transport%distribution, ierr)
     end if
+    if (associated(transport%bc)) call BCDestroy(transport%bc, ierr)
 
     if (transport%solidmass /= 0) call VecDestroy(transport%solidmass, ierr)
     if (transport%solidmass_g /= 0) call VecDestroy(transport%solidmass_g, ierr)
@@ -130,16 +135,16 @@ contains
     PetscBool help
     PetscBool flag
     PetscInt nmax
+    PetscBool bcvalue
 
     transport%nspecies = options%nspecies
     transport%ndims = options%ndims
     transport%species => SpecieCreate(transport%comm, transport%nspecies)
-    transport%disc => DiscretizationCreate(transport%comm)
-    transport%distribution => DistributionCreate(transport%comm)
     transport%relaxation_mode = options%transport_relaxation_mode
     transport%reactive_matrix = options%transport_reactive_matrix
 
     call DiscretizationSetType(transport%disc, options%transport_disc)
+    call DiscretizationSetSizes(transport%disc, transport%grid%info%stencil_size)
     call DiscretizationSetUp(transport%disc)
     
     do lcv=1,transport%nspecies
@@ -147,13 +152,102 @@ contains
        call SpecieSetID(transport%species(lcv), lcv)
        call SpecieSetFromOptions(transport%species(lcv), options, ierr)
     end do
+
+    ! set up the vectors for holding boundary data
+    ! dimension 
+    call BCSetSizes(transport%bc, MAX(options%ndims, options%nphases))
+    call BCSetFromOptions(transport%bc, options, ierr)
+
+    ! parse all flow boundary conditions
+    ! xm boundary
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix,'-bc_concentration_xm', bcvalue, flag, ierr)
+    if (bcvalue) transport%bc%flags(BOUNDARY_XM) = BC_DIRICHLET
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_zero_conc_gradient_xm', bcvalue, &
+         flag, ierr)
+    if (bcvalue) transport%bc%flags(BOUNDARY_XM) = BC_ZERO_GRADIENT
+
+    ! xp boundary
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix,'-bc_concentration_xp', bcvalue, flag, ierr)
+    if (bcvalue) transport%bc%flags(BOUNDARY_XP) = BC_DIRICHLET
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_zero_conc_gradient_xp', bcvalue, &
+         flag, ierr)
+    if (bcvalue) transport%bc%flags(BOUNDARY_XP) = BC_ZERO_GRADIENT
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_x', bcvalue, flag, ierr)
+    if (bcvalue) then
+       transport%bc%flags(BOUNDARY_XM) = BC_PERIODIC
+       transport%bc%flags(BOUNDARY_XP) = BC_PERIODIC
+    end if
+
+    ! ym boundary
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix,'-bc_concentration_ym', bcvalue, flag, ierr)
+    if (bcvalue) transport%bc%flags(BOUNDARY_YM) = BC_DIRICHLET
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_zero_conc_gradient_ym', bcvalue, &
+         flag, ierr)
+    if (bcvalue) transport%bc%flags(BOUNDARY_YM) = BC_ZERO_GRADIENT
+
+    ! yp boundary
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix,'-bc_concentration_yp', bcvalue, flag, ierr)
+    if (bcvalue) transport%bc%flags(BOUNDARY_YP) = BC_DIRICHLET
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_zero_conc_gradient_yp', bcvalue, &
+         flag, ierr)
+    if (bcvalue) transport%bc%flags(BOUNDARY_YP) = BC_ZERO_GRADIENT
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_y', bcvalue, flag, ierr)
+    if (bcvalue) then
+       transport%bc%flags(BOUNDARY_YM) = BC_PERIODIC
+       transport%bc%flags(BOUNDARY_YP) = BC_PERIODIC
+    end if
+
+    if (options%ndims > 2) then
+       ! zm boundary
+       bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix,'-bc_concentration_zm',bcvalue,flag,ierr)
+       if (bcvalue) transport%bc%flags(BOUNDARY_ZM) = BC_DIRICHLET
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_zero_conc_gradient_zm', bcvalue, &
+         flag, ierr)
+    if (bcvalue) transport%bc%flags(BOUNDARY_ZM) = BC_ZERO_GRADIENT
+
+       ! zp boundary
+       bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix,'-bc_concentration_zp',bcvalue,flag,ierr)
+       if (bcvalue) transport%bc%flags(BOUNDARY_ZP) = BC_DIRICHLET
+
+    bcvalue = PETSC_FALSE
+    call PetscOptionsGetBool(options%my_prefix, '-bc_zero_conc_gradient_zp', bcvalue, &
+         flag, ierr)
+    if (bcvalue) transport%bc%flags(BOUNDARY_ZP) = BC_ZERO_GRADIENT
+
+       bcvalue = PETSC_FALSE
+       call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_z', bcvalue, flag, ierr)
+       if (bcvalue) then
+          transport%bc%flags(BOUNDARY_ZM) = BC_PERIODIC
+          transport%bc%flags(BOUNDARY_ZP) = BC_PERIODIC
+       end if
+    end if
   end subroutine TransportSetFromOptions
 
   subroutine TransportSetGrid(transport, grid)
-    use LBM_Grid_module
     type(transport_type) transport
     type (grid_type),pointer:: grid
     transport%grid => grid
+    call BCSetGrid(transport%bc, transport%grid)
   end subroutine TransportSetGrid
 
   subroutine TransportSetUp(transport) 
@@ -172,6 +266,7 @@ contains
     call DistributionSetDAs(transport%distribution, transport%grid%da(NSPECIEXBDOF), &
          transport%grid%da(NSPECIEDOF))
     call DistributionSetUp(transport%distribution)
+    call BCSetUp(transport%bc)
 
     ! allocate, initialize workspace
     allocate(transport%fi_eq(1:transport%nspecies, 0:transport%disc%b, &
@@ -189,26 +284,28 @@ contains
     end if
   end subroutine TransportSetUp
 
-  subroutine TransportGetArrays(transport)
+  subroutine TransportGetArrays(transport, ierr)
     type(transport_type) transport
     PetscErrorCode ierr
 
-    call DistributionGetArrays(transport%distribution)
+    call DistributionGetArrays(transport%distribution, ierr)
     if (transport%solidmass /= 0) then
        call DMDAVecGetArrayF90(transport%grid%da(NSPECIEXBDOF), transport%solidmass, &
             transport%solidmass_a, ierr)
     end if
+    call BCGetArrays(transport%bc, ierr)
   end subroutine TransportGetArrays
 
-  subroutine TransportRestoreArrays(transport)
+  subroutine TransportRestoreArrays(transport, ierr)
     type(transport_type) transport
     PetscErrorCode ierr
 
-    call DistributionRestoreArrays(transport%distribution)
+    call DistributionRestoreArrays(transport%distribution, ierr)
     if (transport%solidmass /= 0) then
        call DMDAVecRestoreArrayF90(transport%grid%da(NSPECIEXBDOF), transport%solidmass, &
             transport%solidmass_a, ierr)
     end if
+    call BCRestoreArrays(transport%bc, ierr)
   end subroutine TransportRestoreArrays
 
   subroutine TransportUpdateMoments(transport, walls)
@@ -414,5 +511,10 @@ contains
     end do
   end subroutine TransportReactWithWallsD2
     
+  subroutine TransportApplyBCs(transport, walls)
+    type(transport_type) transport
+    PetscScalar,dimension(transport%grid%info%gxyzl):: walls
+    call BCApply(transport%bc, walls, transport%distribution)
+  end subroutine TransportApplyBCs
 end module LBM_Transport_module
   
