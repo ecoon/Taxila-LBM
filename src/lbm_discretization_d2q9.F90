@@ -125,14 +125,13 @@ contains
      
     oneontau = 1.d0/relax%tau
     if (relax%mode .eq. RELAXATION_MODE_MRT) then
-       !! Curently following the code Qinjun gave me.
-       relax%tau_mrt(0) = 1.d0
-       relax%tau_mrt(1) = 0.7d0
-       relax%tau_mrt(2) = 1.5d0
-       relax%tau_mrt(3) = 1.d0
-       relax%tau_mrt(4) = 0.8d0
-       relax%tau_mrt(5) = 1.d0
-       relax%tau_mrt(6) = 0.8d0
+       relax%tau_mrt(0) = oneontau !1.d0
+       relax%tau_mrt(1) = relax%s1 !oneontau !0.5d0 !0.7d0
+       relax%tau_mrt(2) = oneontau !1.d0 !1.5d0
+       relax%tau_mrt(3) = oneontau !1.d0
+       relax%tau_mrt(4) = oneontau !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !1.5d0 !0.8d0
+       relax%tau_mrt(5) = oneontau !1.d0
+       relax%tau_mrt(6) = oneontau !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !1.5d0 !0.8d0
        relax%tau_mrt(7) = oneontau
        relax%tau_mrt(8) = oneontau
     end if
