@@ -53,6 +53,7 @@
          LBMSetName, &
          LBMSetFromOptions, &
          LBMSetUp, &
+         LBMInit, &
          LBMRun, &
          LBMInitializeWalls, &
          LBMInitializeWallsPetsc, &
@@ -154,19 +155,10 @@
       return
     end subroutine LBMSetUp
 
-    subroutine LBMRun(lbm, istep, kstep, kwrite)
-      ! input
+    subroutine LBMInit(lbm, istep)
       type(lbm_type) lbm
-      integer istep
-      integer kstep
-      integer kwrite
-
-      ! local
+      PetscInt istep
       PetscErrorCode ierr
-      integer lcv_step
-      type(timing_type),pointer:: timer1, timer2, timer3
-      character(len=MAXWORDLENGTH) timerunits
-      character(len=MAXWORDLENGTH) timername
 
       call DMDALocalToLocalBegin(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, &
            lbm%walls, ierr)
@@ -198,8 +190,11 @@
          if (lbm%grid%info%rank.eq.0) then
             write(*,*) 'outputing step', istep, 'to file', lbm%io%counter
          endif
-         call FlowUpdateMoments(lbm%flow, lbm%walls_a)
+
+         if ((.not.lbm%options%flow_steadystate).or.(lbm%options%flow_rampup_steps > 0)) &
+              call FlowUpdateMoments(lbm%flow, lbm%walls_a)
          call FlowOutputDiagnostics(lbm%flow, lbm%walls_a, lbm%io)
+
          if (associated(lbm%transport)) then
             call TransportUpdateMoments(lbm%transport, lbm%walls_a)
             call TransportOutputDiagnostics(lbm%transport, lbm%walls_a, lbm%io)
@@ -220,49 +215,88 @@
          call FlowGetArrays(lbm%flow, ierr)
       endif
       call IOIncrementCounter(lbm%io)
+    end subroutine LBMInit
+
+    subroutine LBMRun(lbm, istep, kstep, kwrite)
+      ! input
+      type(lbm_type) lbm
+      integer istep
+      integer kstep
+      integer kwrite
+
+      ! local
+      PetscErrorCode ierr
+      integer lcv_step
+      type(timing_type),pointer:: timer1, timer2, timer3
+      character(len=MAXWORDLENGTH) timerunits
+      character(len=MAXWORDLENGTH) timername
 
       timername = trim(lbm%name)//'Simulation'
       timer1 => TimingCreate(lbm%comm, timername)
       do lcv_step = istep+1,kstep
          ! streaming
-         call FlowStream(lbm%flow)
+         if ((.not.lbm%options%flow_steadystate).or. &
+              (lcv_step < lbm%options%flow_rampup_steps)) then
+            call FlowStream(lbm%flow)
+         end if
+
          if (associated(lbm%transport)) then
             call TransportStream(lbm%transport)
          end if
 
          ! internal fluid-solid boundary conditions
-         call FlowBounceback(lbm%flow, lbm%walls_a)
+         if ((.not.lbm%options%flow_steadystate).or. &
+              (lcv_step < lbm%options%flow_rampup_steps)) then
+            call FlowBounceback(lbm%flow, lbm%walls_a)
+         end if
+
          if (associated(lbm%transport)) then
             call TransportReactWithWalls(lbm%transport, lbm%walls_a)
          end if
 
          ! external boundary conditions
-         call FlowApplyBCs(lbm%flow, lbm%walls_a)
+         if ((.not.lbm%options%flow_steadystate).or. &
+              (lcv_step < lbm%options%flow_rampup_steps)) then
+            call FlowApplyBCs(lbm%flow, lbm%walls_a)
+         end if
+
          if (associated(lbm%transport)) then
             call TransportApplyBCs(lbm%transport, lbm%walls_a)
          end if
 
          ! update moments for rho, psi
-         call FlowUpdateMoments(lbm%flow, lbm%walls_a)
+         if ((.not.lbm%options%flow_steadystate).or. &
+              (lcv_step < lbm%options%flow_rampup_steps)) then
+            call FlowUpdateMoments(lbm%flow, lbm%walls_a)
+         end if
+
          if (associated(lbm%transport)) then
             call TransportUpdateMoments(lbm%transport, lbm%walls_a)
          end if
 
          ! add in momentum forcing terms
-         call DistributionCommunicateDensity(lbm%flow%distribution)
-         call FlowCalcForces(lbm%flow, lbm%walls_a)
-         call BCZeroForces(lbm%flow%bc, lbm%flow%forces, lbm%flow%distribution)
+         if ((.not.lbm%options%flow_steadystate).or. &
+              (lcv_step < lbm%options%flow_rampup_steps)) then
+            call DistributionCommunicateDensity(lbm%flow%distribution)
+            call FlowCalcForces(lbm%flow, lbm%walls_a)
+            call BCZeroForces(lbm%flow%bc, lbm%flow%forces, lbm%flow%distribution)
 
          ! reaction?
 
          ! collision
-         call FlowCollision(lbm%flow, lbm%walls_a)
+            call FlowCollision(lbm%flow, lbm%walls_a)
+         end if
+
          if (associated(lbm%transport)) then
             call TransportCollision(lbm%transport, lbm%walls_a, lbm%flow)
          end if
 
          ! communicate, update fi
-         call DistributionCommunicateFi(lbm%flow%distribution)
+         if ((.not.lbm%options%flow_steadystate).or. &
+              (lcv_step < lbm%options%flow_rampup_steps)) then
+            call DistributionCommunicateFi(lbm%flow%distribution)
+         end if
+
          if (associated(lbm%transport)) then
             call DistributionCommunicateFi(lbm%transport%distribution)
          end if
@@ -272,7 +306,11 @@
             if (lbm%grid%info%rank.eq.0) then
                write(*,*) 'outputing step', lcv_step, 'to file', lbm%io%counter
             endif
-            call FlowOutputDiagnostics(lbm%flow, lbm%walls_a, lbm%io)
+            if ((.not.lbm%options%flow_steadystate).or. &
+                 (lcv_step < lbm%options%flow_rampup_steps)) then
+               call FlowOutputDiagnostics(lbm%flow, lbm%walls_a, lbm%io)
+            end if
+
             if (associated(lbm%transport)) then
                call TransportOutputDiagnostics(lbm%transport, lbm%walls_a, lbm%io)
             end if
