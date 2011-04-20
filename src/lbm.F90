@@ -47,6 +47,11 @@
 
        character(len=MAXWORDLENGTH) name       
     end type lbm_type
+
+    interface LBMInitializeState
+       module procedure LBMInitializeState_Flow
+       module procedure LBMInitializeState_FlowTransport
+    end interface
     
     public :: LBMCreate, &
          LBMDestroy, &
@@ -350,7 +355,7 @@
       return
     end subroutine LBMInitializeWallsPetsc
 
-    subroutine LBMInitializeState(lbm, init_subroutine)
+    subroutine LBMInitializeState_Flow(lbm, init_subroutine)
       type(lbm_type) lbm
       external :: init_subroutine
       PetscErrorCode ierr
@@ -363,7 +368,32 @@
       call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
       call FlowRestoreArrays(lbm%flow, ierr)
       return
-    end subroutine LBMInitializeState
+    end subroutine LBMInitializeState_Flow
+
+    subroutine LBMInitializeState_FlowTransport(lbm, flow_subroutine, trans_subroutine)
+      type(lbm_type) lbm
+      external :: flow_subroutine, trans_subroutine
+      PetscErrorCode ierr
+
+      call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+      
+      ! flow init
+      call FlowGetArrays(lbm%flow, ierr)
+      call flow_subroutine(lbm%flow%distribution%fi_a, lbm%flow%distribution%rho_a, &
+           lbm%flow%distribution%flux, lbm%walls_a, lbm%flow%distribution, &
+           lbm%flow%phases, lbm%options)
+      call FlowRestoreArrays(lbm%flow, ierr)
+
+      ! transport init
+      call TransportGetArrays(lbm%transport, ierr)
+      call trans_subroutine(lbm%transport%distribution%fi_a, &
+           lbm%transport%distribution%rho_a, lbm%transport%distribution%flux, &
+           lbm%walls_a, lbm%transport%distribution, lbm%transport%species, lbm%options)
+      call TransportRestoreArrays(lbm%transport, ierr)
+
+      call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+      return
+    end subroutine LBMInitializeState_FlowTransport
 
     ! function LBMGetDMByIndex( lbm, dm_index ) result(dm)
     !   type(lbm_type) lbm
