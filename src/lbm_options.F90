@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         09 December 2010
 !!!       on:            14:16:32 MST
-!!!     last modified:   13 April 2011
-!!!       at:            17:25:36 MDT
+!!!     last modified:   20 April 2011
+!!!       at:            16:26:24 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -41,6 +41,8 @@
        PetscInt nphases
        PetscInt nspecies
        PetscInt flow_relaxation_mode
+       PetscBool flow_steadystate
+       PetscInt flow_rampup_steps
        PetscInt transport_relaxation_mode
        PetscBool transport_reactive_matrix
     end type options_type
@@ -76,6 +78,8 @@
       options%nphases = 1
       options%nspecies = 0
       options%flow_relaxation_mode = RELAXATION_MODE_SRT
+      options%flow_steadystate = PETSC_FALSE
+      options%flow_rampup_steps = 0
       options%transport_relaxation_mode = RELAXATION_MODE_SRT
       options%transport_reactive_matrix = PETSC_FALSE
     end function OptionsCreate
@@ -147,7 +151,7 @@
       call PetscOptionsGetInt(options%my_prefix,'-nphases', options%nphases,flag,ierr)
 
       if (help) call PetscPrintf(options%comm, &
-           "  -flow_discretization 'd3q19': discretization type\n", ierr)
+           "  -flow_discretization <d3q19>: discretization type\n", ierr)
       call PetscOptionsGetString(options%my_prefix, '-flow_discretization', &
            name, flag, ierr)
       if (.not.flag) then
@@ -171,10 +175,22 @@
       if (options%flow_disc == NULL_DISCRETIZATION) then
          SETERRQ(1, 1, 'Invalid Discretization', ierr)
       end if
+
+      ! steady state problem?
+      if (help) call PetscPrintf(options%comm, &
+           "  -flow_steadystate: turn off flow, assuming steady state\n", ierr)
+      if (help) call PetscPrintf(options%comm, "  -flow_rampup_steps <0> : "// &
+           "allow flow to ramp up if flow not set at initialization\n", ierr)
+      call PetscOptionsGetBool(options%my_prefix, '-flow_steadystate', &
+           options%flow_steadystate, flag, ierr)
+      if (options%flow_steadystate) then
+         call PetscOptionsGetInt(options%my_prefix, '-flow_rampup_steps', &
+              options%flow_rampup_steps, flag, ierr)
+      end if
          
       ! set the tran discretization
       if (help) call PetscPrintf(options%comm, &
-           "  -transport_discretization 'd3q19': discretization type\n", ierr)
+           "  -transport_discretization <d3q19>: discretization type\n", ierr)
       call PetscOptionsGetString(options%my_prefix, '-transport_discretization', &
            name, flag, ierr)
 
