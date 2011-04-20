@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            17:30:22 MST
-!!!     last modified:   18 April 2011
-!!!       at:            14:29:02 MDT
+!!!     last modified:   20 April 2011
+!!!       at:            11:53:11 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -27,7 +27,7 @@
 
     type(distribution_type) dist
     type(options_type) options
-    PetscScalar,dimension(bc_dim, dist%info%ys:dist%info%ye
+    PetscScalar,dimension(bc_dim, dist%info%ys:dist%info%ye, &
          dist%info%zs:dist%info%ze):: xm_bcvals, xp_bcvals
     PetscScalar,dimension(bc_dim, dist%info%xs:dist%info%xe, &
          dist%info%zs:dist%info%ze):: ym_bcvals, yp_bcvals
@@ -201,5 +201,5 @@
        end if
     end if
     return
-  end subroutine initialize_bcs
+  end subroutine initialize_bcs_transport
   
