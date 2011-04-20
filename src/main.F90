@@ -6,7 +6,7 @@
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
 !!!     last modified:   20 April 2011
-!!!       at:            16:36:56 MDT
+!!!       at:            17:09:43 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -34,6 +34,7 @@ program MAIN
   external initialize_bcs
   external initialize_bcs_transport
   external initialize_state
+  external initialize_state_transport
   external initialize_walls
   type(lbm_type),pointer:: lbm
   type(options_type),pointer:: options
@@ -75,7 +76,11 @@ program MAIN
      call LBMInitializeStateRestarted(lbm, options%istep, options%kwrite)
      istep = options%istep
   else
-     call LBMInitializeState(lbm, initialize_state)
+     if (associated(lbm%transport)) then
+        call LBMInitializeState(lbm, initialize_state, initialize_state_transport)
+     else
+        call LBMInitializeState(lbm, initialize_state)
+     end if
      istep=0
   endif
   
