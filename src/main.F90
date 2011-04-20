@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
-!!!     last modified:   18 April 2011
-!!!       at:            12:16:59 MDT
+!!!     last modified:   20 April 2011
+!!!       at:            16:36:56 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -85,6 +85,7 @@ program MAIN
           options%ntimes*options%npasses
   end if
   
+  call LBMInit(lbm, istep)
   call LBMRun(lbm, istep, options%ntimes*options%npasses, options%kwrite)
   call LBMDestroy(lbm, ierr)
   call PetscFinalize(ierr)
