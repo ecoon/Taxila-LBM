@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         20 April 2011
 !!!       on:            16:58:06 MDT
-!!!     last modified:   20 April 2011
-!!!       at:            17:12:09 MDT
+!!!     last modified:   21 April 2011
+!!!       at:            17:38:27 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -27,8 +27,8 @@
 
     type(distribution_type) dist
     type(options_type) options
-    PetscScalar,dimension(bc_dim, dist%info%ys:dist%info%ye):: xm_bcvals, xp_bcvals
-    PetscScalar,dimension(bc_dim, dist%info%xs:dist%info%xe):: ym_bcvals, yp_bcvals
+    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%ys:dist%info%ye):: xm_bcvals, xp_bcvals
+    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%xs:dist%info%xe):: ym_bcvals, yp_bcvals
     PetscScalar,pointer:: zm_bcvals, zp_bcvals
     PetscInt bc_dim
 
@@ -38,23 +38,35 @@
     PetscErrorCode ierr
     PetscInt m
 
-    xm_bcvals = 0.d0
-    xp_bcvals = 0.d0
-    ym_bcvals = 0.d0
-    yp_bcvals = 0.d0
-
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
 
-    if (help) call PetscPrintf(options%comm, "-bc_conc_pointsource{N}':"// &
-         "set the psi of primary specie N at the point source", ierr)
+    if (help) call PetscPrintf(options%comm, "-bc_conc_pointsource':"// &
+         "set the psi flux of primary specie in the inward normal direction", ierr)
     pointsource_conc = 0.d0
-    do m=1,dist%s
-       call PetscOptionsGetReal(options%my_prefix,'-bc_conc_pointsource'// &
-            char(m+48), pointsource_conc, flag, ierr)
-       if (.not.flag) then
-          SETERRQ(1,1,'invalid boundary value for point source concentration', ierr)
-       end if
-       xm_bcvals(m,dist%info%NY/2) = pointsource_conc
-    end do
+
+    call PetscOptionsGetReal(options%my_prefix,'-bc_conc_pointsource', pointsource_conc,&
+         flag, ierr)
+    if (.not.flag) then
+       SETERRQ(1,1,'invalid boundary value for point source concentration', ierr)
+    end if
+
+    if (dist%info%xs.eq.1) then
+       xm_bcvals = 0.d0
+       if ((dist%info%NY+1)/2 >= dist%info%ys .and. (dist%info%NY+1)/2 <= dist%info%ye) &
+          xm_bcvals(1,X_DIRECTION,(dist%info%NY+1)/2) = pointsource_conc
+    end if
+
+    if (dist%info%xe.eq.dist%info%NX) then
+       xp_bcvals = 0.d0
+    end if
+
+    if (dist%info%ys.eq.1) then
+       ym_bcvals = 0.d0
+    end if
+
+    if (dist%info%ye.eq.dist%info%NY) then
+       yp_bcvals = 0.d0
+    end if
+
   end subroutine initialize_bcs_transport
     

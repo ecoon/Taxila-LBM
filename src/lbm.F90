@@ -64,6 +64,7 @@
          LBMInitializeWallsPetsc, &
          LBMInitializeState, &
          LBMInitializeStateRestarted, &
+         LBMLoadSteadyStateFlow, &
          LBMGetCorners
 
   contains
@@ -196,7 +197,7 @@
             write(*,*) 'outputing step', istep, 'to file', lbm%io%counter
          endif
 
-         if ((.not.lbm%options%flow_steadystate).or.(lbm%options%flow_rampup_steps > 0)) &
+         if ((.not.lbm%options%steadystate).or.(lbm%options%steadystate_rampup_steps > 0)) &
               call FlowUpdateMoments(lbm%flow, lbm%walls_a)
          call FlowOutputDiagnostics(lbm%flow, lbm%walls_a, lbm%io)
 
@@ -240,8 +241,8 @@
       timer1 => TimingCreate(lbm%comm, timername)
       do lcv_step = istep+1,kstep
          ! streaming
-         if ((.not.lbm%options%flow_steadystate).or. &
-              (lcv_step < lbm%options%flow_rampup_steps)) then
+         if ((.not.lbm%options%steadystate).or. &
+              (lcv_step < lbm%options%steadystate_rampup_steps)) then
             call FlowStream(lbm%flow)
          end if
 
@@ -250,8 +251,8 @@
          end if
 
          ! internal fluid-solid boundary conditions
-         if ((.not.lbm%options%flow_steadystate).or. &
-              (lcv_step < lbm%options%flow_rampup_steps)) then
+         if ((.not.lbm%options%steadystate).or. &
+              (lcv_step < lbm%options%steadystate_rampup_steps)) then
             call FlowBounceback(lbm%flow, lbm%walls_a)
          end if
 
@@ -260,8 +261,8 @@
          end if
 
          ! external boundary conditions
-         if ((.not.lbm%options%flow_steadystate).or. &
-              (lcv_step < lbm%options%flow_rampup_steps)) then
+         if ((.not.lbm%options%steadystate).or. &
+              (lcv_step < lbm%options%steadystate_rampup_steps)) then
             call FlowApplyBCs(lbm%flow, lbm%walls_a)
          end if
 
@@ -270,8 +271,8 @@
          end if
 
          ! update moments for rho, psi
-         if ((.not.lbm%options%flow_steadystate).or. &
-              (lcv_step < lbm%options%flow_rampup_steps)) then
+         if ((.not.lbm%options%steadystate).or. &
+              (lcv_step < lbm%options%steadystate_rampup_steps)) then
             call FlowUpdateMoments(lbm%flow, lbm%walls_a)
          end if
 
@@ -280,8 +281,8 @@
          end if
 
          ! add in momentum forcing terms
-         if ((.not.lbm%options%flow_steadystate).or. &
-              (lcv_step < lbm%options%flow_rampup_steps)) then
+         if ((.not.lbm%options%steadystate).or. &
+              (lcv_step < lbm%options%steadystate_rampup_steps)) then
             call DistributionCommunicateDensity(lbm%flow%distribution)
             call FlowCalcForces(lbm%flow, lbm%walls_a)
             call BCZeroForces(lbm%flow%bc, lbm%flow%forces, lbm%flow%distribution)
@@ -297,8 +298,8 @@
          end if
 
          ! communicate, update fi
-         if ((.not.lbm%options%flow_steadystate).or. &
-              (lcv_step < lbm%options%flow_rampup_steps)) then
+         if ((.not.lbm%options%steadystate).or. &
+              (lcv_step < lbm%options%steadystate_rampup_steps)) then
             call DistributionCommunicateFi(lbm%flow%distribution)
          end if
 
@@ -311,8 +312,8 @@
             if (lbm%grid%info%rank.eq.0) then
                write(*,*) 'outputing step', lcv_step, 'to file', lbm%io%counter
             endif
-            if ((.not.lbm%options%flow_steadystate).or. &
-                 (lcv_step < lbm%options%flow_rampup_steps)) then
+            if ((.not.lbm%options%steadystate).or. &
+                 (lcv_step < lbm%options%steadystate_rampup_steps)) then
                call FlowOutputDiagnostics(lbm%flow, lbm%walls_a, lbm%io)
             end if
 
@@ -421,25 +422,33 @@
       corners = lbm%grid%info%corners
     end subroutine LBMGetCorners
 
-  subroutine LBMInitializeStateRestarted(lbm, istep, kwrite)
-    use petsc
-    type(lbm_type) lbm
-    PetscInt istep, kwrite
-    PetscErrorCode ierr
-
-    lbm%io%counter = istep/kwrite
-    if (lbm%grid%info%rank.eq.0) then
-       write(*,*) 'reading step', istep, 'from file', lbm%io%counter
-    endif
-    call IOLoad(lbm%io, lbm%flow%distribution%fi_g, 'fi')
-
-    call DMGlobalToLocalBegin(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi_g, &
-         INSERT_VALUES, lbm%flow%distribution%fi, ierr)
-    call DMGlobalToLocalEnd(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi_g, &
-         INSERT_VALUES, lbm%flow%distribution%fi, ierr)
-    return
-  end subroutine LBMInitializeStateRestarted
-
-
-end module LBM_module
+    subroutine LBMInitializeStateRestarted(lbm, istep, kwrite)
+      use petsc
+      type(lbm_type) lbm
+      PetscInt istep, kwrite
+      PetscErrorCode ierr
+      
+      lbm%io%counter = istep/kwrite
+      if (lbm%grid%info%rank.eq.0) then
+         write(*,*) 'reading step', istep, 'from file', lbm%io%counter
+      endif
+      call IOLoad(lbm%io, lbm%flow%distribution%fi_g, 'fi')
+      
+      call DMGlobalToLocalBegin(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi_g, &
+           INSERT_VALUES, lbm%flow%distribution%fi, ierr)
+      call DMGlobalToLocalEnd(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi_g, &
+           INSERT_VALUES, lbm%flow%distribution%fi, ierr)
+      return
+    end subroutine LBMInitializeStateRestarted
+    
+    subroutine LBMLoadSteadyStateFlow(lbm, filename)
+      type(lbm_type) lbm 
+      character(len=MAXSTRINGLENGTH) filename
+      PetscViewer viewer
+      PetscErrorCode ierr
+      call PetscViewerBinaryOpen(lbm%comm, filename, FILE_MODE_READ, viewer, ierr)
+      call VecLoad(lbm%flow%velt_g, viewer, ierr)
+      call PetscViewerDestroy(viewer, ierr)
+    end subroutine LBMLoadSteadyStateFlow
+  end module LBM_module
 

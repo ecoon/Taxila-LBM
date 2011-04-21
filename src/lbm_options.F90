@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         09 December 2010
 !!!       on:            14:16:32 MST
-!!!     last modified:   20 April 2011
-!!!       at:            16:26:24 MDT
+!!!     last modified:   21 April 2011
+!!!       at:            09:57:46 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -41,8 +41,10 @@
        PetscInt nphases
        PetscInt nspecies
        PetscInt flow_relaxation_mode
-       PetscBool flow_steadystate
-       PetscInt flow_rampup_steps
+       PetscBool steadystate
+       PetscInt steadystate_rampup_steps
+       character(len=MAXSTRINGLENGTH):: steadystate_flow_file
+       PetscBool steadystate_hasfile
        PetscInt transport_relaxation_mode
        PetscBool transport_reactive_matrix
     end type options_type
@@ -78,8 +80,10 @@
       options%nphases = 1
       options%nspecies = 0
       options%flow_relaxation_mode = RELAXATION_MODE_SRT
-      options%flow_steadystate = PETSC_FALSE
-      options%flow_rampup_steps = 0
+      options%steadystate = PETSC_FALSE
+      options%steadystate_rampup_steps = 0
+      options%steadystate_flow_file = ''
+      options%steadystate_hasfile = PETSC_FALSE
       options%transport_relaxation_mode = RELAXATION_MODE_SRT
       options%transport_reactive_matrix = PETSC_FALSE
     end function OptionsCreate
@@ -178,14 +182,21 @@
 
       ! steady state problem?
       if (help) call PetscPrintf(options%comm, &
-           "  -flow_steadystate: turn off flow, assuming steady state\n", ierr)
-      if (help) call PetscPrintf(options%comm, "  -flow_rampup_steps <0> : "// &
-           "allow flow to ramp up if flow not set at initialization\n", ierr)
-      call PetscOptionsGetBool(options%my_prefix, '-flow_steadystate', &
-           options%flow_steadystate, flag, ierr)
-      if (options%flow_steadystate) then
-         call PetscOptionsGetInt(options%my_prefix, '-flow_rampup_steps', &
-              options%flow_rampup_steps, flag, ierr)
+           "  -steadystate: turn off flow, assuming steady state\n", ierr)
+      if (help) call PetscPrintf(options%comm, "  -steadystate_flow_file <file> : "// &
+           "set flow via pre-computed steadystate\n", ierr)
+      if (help) call PetscPrintf(options%comm, "  -steadystate_rampup_steps <0> : "// &
+           "allow flow to ramp up if flow not set via file\n", ierr)
+      call PetscOptionsGetBool(options%my_prefix, '-steadystate', &
+           options%steadystate, flag, ierr)
+      if (options%steadystate) then
+         call PetscOptionsGetString(options%my_prefix, '-steadystate_flow_file', &
+              options%steadystate_flow_file, flag, ierr)
+         options%steadystate_hasfile = flag
+         if (.not.flag) then
+            call PetscOptionsGetInt(options%my_prefix, '-steadystate_rampup_steps', &
+                 options%steadystate_rampup_steps, flag, ierr)
+         end if
       end if
          
       ! set the tran discretization
