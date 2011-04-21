@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
-!!!     last modified:   20 April 2011
-!!!       at:            17:10:27 MDT
+!!!     last modified:   21 April 2011
+!!!       at:            09:41:04 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -35,7 +35,7 @@
          dist%info%gys:dist%info%gye):: fi
     PetscScalar,dimension(dist%s, &
          dist%info%gxs:dist%info%gxe, &
-         dist%info%gzs:dist%info%gze):: rho
+         dist%info%gys:dist%info%gye):: rho
     PetscScalar,dimension(dist%s, 1:dist%info%ndims, &
          dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: u
