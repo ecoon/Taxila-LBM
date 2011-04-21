@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            15:34:44 MDT
-!!!     last modified:   18 April 2011
-!!!       at:            15:15:29 MDT
+!!!     last modified:   21 April 2011
+!!!       at:            10:45:56 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -32,6 +32,7 @@ module LBM_Specie_module
      PetscInt phase
 
      ! bagged parameters
+     PetscScalar,pointer::  garbage
 
      ! dependent parameters
      type(relaxation_type),pointer:: relax
@@ -133,19 +134,21 @@ contains
     type(options_type) options
     PetscErrorCode ierr
 
-    PetscInt sizeofint, sizeofscalar, sizeofbool, sizeofdata
+    PetscSizeT sizeofint, sizeofscalar, sizeofbool, sizeofdata
     PetscInt lcv
     character(len=MAXWORDLENGTH):: paramname
 
-    ! set up the data
-
     ! create the bag
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
-    sizeofdata = 0 !???
+    sizeofdata = sizeofscalar
     call PetscBagCreate(specie%comm, sizeofdata, specie%bag, ierr)
-    call PetscBagSetName(specie%bag, TRIM(options%my_prefix)//specie%name, ierr)
+    call PetscBagSetName(specie%bag, TRIM(options%my_prefix)//specie%name, "", ierr)
+    call PetscBagGetData(specie%bag, specie%data, ierr)
 
     ! register data
+    call PetscBagRegisterScalar(specie%bag, specie%data%garbage, 0.d0, &
+         trim(options%my_prefix)//'garbage'//paramname, 'Specie garbage', ierr)
+    specie%garbage => specie%data%garbage
 
     call RelaxationSetFromOptions(specie%relax, options, ierr)
   end subroutine SpecieSetFromOptions

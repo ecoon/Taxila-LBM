@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            16:59:38 MDT
-!!!     last modified:   13 April 2011
-!!!       at:            09:52:35 MDT
+!!!     last modified:   21 April 2011
+!!!       at:            10:40:10 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -33,7 +33,7 @@ module LBM_Specie_Bag_Data_type_module
 
   ! physical parameters for a chemical specie
   type, public :: specie_bag_data_type
-     PetscScalar reactivity ! this is crap, but Porter's gfortran doesn't like empty types
+     PetscScalar garbage ! this is crap, but Porter's gfortran doesn't like empty types
   end type specie_bag_data_type
 end module LBM_Specie_Bag_Data_type_module
 

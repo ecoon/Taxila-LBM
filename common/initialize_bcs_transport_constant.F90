@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            17:30:22 MST
-!!!     last modified:   20 April 2011
-!!!       at:            11:53:11 MDT
+!!!     last modified:   21 April 2011
+!!!       at:            17:25:32 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -27,21 +27,25 @@
 
     type(distribution_type) dist
     type(options_type) options
-    PetscScalar,dimension(bc_dim, dist%info%ys:dist%info%ye, &
+    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%ys:dist%info%ye, &
          dist%info%zs:dist%info%ze):: xm_bcvals, xp_bcvals
-    PetscScalar,dimension(bc_dim, dist%info%xs:dist%info%xe, &
+    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%xs:dist%info%xe, &
          dist%info%zs:dist%info%ze):: ym_bcvals, yp_bcvals
-    PetscScalar,dimension(bc_dim, dist%info%xs:dist%info%xe, &
+    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%xs:dist%info%xe, &
          dist%info%ys:dist%info%ye):: zm_bcvals, zp_bcvals
     PetscInt bc_dim
 
     ! local
-    PetscScalar,dimension(dist%s):: xp3_ave_p, xm3_ave_p
+    PetscScalar,dimension(dist%s):: xp3_ave, xm3_ave
+    PetscScalar,dimension(dist%s):: yp3_ave, ym3_ave
+    PetscScalar,dimension(dist%s):: zp3_ave, zm3_ave
+
     PetscBool conc_xm, conc_xp
-    PetscScalar,dimension(dist%s):: yp3_ave_p, ym3_ave_p
     PetscBool conc_ym, conc_yp
-    PetscScalar,dimension(dist%s):: zp3_ave_p, zm3_ave_p
     PetscBool conc_zm, conc_zp
+    PetscBool flux_xm, flux_xp
+    PetscBool flux_ym, flux_yp
+    PetscBool flux_zm, flux_zp
 
     PetscInt i, j, k, m
     PetscBool flag
@@ -58,25 +62,37 @@
     conc_zm = .FALSE.
     conc_zp = .FALSE.
 
-    xp3_ave_p = 0.d0
-    xm3_ave_p = 0.d0
-    yp3_ave_p = 0.d0
-    ym3_ave_p = 0.d0
-    zp3_ave_p = 0.d0
-    zm3_ave_p = 0.d0
+    flux_xm = .FALSE.
+    flux_xp = .FALSE.
+    flux_ym = .FALSE.
+    flux_yp = .FALSE.
+    flux_zm = .FALSE.
+    flux_zp = .FALSE.
 
-    ! print help messages
-    if (help) call PetscPrintf(options%comm, "-bc_concentration_{xyz}{mp}_specie{N}':"// &
-         "set the psi of primary specie N", ierr)
+    xp3_ave = 0.d0
+    xm3_ave = 0.d0
+    yp3_ave = 0.d0
+    ym3_ave = 0.d0
+    zp3_ave = 0.d0
+    zm3_ave = 0.d0
 
     ! get average values on xm edge
     if (bc_flags(BOUNDARY_XM).eq.BC_DIRICHLET) then
        conc_xm = .TRUE.
        do m=1,dist%s
-          call PetscOptionsGetReal(options%my_prefix,'-bc_concentration_xm_specie'// &
-               char(m+48), xm3_ave_p(m), flag, ierr)
+          call PetscOptionsGetReal(options%my_prefix,'-bc_conc_xm_specie'// &
+               char(m+48), xm3_ave(m), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
-               '-bc_concentration_xm', xm3_ave_p(1), flag, ierr)
+               '-bc_conc_xm', xm3_ave(1), flag, ierr)
+          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+       end do
+    else if (bc_flags(BOUNDARY_XM).eq.BC_FLUX) then
+       flux_xm = .TRUE.
+       do m=1,dist%s
+          call PetscOptionsGetReal(options%my_prefix,'-bc_conc_flux_xm_specie'// &
+               char(m+48), xm3_ave(m), flag, ierr)
+          if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
+               '-bc_conc_flux_xm', xm3_ave(1), flag, ierr)
           if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
        end do
     endif
@@ -85,10 +101,19 @@
     if (bc_flags(BOUNDARY_XP).eq.BC_DIRICHLET) then
        conc_xm = .TRUE.
        do m=1,dist%s
-          call PetscOptionsGetReal(options%my_prefix,'-bc_concentration_xp_specie'// &
-               char(m+48), xp3_ave_p(m), flag, ierr)
+          call PetscOptionsGetReal(options%my_prefix,'-bc_conc_xp_specie'// &
+               char(m+48), xp3_ave(m), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
-               '-bc_concentration_xp', xp3_ave_p(1), flag, ierr)
+               '-bc_conc_xp', xp3_ave(1), flag, ierr)
+          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+       end do
+    else if (bc_flags(BOUNDARY_XP).eq.BC_FLUX) then
+       flux_xp = .TRUE.
+       do m=1,dist%s
+          call PetscOptionsGetReal(options%my_prefix,'-bc_conc_flux_xp_specie'// &
+               char(m+48), xp3_ave(m), flag, ierr)
+          if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
+               '-bc_conc_flux_xp', xp3_ave(1), flag, ierr)
           if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
        end do
     endif
@@ -97,10 +122,19 @@
     if (bc_flags(BOUNDARY_YM).eq.BC_DIRICHLET) then
        conc_ym = .TRUE.
        do m=1,dist%s
-          call PetscOptionsGetReal(options%my_prefix,'-bc_concentration_ym_specie'// &
-               char(m+48), ym3_ave_p(m), flag, ierr)
+          call PetscOptionsGetReal(options%my_prefix,'-bc_conc_ym_specie'// &
+               char(m+48), ym3_ave(m), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
-               '-bc_concentration_ym', ym3_ave_p(1), flag, ierr)
+               '-bc_conc_ym', ym3_ave(1), flag, ierr)
+          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+       end do
+    else if (bc_flags(BOUNDARY_YM).eq.BC_FLUX) then
+       flux_ym = .TRUE.
+       do m=1,dist%s
+          call PetscOptionsGetReal(options%my_prefix,'-bc_conc_flux_ym_specie'// &
+               char(m+48), ym3_ave(m), flag, ierr)
+          if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
+               '-bc_conc_flux_ym', ym3_ave(1), flag, ierr)
           if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
        end do
     endif
@@ -109,10 +143,19 @@
     if (bc_flags(BOUNDARY_YP).eq.BC_DIRICHLET) then
        conc_yp = .TRUE.
        do m=1,dist%s
-          call PetscOptionsGetReal(options%my_prefix,'-bc_concentration_yp_specie'// &
-               char(m+48), yp3_ave_p(m), flag, ierr)
+          call PetscOptionsGetReal(options%my_prefix,'-bc_conc_yp_specie'// &
+               char(m+48), yp3_ave(m), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
-               '-bc_concentration_yp', yp3_ave_p(1), flag, ierr)
+               '-bc_conc_yp', yp3_ave(1), flag, ierr)
+          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+       end do
+    else if (bc_flags(BOUNDARY_YP).eq.BC_FLUX) then
+       flux_yp = .TRUE.
+       do m=1,dist%s
+          call PetscOptionsGetReal(options%my_prefix,'-bc_conc_flux_yp_specie'// &
+               char(m+48), yp3_ave(m), flag, ierr)
+          if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
+               '-bc_conc_flux_yp', yp3_ave(1), flag, ierr)
           if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
        end do
     endif
@@ -121,10 +164,19 @@
     if (bc_flags(BOUNDARY_ZM).eq.BC_DIRICHLET) then
        conc_zm = .TRUE.
        do m=1,dist%s
-          call PetscOptionsGetReal(options%my_prefix,'-bc_concentration_zm_specie'// &
-               char(m+48), zm3_ave_p(m), flag, ierr)
+          call PetscOptionsGetReal(options%my_prefix,'-bc_conc_zm_specie'// &
+               char(m+48), zm3_ave(m), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
-               '-bc_concentration_zm', zm3_ave_p(1), flag, ierr)
+               '-bc_conc_zm', zm3_ave(1), flag, ierr)
+          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+       end do
+    else if (bc_flags(BOUNDARY_ZM).eq.BC_FLUX) then
+       flux_zm = .TRUE.
+       do m=1,dist%s
+          call PetscOptionsGetReal(options%my_prefix,'-bc_conc_flux_zm_specie'// &
+               char(m+48), zm3_ave(m), flag, ierr)
+          if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
+               '-bc_conc_flux_zm', zm3_ave(1), flag, ierr)
           if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
        end do
     endif
@@ -133,10 +185,19 @@
     if (bc_flags(BOUNDARY_ZP).eq.BC_DIRICHLET) then
        conc_zp = .TRUE.
        do m=1,dist%s
-          call PetscOptionsGetReal(options%my_prefix,'-bc_concentration_zp_specie'// &
-               char(m+48), zp3_ave_p(m), flag, ierr)
+          call PetscOptionsGetReal(options%my_prefix,'-bc_conc_zp_specie'// &
+               char(m+48), zp3_ave(m), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
-               '-bc_concentration_zp', zp3_ave_p(1), flag, ierr)
+               '-bc_conc_zp', zp3_ave(1), flag, ierr)
+          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+       end do
+    else if (bc_flags(BOUNDARY_ZP).eq.BC_FLUX) then
+       flux_zp = .TRUE.
+       do m=1,dist%s
+          call PetscOptionsGetReal(options%my_prefix,'-bc_conc_flux_zp_specie'// &
+               char(m+48), zp3_ave(m), flag, ierr)
+          if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
+               '-bc_conc_flux_zp', zp3_ave(1), flag, ierr)
           if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
        end do
     endif
@@ -146,7 +207,11 @@
        xm_bcvals = 0.
        if (conc_xm) then
           do m=1,dist%s
-             xm_bcvals(m,:,:) = xm3_ave_p(m)
+             xm_bcvals(m,1,:,:) = xm3_ave(m)
+          end do
+       else if (flux_xm) then
+          do m=1,dist%s
+             xm_bcvals(m,X_DIRECTION,:,:) = xm3_ave(m)
           end do
        end if
     end if
@@ -156,7 +221,11 @@
        xp_bcvals = 0.
        if (conc_xp) then
           do m=1,dist%s
-             xp_bcvals(m,:,:) = xp3_ave_p(m)
+             xp_bcvals(m,1,:,:) = xp3_ave(m)
+          end do
+       else if (flux_xp) then
+          do m=1,dist%s
+             xp_bcvals(m,X_DIRECTION,:,:) = xp3_ave(m)
           end do
        end if
     end if
@@ -166,7 +235,11 @@
        ym_bcvals = 0.
        if (conc_ym) then
           do m=1,dist%s
-             ym_bcvals(m,:,:) = ym3_ave_p(m)
+             ym_bcvals(m,1,:,:) = ym3_ave(m)
+          end do
+       else if (flux_ym) then
+          do m=1,dist%s
+             ym_bcvals(m,Y_DIRECTION,:,:) = ym3_ave(m)
           end do
        end if
     end if
@@ -176,7 +249,11 @@
        yp_bcvals = 0.
        if (conc_yp) then
           do m=1,dist%s
-             yp_bcvals(m,:,:) = yp3_ave_p(m)
+             yp_bcvals(m,1,:,:) = yp3_ave(m)
+          end do
+       else if (flux_yp) then
+          do m=1,dist%s
+             yp_bcvals(m,Y_DIRECTION,:,:) = yp3_ave(m)
           end do
        end if
     end if
@@ -186,7 +263,11 @@
        zm_bcvals = 0.
        if (conc_zm) then
           do m=1,dist%s
-             zm_bcvals(m,:,:) = zm3_ave_p(m)
+             zm_bcvals(m,1,:,:) = zm3_ave(m)
+          end do
+       else if (flux_zm) then
+          do m=1,dist%s
+             zm_bcvals(m,Z_DIRECTION,:,:) = zm3_ave(m)
           end do
        end if
     end if
@@ -196,7 +277,11 @@
        zp_bcvals = 0.
        if (conc_zp) then
           do m=1,dist%s
-             zp_bcvals(m,:,:) = zp3_ave_p(m)
+             zp_bcvals(m,1,:,:) = zp3_ave(m)
+          end do
+       else if (flux_zp) then
+          do m=1,dist%s
+             zp_bcvals(m,Z_DIRECTION,:,:) = zp3_ave(m)
           end do
        end if
     end if

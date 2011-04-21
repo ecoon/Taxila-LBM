@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
-!!!     last modified:   20 April 2011
-!!!       at:            17:09:43 MDT
+!!!     last modified:   21 April 2011
+!!!       at:            10:38:54 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -80,6 +80,10 @@ program MAIN
         call LBMInitializeState(lbm, initialize_state, initialize_state_transport)
      else
         call LBMInitializeState(lbm, initialize_state)
+     end if
+     
+     if (options%steadystate_hasfile) then
+        call LBMLoadSteadyStateFlow(lbm, options%steadystate_flow_file)
      end if
      istep=0
   endif
