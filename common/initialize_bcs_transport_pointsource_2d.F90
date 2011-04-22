@@ -6,7 +6,7 @@
 !!!     created:         20 April 2011
 !!!       on:            16:58:06 MDT
 !!!     last modified:   21 April 2011
-!!!       at:            17:38:27 MDT
+!!!       at:            18:07:44 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -33,27 +33,33 @@
     PetscInt bc_dim
 
     ! local
-    PetscScalar pointsource_conc
+    PetscScalar pointsource_conc, pointsource_node
     PetscBool flag, help
     PetscErrorCode ierr
     PetscInt m
 
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
 
-    if (help) call PetscPrintf(options%comm, "-bc_conc_pointsource':"// &
+    if (help) call PetscPrintf(options%comm, "-bc_conc_pointsource <val>':"// &
          "set the psi flux of primary specie in the inward normal direction", ierr)
+    if (help) call PetscPrintf(options%comm, "-bc_conc_pointsource_location <val>':"// &
+         "set the location of the point source in y-grid points", ierr)
     pointsource_conc = 0.d0
 
     call PetscOptionsGetReal(options%my_prefix,'-bc_conc_pointsource', pointsource_conc,&
          flag, ierr)
     if (.not.flag) then
        SETERRQ(1,1,'invalid boundary value for point source concentration', ierr)
+    call PetscOptionsGetReal(options%my_prefix,'-bc_conc_pointsource_location', &
+         pointsource_node, flag, ierr)
+    if (.not.flag) then
+       SETERRQ(1,1,'invalid node for point source concentration', ierr)
     end if
 
     if (dist%info%xs.eq.1) then
        xm_bcvals = 0.d0
-       if ((dist%info%NY+1)/2 >= dist%info%ys .and. (dist%info%NY+1)/2 <= dist%info%ye) &
-          xm_bcvals(1,X_DIRECTION,(dist%info%NY+1)/2) = pointsource_conc
+       if (pointsource_node >= dist%info%ys .and. pointsource_node <= dist%info%ye) &
+          xm_bcvals(1,X_DIRECTION,pointsource_node) = pointsource_conc
     end if
 
     if (dist%info%xe.eq.dist%info%NX) then
