@@ -337,8 +337,8 @@
 
       call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
       call init_subroutine(lbm%walls_a, lbm%options%walls_file, lbm%grid%info)
+      call LBMSetGhostWalls(lbm, lbm%walls_a)
       call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-      return
     end subroutine LBMInitializeWalls
 
     subroutine LBMInitializeWallsPetsc(lbm, filename)
@@ -352,8 +352,65 @@
       call PetscViewerDestroy(viewer, ierr)
       call DMGlobalToLocalBegin(lbm%grid%da(ONEDOF), lbm%walls_g, INSERT_VALUES, lbm%walls, ierr)
       call DMGlobalToLocalEnd(lbm%grid%da(ONEDOF), lbm%walls_g, INSERT_VALUES, lbm%walls, ierr)
-      return
+      call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+      call LBMSetGhostWalls(lbm, lbm%walls_a)
+      call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
     end subroutine LBMInitializeWallsPetsc
+
+    subroutine LBMSetGhostWalls(lbm, walls)
+      type(lbm_type) lbm
+      PetscScalar,dimension(lbm%grid%info%gxyzl):: walls
+      select case(lbm%grid%info%ndims)
+      case (2)
+         call LBMSetGhostWallsD2(lbm, walls, lbm%grid%info)
+      case (3)
+         call LBMSetGhostWallsD3(lbm, walls, lbm%grid%info)
+      end select
+    end subroutine LBMSetGhostWalls 
+
+    subroutine LBMSetGhostWallsD2(lbm, walls, info)
+      use LBM_Info_module
+      type(lbm_type) lbm
+      type(info_type) info
+      PetscScalar,dimension(info%gxs:info%gxe,info%gys:info%gye):: walls
+      if ((info%xs.eq.1).and.(.not.info%periodic(X_DIRECTION))) then
+         walls(info%gxs:info%xs-1,:) = 1.
+      end if
+      if ((info%xe.eq.info%NX).and.(.not.info%periodic(X_DIRECTION))) then
+         walls(info%xe+1:info%gxe,:) = 1.
+      end if
+      if ((info%ys.eq.1).and.(.not.info%periodic(Y_DIRECTION))) then
+         walls(:,info%gys:info%ys-1) = 1.
+      end if
+      if ((info%ye.eq.info%NY).and.(.not.info%periodic(Y_DIRECTION))) then
+         walls(:,info%ye+1:info%gye) = 1.
+      end if
+    end subroutine LBMSetGhostWallsD2
+
+    subroutine LBMSetGhostWallsD3(lbm, walls, info)
+      use LBM_Info_module
+      type(lbm_type) lbm
+      type(info_type) info
+      PetscScalar,dimension(info%gxs:info%gxe,info%gys:info%gye,info%gzs:info%gze):: walls
+      if ((info%xs.eq.1).and.(.not.info%periodic(X_DIRECTION))) then
+         walls(info%gxs:info%xs-1,:,:) = 1.
+      end if
+      if ((info%xe.eq.info%NX).and.(.not.info%periodic(X_DIRECTION))) then
+         walls(info%xe+1:info%gxe,:,:) = 1.
+      end if
+      if ((info%ys.eq.1).and.(.not.info%periodic(Y_DIRECTION))) then
+         walls(:,info%gys:info%ys-1,:) = 1.
+      end if
+      if ((info%ye.eq.info%NY).and.(.not.info%periodic(Y_DIRECTION))) then
+         walls(:,info%ye+1:info%gye,:) = 1.
+      end if
+      if ((info%zs.eq.1).and.(.not.info%periodic(Z_DIRECTION))) then
+         walls(:,:,info%gzs:info%zs-1) = 1.
+      end if
+      if ((info%ze.eq.info%NZ).and.(.not.info%periodic(Z_DIRECTION))) then
+         walls(:,:,info%ze+1:info%gze) = 1.
+      end if
+    end subroutine LBMSetGhostWallsD3
 
     subroutine LBMInitializeState_Flow(lbm, init_subroutine)
       type(lbm_type) lbm
