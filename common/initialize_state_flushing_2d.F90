@@ -6,7 +6,7 @@
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
 !!!     last modified:   25 April 2011
-!!!       at:            14:47:29 MDT
+!!!       at:            15:11:18 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -58,14 +58,14 @@
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
 
     rho1 = 0.d0
-    if (help) call PetscPrintf(options%comm, "-rho1=<0,0>: ???", ierr)
+    if (help) call PetscPrintf(options%comm, "-rho_invading=<0,0>: ???", ierr)
     nmax = dist%s
-    call PetscOptionsGetRealArray(options%my_prefix, '-rho1', rho1, nmax, flag, ierr)
+    call PetscOptionsGetRealArray(options%my_prefix, '-rho_invading', rho1, nmax, flag, ierr)
 
     rho2 = 0.d0
-    if (help) call PetscPrintf(options%comm, "-rho2=<0,0>: ???", ierr)
+    if (help) call PetscPrintf(options%comm, "-rho_defending=<0,0>: ???", ierr)
     nmax = dist%s
-    call PetscOptionsGetRealArray(options%my_prefix, '-rho2', rho2, nmax, flag, ierr)
+    call PetscOptionsGetRealArray(options%my_prefix, '-rho_defending', rho2, nmax, flag, ierr)
     
     flushy = .FALSE.
     flushx = .TRUE.

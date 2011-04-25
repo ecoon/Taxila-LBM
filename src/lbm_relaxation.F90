@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            15:15:25 MDT
-!!!     last modified:   18 April 2011
-!!!       at:            15:02:00 MDT
+!!!     last modified:   25 April 2011
+!!!       at:            15:20:08 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -130,11 +130,11 @@ contains
     call PetscBagGetData(relax%bag, relax%data, ierr)
 
     call PetscBagRegisterScalar(relax%bag, relax%data%tau, 1.d0, &
-         trim(options%my_prefix)//'tau_'//relax%name, 'relaxation time', ierr)
+         trim(options%my_prefix)//'tau_'//trim(relax%name), 'relaxation time', ierr)
     relax%tau => relax%data%tau
 
      call PetscBagRegisterScalar(relax%bag, relax%data%s1, 1.d0, &
-         trim(options%my_prefix)//'s1_'//relax%name, 'MRT relaxation time', ierr)
+         trim(options%my_prefix)//'s1_'//trim(relax%name), 'MRT relaxation time', ierr)
     relax%s1 => relax%data%s1
 
     call PetscBagSetName(relax%bag, TRIM(options%my_prefix)//relax%name, "", ierr)

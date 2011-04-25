@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            15:34:44 MDT
-!!!     last modified:   21 April 2011
-!!!       at:            10:45:56 MDT
+!!!     last modified:   25 April 2011
+!!!       at:            15:24:08 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -137,17 +137,27 @@ contains
     PetscSizeT sizeofint, sizeofscalar, sizeofbool, sizeofdata
     PetscInt lcv
     character(len=MAXWORDLENGTH):: paramname
+    PetscBool help, flag
+    write(paramname, '(I1)') specie%id
+    
+    ! set the species name from options
+    call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
+    if (help) call PetscPrintf(options%comm, "-specie"//trim(paramname)//"_name=<specie"// &
+         trim(paramname)//">: name the specie -- for use with parameter options\n", ierr)
+    call PetscOptionsGetString(options%my_prefix, "-specie"//trim(paramname)//"_name", &
+         specie%name, flag, ierr)
+    call RelaxationSetName(specie%relax, specie%name)
 
     ! create the bag
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
     sizeofdata = sizeofscalar
     call PetscBagCreate(specie%comm, sizeofdata, specie%bag, ierr)
-    call PetscBagSetName(specie%bag, TRIM(options%my_prefix)//specie%name, "", ierr)
+    call PetscBagSetName(specie%bag, TRIM(options%my_prefix)//trim(specie%name), "", ierr)
     call PetscBagGetData(specie%bag, specie%data, ierr)
 
     ! register data
     call PetscBagRegisterScalar(specie%bag, specie%data%garbage, 0.d0, &
-         trim(options%my_prefix)//'garbage'//paramname, 'Specie garbage', ierr)
+         trim(options%my_prefix)//'garbage_'//trim(specie%name), 'Specie garbage', ierr)
     specie%garbage => specie%data%garbage
 
     call RelaxationSetFromOptions(specie%relax, options, ierr)
