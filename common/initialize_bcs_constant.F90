@@ -457,7 +457,7 @@
                    zp_bcvals(1,Z_DIRECTION,i,j) = 4.*zp3_max/(dist%info%NY-2.)**2*(j-1.5)*(dist%info%NY-0.5-j)
                 enddo
              enddo
-          else if (velocit_zp) then
+          else if (velocity_zp) then
              zp_bcvals(1,Z_DIRECTION,:,:) = zp3_ave
           endif
        end if
