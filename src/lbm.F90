@@ -197,12 +197,16 @@
             write(*,*) 'outputing step', istep, 'to file', lbm%io%counter
          endif
 
-         if ((.not.lbm%options%steadystate).or.(lbm%options%steadystate_rampup_steps > 0)) &
-              call FlowUpdateMoments(lbm%flow, lbm%walls_a)
+         if ((.not.lbm%options%steadystate).or. &
+              (lbm%options%steadystate_rampup_steps > 0)) then
+            call FlowUpdateMoments(lbm%flow, lbm%walls_a)
+            call FlowUpdateDiagnostics(lbm%flow, lbm%walls_a)
+         end if
          call FlowOutputDiagnostics(lbm%flow, lbm%walls_a, lbm%io)
 
          if (associated(lbm%transport)) then
             call TransportUpdateMoments(lbm%transport, lbm%walls_a)
+            call TransportUpdateDiagnostics(lbm%transport, lbm%walls_a)
             call TransportOutputDiagnostics(lbm%transport, lbm%walls_a, lbm%io)
          end if
 
@@ -286,7 +290,6 @@
             call DistributionCommunicateDensity(lbm%flow%distribution)
             call FlowCalcForces(lbm%flow, lbm%walls_a)
             call BCZeroForces(lbm%flow%bc, lbm%flow%forces, lbm%flow%distribution)
-
          ! reaction?
 
          ! collision
@@ -294,6 +297,10 @@
          end if
 
          if (associated(lbm%transport)) then
+            if ((.not.lbm%options%steadystate).or. &
+                 (lcv_step < lbm%options%steadystate_rampup_steps)) then
+               call FlowUpdateDiagnostics(lbm%flow, lbm%walls_a)
+            end if
             call TransportCollision(lbm%transport, lbm%walls_a, lbm%flow)
          end if
 
@@ -314,10 +321,12 @@
             endif
             if ((.not.lbm%options%steadystate).or. &
                  (lcv_step < lbm%options%steadystate_rampup_steps)) then
+               call FlowUpdateDiagnostics(lbm%flow, lbm%walls_a)
                call FlowOutputDiagnostics(lbm%flow, lbm%walls_a, lbm%io)
             end if
 
             if (associated(lbm%transport)) then
+               call TransportUpdateDiagnostics(lbm%transport, lbm%walls_a)
                call TransportOutputDiagnostics(lbm%transport, lbm%walls_a, lbm%io)
             end if
             call IOIncrementCounter(lbm%io)
@@ -446,8 +455,10 @@
       character(len=MAXSTRINGLENGTH) filename
       PetscViewer viewer
       PetscErrorCode ierr
-      call PetscViewerBinaryOpen(lbm%comm, filename, FILE_MODE_READ, viewer, ierr)
+      call PetscViewerBinaryOpen(lbm%comm, trim(filename), FILE_MODE_READ, viewer, ierr)
+      CHKERRQ(ierr)
       call VecLoad(lbm%flow%velt_g, viewer, ierr)
+      CHKERRQ(ierr)
       call PetscViewerDestroy(viewer, ierr)
     end subroutine LBMLoadSteadyStateFlow
   end module LBM_module
