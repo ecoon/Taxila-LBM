@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
-!!!     last modified:   12 April 2011
-!!!       at:            12:11:19 MDT
+!!!     last modified:   25 April 2011
+!!!       at:            14:47:51 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -118,10 +118,10 @@
 
     ! set density
     where(bound)
-       rho(1,:,:,:)=rho1(2)
-       rho(2,:,:,:)=rho2(1)
-    else where
        rho(1,:,:,:)=rho1(1)
+       rho(2,:,:,:)=rho1(2)
+    else where
+       rho(1,:,:,:)=rho2(1)
        rho(2,:,:,:)=rho2(2)
     end where
     
