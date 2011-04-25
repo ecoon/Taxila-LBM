@@ -108,129 +108,208 @@ contains
     PetscInt i,j,m,n,d
     PetscScalar,dimension(1:dist%s, 0:dist%b,  dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: tmp
-    PetscScalar,dimension(dist%s, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: drhodx
-    PetscScalar,dimension(dist%s, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: drhody
+    PetscScalar,dimension(dist%s, dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: gradrho
+    PetscScalar,dimension(dist%info%ndims):: weightsum
     PetscErrorCode ierr
 
-    do m=1,dist%s
-       call DistributionGatherValueToDirection(dist, rho(m,:,:), tmp(m,:,:,:))
-    end do
+    gradrho = 0.d0
+    weightsum = 0.d0
 
-!!$    if(dist%info%stencil_size.eq.1) then
-!!$
-!!$      do j=dist%info%ys,dist%info%ye
-!!$      do i=dist%info%xs,dist%info%xe
-!!$        if (walls(i,j).eq.0) then
-!!$          do d=1,dist%info%ndims
-!!$            do n=1,2*dist%info%ndims
-!!$            do m=1,dist%s
-!!$              forces(m,d,i,j) = forces(m,d,i,j) &
-!!$                   - rho(m,i,j)*sum(phases(m)%gf*tmp(:,n,i,j)*dist%disc%ci(n,d),1)
-!!$            enddo
-!!$            end do
-!!$            do n=2*dist%info%ndims+1,dist%b
-!!$            do m=1,dist%s
-!!$              forces(m,d,i,j) = forces(m,d,i,j) &
-!!$                   - 0.25*rho(m,i,j)*sum(phases(m)%gf*tmp(:,n,i,j)*dist%disc%ci(n,d),1)
-!!$            enddo
-!!$            end do
-!!$          end do
-!!$        end if
-!!$      end do
-!!$      end do
-!!$       
-!!$    end if 
-
-    !! Calculate drhodx and drhody
-    if(dist%info%stencil_size.eq.1) then
-      do j=dist%info%ys,dist%info%ye
-      do i=dist%info%xs,dist%info%xe
-        if (walls(i,j).eq.0) then
-          drhodx(:,i,j) = dist%disc%ffw(1)*(rho(:,i+1,j  )-rho(:,i-1,j)) &
-                         +dist%disc%ffw(2)*(rho(:,i+1,j+1)-rho(:,i-1,j+1)-rho(:,i-1,j-1)+rho(:,i+1,j-1))
-
-          drhody(:,i,j) = dist%disc%ffw(1)*(rho(:,i  ,j+1)-rho(:,i,j-1)) &
-                         +dist%disc%ffw(2)*(rho(:,i+1,j+1)+rho(:,i-1,j+1)-rho(:,i-1,j-1)-rho(:,i+1,j-1))
-        end if
-      end do
-      end do
-    end if
-
-    if(dist%info%stencil_size.eq.2) then
-      do j=dist%info%ys,dist%info%ye
-      do i=dist%info%xs,dist%info%xe
-        if (walls(i,j).eq.0) then
-          drhodx(:,i,j) = dist%disc%ffw(1)*(rho(:,i+1,j  )-rho(:,i-1,j  )) &
-                         +dist%disc%ffw(2)*(rho(:,i+1,j+1)-rho(:,i-1,j+1)-rho(:,i-1,j-1)+rho(:,i+1,j-1)) &
-                    +2.d0*dist%disc%ffw(4)*(rho(:,i+2,j  )-rho(:,i-2,j  )) &
-                    +2.d0*dist%disc%ffw(5)*(rho(:,i+2,j+1)-rho(:,i-2,j+1)-rho(:,i-2,j-1)+rho(:,i+2,j-1)) &
-                         +dist%disc%ffw(5)*(rho(:,i+1,j+2)-rho(:,i-1,j+2)-rho(:,i-1,j-2)+rho(:,i+1,j-2)) &
-                    +2.d0*dist%disc%ffw(8)*(rho(:,i+2,j+2)-rho(:,i-2,j+2)-rho(:,i-2,j-2)+rho(:,i+2,j-2))
-
-          drhody(:,i,j) = dist%disc%ffw(1)*(rho(:,i  ,j+1)-rho(:,i  ,j-1)) &
-                         +dist%disc%ffw(2)*(rho(:,i+1,j+1)+rho(:,i-1,j+1)-rho(:,i-1,j-1)-rho(:,i+1,j-1)) &
-                    +2.d0*dist%disc%ffw(4)*(rho(:,i  ,j+2)-rho(:,i  ,j-2)) &
-                         +dist%disc%ffw(5)*(rho(:,i+2,j+1)+rho(:,i-2,j+1)-rho(:,i-2,j-1)-rho(:,i+2,j-1)) &
-                    +2.d0*dist%disc%ffw(5)*(rho(:,i+1,j+2)+rho(:,i-1,j+2)-rho(:,i-1,j-2)-rho(:,i+1,j-2)) &
-                    +2.d0*dist%disc%ffw(8)*(rho(:,i+2,j+2)+rho(:,i-2,j+2)-rho(:,i-2,j-2)-rho(:,i+2,j-2))
-        end if
-      end do
-      end do
-    end if
-
-    if(dist%info%stencil_size.eq.3) then
-      do j=dist%info%ys,dist%info%ye
-      do i=dist%info%xs,dist%info%xe
-        if (walls(i,j).eq.0) then
-          drhodx(:,i,j) = dist%disc%ffw( 1)*(rho(:,i+1,j  )-rho(:,i-1,j  )) &
-                         +dist%disc%ffw( 2)*(rho(:,i+1,j+1)-rho(:,i-1,j+1)-rho(:,i-1,j-1)+rho(:,i+1,j-1)) &
-                    +2.d0*dist%disc%ffw( 4)*(rho(:,i+2,j  )-rho(:,i-2,j  )) &
-                    +2.d0*dist%disc%ffw( 5)*(rho(:,i+2,j+1)-rho(:,i-2,j+1)-rho(:,i-2,j-1)+rho(:,i+2,j-1)) &
-                         +dist%disc%ffw( 5)*(rho(:,i+1,j+2)-rho(:,i-1,j+2)-rho(:,i-1,j-2)+rho(:,i+1,j-2)) &
-                    +2.d0*dist%disc%ffw( 8)*(rho(:,i+2,j+2)-rho(:,i-2,j+2)-rho(:,i-2,j-2)+rho(:,i+2,j-2)) &
-                    +3.d0*dist%disc%ffw( 9)*(rho(:,i+3,j  )-rho(:,i-3,j  )) &
-                    +3.d0*dist%disc%ffw(10)*(rho(:,i+3,j+1)-rho(:,i-3,j+1)-rho(:,i-3,j-1)+rho(:,i+3,j-1)) &
-                         +dist%disc%ffw(10)*(rho(:,i+1,j+3)-rho(:,i-1,j+3)-rho(:,i-1,j-3)+rho(:,i+1,j-3))
-
-          drhody(:,i,j) = dist%disc%ffw( 1)*(rho(:,i  ,j+1)-rho(:,i  ,j-1)) &
-                         +dist%disc%ffw( 2)*(rho(:,i+1,j+1)+rho(:,i-1,j+1)-rho(:,i-1,j-1)-rho(:,i+1,j-1)) &
-                    +2.d0*dist%disc%ffw( 4)*(rho(:,i  ,j+2)-rho(:,i  ,j-2)) &
-                         +dist%disc%ffw( 5)*(rho(:,i+2,j+1)+rho(:,i-2,j+1)-rho(:,i-2,j-1)-rho(:,i+2,j-1)) &
-                    +2.d0*dist%disc%ffw( 5)*(rho(:,i+1,j+2)+rho(:,i-1,j+2)-rho(:,i-1,j-2)-rho(:,i+1,j-2)) &
-                    +2.d0*dist%disc%ffw( 8)*(rho(:,i+2,j+2)+rho(:,i-2,j+2)-rho(:,i-2,j-2)-rho(:,i+2,j-2)) &
-                    +3.d0*dist%disc%ffw( 9)*(rho(:,i  ,j+3)-rho(:,i  ,j-3)) &
-                         +dist%disc%ffw(10)*(rho(:,i+3,j+1)+rho(:,i-3,j+1)-rho(:,i-3,j-1)-rho(:,i+3,j-1)) &
-                    +3.d0*dist%disc%ffw(10)*(rho(:,i+1,j+3)+rho(:,i-1,j+3)-rho(:,i-1,j-3)-rho(:,i+1,j-3))
-        end if
-      end do
-      end do
-    end if
-
-    !! Calculate fluid-fluid forces
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
-      if (walls(i,j).eq.0) then
-           
-        ! phase 1, x-component
-        forces(1,1,i,j) = -( phases(1)%gf(1)*rho(1,i,j)*drhodx(1,i,j) &
-                           + phases(1)%gf(2)*rho(1,i,j)*drhodx(2,i,j) )
-        ! phase 1, y-component
-        forces(1,2,i,j) = -( phases(1)%gf(1)*rho(1,i,j)*drhody(1,i,j) & 
-                            +phases(1)%gf(2)*rho(1,i,j)*drhody(2,i,j) )
-        ! phase 2, x-component
-        forces(2,1,i,j) = -( phases(2)%gf(1)*rho(2,i,j)*drhodx(1,i,j) &
-                            +phases(2)%gf(2)*rho(2,i,j)*drhodx(2,i,j) )
-        ! phase 2, y-component
-        forces(2,2,i,j) = -( phases(2)%gf(1)*rho(2,i,j)*drhody(1,i,j) & 
-                            +phases(2)%gf(2)*rho(2,i,j)*drhody(2,i,j) )
+       if (walls(i,j).eq.0) then
+          weightsum = 0.d0
 
-      endif
-    enddo
-    enddo
+          ! N/S/E/W sqared length 1 
+          if (walls(i+1,j).eq.0) then
+             gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
+                  + dist%disc%ffw(1)*(rho(:,i+1,j)-rho(:,i,j)) 
+             weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(1)
+          end if
+          if (walls(i-1,j).eq.0) then
+             gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
+                  - dist%disc%ffw(1)*(rho(:,i-1,j)-rho(:,i,j))
+             weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(1)
+          end if
+          if (walls(i,j+1).eq.0) then
+             gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                  + dist%disc%ffw(1)*(rho(:,i,j+1)-rho(:,i,j)) 
+             weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(1)
+          end if
+          if (walls(i,j-1).eq.0) then
+             gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                  - dist%disc%ffw(1)*(rho(:,i,j-1)-rho(:,i,j)) 
+             weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(1)
+          end if
 
+          ! diagonals squared length 2
+          if (walls(i+1,j+1).eq.0) then
+             gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
+                  + dist%disc%ffw(2)*(rho(:,i+1,j+1)-rho(:,i,j)) 
+             gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                  + dist%disc%ffw(2)*(rho(:,i+1,j+1)-rho(:,i,j)) 
+             weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(2)
+             weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(2)
+          end if
+          if (walls(i-1,j+1).eq.0) then
+             gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
+                  - dist%disc%ffw(2)*(rho(:,i-1,j+1)-rho(:,i,j)) 
+             gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                  + dist%disc%ffw(2)*(rho(:,i-1,j+1)-rho(:,i,j)) 
+             weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(2)
+             weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(2)
+          end if
+          if (walls(i+1,j-1).eq.0) then
+             gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
+                  + dist%disc%ffw(2)*(rho(:,i+1,j-1)-rho(:,i,j)) 
+             gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                  - dist%disc%ffw(2)*(rho(:,i+1,j-1)-rho(:,i,j)) 
+             weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(2)
+             weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(2)
+          end if
+          if (walls(i-1,j-1).eq.0) then
+             gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
+                  - dist%disc%ffw(2)*(rho(:,i-1,j-1)-rho(:,i,j)) 
+             gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                  - dist%disc%ffw(2)*(rho(:,i-1,j-1)-rho(:,i,j)) 
+             weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(2)
+             weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(2)
+          end if
 
+          if(dist%info%stencil_size > 1) then
+             ! N/S/E/W squared length 4 
+             if (walls(i+2,j).eq.0) then
+                gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
+                     + 2.*dist%disc%ffw(4)*(rho(:,i+2,j)-rho(:,i,j)) 
+                weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(4)*4.
+             end if
+             if (walls(i-2,j).eq.0) then
+                gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
+                     - 2.*dist%disc%ffw(4)*(rho(:,i-2,j)-rho(:,i,j)) 
+                weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(4)*4
+             end if
+             if (walls(i,j+2).eq.0) then
+                gradrho(:,X_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                     + 2.*dist%disc%ffw(4)*(rho(:,i,j+2)-rho(:,i,j)) 
+                weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(4)*4.
+             end if
+             if (walls(i,j-2).eq.0) then
+                gradrho(:,X_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                     - 2.*dist%disc%ffw(4)*(rho(:,i,j-2)-rho(:,i,j)) 
+                weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(4)*4.
+             end if
+
+             ! short diagonals, length squared 5
+             if (walls(i+2,j+1).eq.0) then
+                gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
+                     + 2.*dist%disc%ffw(5)*(rho(:,i+2,j+1)-rho(:,i,j)) 
+                gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                     + dist%disc%ffw(5)*(rho(:,i+2,j+1)-rho(:,i,j)) 
+                weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)*4
+                weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)
+             end if
+             if (walls(i+2,j-1).eq.0) then
+                gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
+                     + 2.*dist%disc%ffw(5)*(rho(:,i+2,j-1)-rho(:,i,j)) 
+                gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                     - dist%disc%ffw(5)*(rho(:,i+2,j-1)-rho(:,i,j)) 
+                weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)*4.
+                weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)
+             end if
+             if (walls(i-2,j+1).eq.0) then
+                gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
+                     - 2.*dist%disc%ffw(5)*(rho(:,i-2,j+1)-rho(:,i,j)) 
+                gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                     + dist%disc%ffw(5)*(rho(:,i-2,j+1)-rho(:,i,j)) 
+                weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)*4.
+                weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)
+             end if
+             if (walls(i-2,j-1).eq.0) then
+                gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
+                     - 2.*dist%disc%ffw(5)*(rho(:,i-2,j-1)-rho(:,i,j)) 
+                gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                     - dist%disc%ffw(5)*(rho(:,i-2,j-1)-rho(:,i,j)) 
+                weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)*4
+                weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)
+             end if
+             if (walls(i+1,j+2).eq.0) then
+                gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
+                     + dist%disc%ffw(5)*(rho(:,i+1,j+2)-rho(:,i,j)) 
+                gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                     + 2.*dist%disc%ffw(5)*(rho(:,i+1,j+2)-rho(:,i,j)) 
+                weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)
+                weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)*4.
+             end if
+             if (walls(i+1,j-2).eq.0) then
+                gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
+                     + dist%disc%ffw(5)*(rho(:,i+1,j-2)-rho(:,i,j)) 
+                gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                     - 2.*dist%disc%ffw(5)*(rho(:,i+1,j-2)-rho(:,i,j)) 
+                weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)
+                weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)*4.
+             end if
+             if (walls(i-1,j+2).eq.0) then
+                gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
+                     - dist%disc%ffw(5)*(rho(:,i-1,j+2)-rho(:,i,j)) 
+                gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                     + 2.*dist%disc%ffw(5)*(rho(:,i-1,j+2)-rho(:,i,j)) 
+                weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)
+                weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)*4.
+             end if
+             if (walls(i-1,j-2).eq.0) then
+                gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
+                     - dist%disc%ffw(5)*(rho(:,i-1,j-2)-rho(:,i,j)) 
+                gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                     - 2.*dist%disc%ffw(5)*(rho(:,i-1,j-2)-rho(:,i,j)) 
+                weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)
+                weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)*4.
+             end if
+
+             ! long diagonals, length squared = 8
+             if (walls(i+2,j+2).eq.0) then
+                gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
+                     + 2.*dist%disc%ffw(8)*(rho(:,i+2,j+2)-rho(:,i,j)) 
+                gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                     + 2.*dist%disc%ffw(8)*(rho(:,i+2,j+2)-rho(:,i,j)) 
+                weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(8)*4.
+                weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(8)*4.
+             end if
+             if (walls(i-2,j+2).eq.0) then
+                gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
+                     - 2.*dist%disc%ffw(8)*(rho(:,i-2,j+2)-rho(:,i,j)) 
+                gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                     + 2.*dist%disc%ffw(8)*(rho(:,i-2,j+2)-rho(:,i,j)) 
+                weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(8)*4.
+                weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(8)*4.
+             end if
+             if (walls(i+2,j-2).eq.0) then
+                gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
+                     + 2.*dist%disc%ffw(8)*(rho(:,i+2,j-2)-rho(:,i,j)) 
+                gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                     - 2.*dist%disc%ffw(8)*(rho(:,i+2,j-2)-rho(:,i,j)) 
+                weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(8)*4.
+                weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(8)*4.
+             end if
+             if (walls(i-2,j-2).eq.0) then
+                gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
+                     - 2.*dist%disc%ffw(8)*(rho(:,i-2,j-2)-rho(:,i,j)) 
+                gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                     - 2.*dist%disc%ffw(8)*(rho(:,i-2,j-2)-rho(:,i,j)) 
+                weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(8)*4.
+                weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(8)*4.
+             end if
+          end if
+
+          do m=1,dist%s
+          do d=1,dist%info%ndims
+             forces(m,d,i,j) = rho(m,i,j)*sum(phases(m)%gf &
+                  *(gradrho(:,d,i,j)/weightsum(d)),1)
+          end do
+          end do
+       end if
+    end do
+    end do
   end subroutine LBMAddFluidFluidForcesD2
 
   ! --- Fluid-solid interaction forces, from
