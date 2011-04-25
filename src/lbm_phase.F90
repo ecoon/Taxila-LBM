@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            13:43:00 MDT
-!!!     last modified:   18 April 2011
-!!!       at:            15:15:21 MDT
+!!!     last modified:   25 April 2011
+!!!       at:            15:27:18 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -146,7 +146,16 @@ contains
     PetscSizeT sizeofint, sizeofscalar, sizeofbool, sizeofdata
     PetscInt lcv
     character(len=MAXWORDLENGTH):: paramname
+    PetscBool help, flag
     write(paramname, '(I1)') phase%id
+    
+    ! set the phase name from options
+    call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
+    if (help) call PetscPrintf(options%comm, "-phase"//trim(paramname)//"_name=<phase"// &
+         trim(paramname)//">: name the phase -- for use with parameter options\n", ierr)
+    call PetscOptionsGetString(options%my_prefix, "-phase"//trim(paramname)//"_name", &
+         phase%name, flag, ierr)
+    call RelaxationSetName(phase%relax, phase%name)
 
     ! create the bag
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
@@ -157,17 +166,17 @@ contains
 
     ! register data
     call PetscBagRegisterScalar(phase%bag, phase%data%gw, 0.d0, &
-         trim(options%my_prefix)//'gw'//paramname, 'Phase-solid interaction potential coefficient', ierr)
+         trim(options%my_prefix)//'gw_'//trim(phase%name), 'Phase-solid interaction potential coefficient', ierr)
     phase%gw => phase%data%gw
     call PetscBagRegisterScalar(phase%bag, phase%data%mm, 1.d0, &
-         trim(options%my_prefix)//'mm'//paramname, 'molecular mass', ierr)
+         trim(options%my_prefix)//'mm_'//trim(phase%name), 'molecular mass', ierr)
     phase%mm => phase%data%mm
     phase%relax%d_k = 1.d0 - 2.d0/(3.d0*phase%mm)
 
     do lcv=1,phase%s
-       write(paramname, '(I1, I1)') lcv, phase%id
+       write(paramname, '(I1, I1)') phase%id, lcv
        call PetscBagRegisterScalar(phase%bag, phase%data%gf(lcv), 0.d0, &
-            trim(options%my_prefix)//'g_'//paramname, 'phase-phase interaction potential coefficient', ierr)
+            trim(options%my_prefix)//'g_'//trim(paramname), 'phase-phase interaction potential coefficient', ierr)
     end do
     phase%gf => phase%data%gf(1:options%nphases)
 
