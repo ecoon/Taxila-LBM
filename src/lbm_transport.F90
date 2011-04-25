@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         04 April 2011
 !!!       on:            14:35:39 MDT
-!!!     last modified:   21 April 2011
-!!!       at:            16:38:01 MDT
+!!!     last modified:   22 April 2011
+!!!       at:            11:54:29 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -68,6 +68,7 @@ module LBM_Transport_module
        TransportReactWithWalls, &
        TransportCollision, &
        TransportApplyBCs, &
+       TransportUpdateDiagnostics, &
        TransportOutputDiagnostics
 contains
 
@@ -345,6 +346,12 @@ contains
     call DistributionCalcFlux(transport%distribution, walls)
   end subroutine TransportUpdateMoments
 
+  subroutine TransportUpdateDiagnostics(transport, walls)
+    type(transport_type) transport
+    PetscScalar,dimension(1:transport%grid%info%gxyzl):: walls
+    ! nothing to do
+  end subroutine TransportUpdateDiagnostics
+
   subroutine TransportOutputDiagnostics(transport, walls, io)
     use LBM_IO_module
     type(transport_type) transport
@@ -392,7 +399,6 @@ contains
     PetscScalar,dimension(transport%grid%info%gxyzl):: walls
     PetscErrorCode ierr
 
-    call FlowUpdateDiagnostics(flow, walls)
     call DMDAVecGetArrayF90(flow%grid%da(NFLOWDOF),flow%velt_g,flow%velt_a,ierr)
 
     select case(transport%ndims)
