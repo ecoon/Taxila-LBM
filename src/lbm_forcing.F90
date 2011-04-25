@@ -177,6 +177,9 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(2)
           end if
 
+          write(*,*) 'gradrho(1,:,',i,',',j,')'
+          write(*,*) gradrho(1,1,i,j), gradrho(1,2,i,j)
+
           if(dist%info%stencil_size > 1) then
              ! N/S/E/W squared length 4 
              if (walls(i+2,j).eq.0) then
@@ -310,6 +313,13 @@ contains
        end if
     end do
     end do
+
+    write(*,*) 'forces(1,1,:,4)'
+    write(*,*) forces(1,1,dist%info%xs:dist%info%xe,4)
+    write(*,*) 'forces(1,2,:,4)'
+    write(*,*) forces(1,2,dist%info%xs:dist%info%xe,4)
+   
+ 
   end subroutine LBMAddFluidFluidForcesD2
 
   ! --- Fluid-solid interaction forces, from
