@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         20 April 2011
 !!!       on:            16:58:06 MDT
-!!!     last modified:   21 April 2011
-!!!       at:            18:07:44 MDT
+!!!     last modified:   22 April 2011
+!!!       at:            09:46:02 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -33,7 +33,8 @@
     PetscInt bc_dim
 
     ! local
-    PetscScalar pointsource_conc, pointsource_node
+    PetscScalar pointsource_conc
+    PetscInt pointsource_node
     PetscBool flag, help
     PetscErrorCode ierr
     PetscInt m
@@ -50,7 +51,8 @@
          flag, ierr)
     if (.not.flag) then
        SETERRQ(1,1,'invalid boundary value for point source concentration', ierr)
-    call PetscOptionsGetReal(options%my_prefix,'-bc_conc_pointsource_location', &
+    end if
+    call PetscOptionsGetInt(options%my_prefix,'-bc_conc_pointsource_location', &
          pointsource_node, flag, ierr)
     if (.not.flag) then
        SETERRQ(1,1,'invalid node for point source concentration', ierr)
