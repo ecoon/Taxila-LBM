@@ -67,8 +67,8 @@
     nmax = dist%s
     call PetscOptionsGetRealArray(options%my_prefix, '-rho_defending', rho2, nmax, flag, ierr)
     
-    flushy = .FALSE.
-    flushx = .TRUE.
+    flushy = .TRUE.
+    flushx = .FALSE.
     if (help) call PetscPrintf(options%comm, "-flush_direction_{xyz}: set the direction"// &
          " of flushing", ierr)
     call PetscOptionsGetBool(options%my_prefix, '-flush_direction_x', flushx, flag, ierr)
