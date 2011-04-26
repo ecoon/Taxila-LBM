@@ -303,7 +303,7 @@ contains
 
           do m=1,dist%s
           do d=1,dist%info%ndims
-             forces(m,d,i,j) = rho(m,i,j)*sum(phases(m)%gf &
+             forces(m,d,i,j) = -rho(m,i,j)*sum(phases(m)%gf &
                   *(gradrho(:,d,i,j)/weightsum(d)),1)
           end do
           end do
