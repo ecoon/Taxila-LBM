@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   07 April 2011
-!!!       at:            15:18:33 MDT
+!!!     last modified:   27 April 2011
+!!!       at:            12:57:13 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -105,9 +105,9 @@ contains
 
     info%rank = -1
     info%nprocs = -1
-    info%nproc_x = -1
-    info%nproc_y = -1
-    info%nproc_z = -1
+    info%nproc_x = PETSC_DECIDE
+    info%nproc_y = PETSC_DECIDE
+    info%nproc_z = PETSC_DECIDE
     
     nullify(info%periodic)
     nullify(info%gridsize)
@@ -200,7 +200,7 @@ contains
        info%gzs = PETSC_NULL_INTEGER
        info%gze = PETSC_NULL_INTEGER
        info%gzl = 1
-       info%nproc_z = PETSC_NULL_INTEGER
+       info%nproc_z = PETSC_DECIDE
     end if
 
     ! calculate grid spacing
