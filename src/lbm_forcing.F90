@@ -187,15 +187,15 @@ contains
              if (walls(i-2,j).eq.0) then
                 gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
                      - 2.*dist%disc%ffw(4)*(rho(:,i-2,j)-rho(:,i,j)) 
-                weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(4)*4
+                weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(4)*4.
              end if
              if (walls(i,j+2).eq.0) then
-                gradrho(:,X_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
                      + 2.*dist%disc%ffw(4)*(rho(:,i,j+2)-rho(:,i,j)) 
                 weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(4)*4.
              end if
              if (walls(i,j-2).eq.0) then
-                gradrho(:,X_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
+                gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
                      - 2.*dist%disc%ffw(4)*(rho(:,i,j-2)-rho(:,i,j)) 
                 weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(4)*4.
              end if
@@ -206,7 +206,7 @@ contains
                      + 2.*dist%disc%ffw(5)*(rho(:,i+2,j+1)-rho(:,i,j)) 
                 gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
                      + dist%disc%ffw(5)*(rho(:,i+2,j+1)-rho(:,i,j)) 
-                weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)*4
+                weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)*4.
                 weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)
              end if
              if (walls(i+2,j-1).eq.0) then
@@ -230,7 +230,7 @@ contains
                      - 2.*dist%disc%ffw(5)*(rho(:,i-2,j-1)-rho(:,i,j)) 
                 gradrho(:,Y_DIRECTION,i,j) = gradrho(:,Y_DIRECTION,i,j) &
                      - dist%disc%ffw(5)*(rho(:,i-2,j-1)-rho(:,i,j)) 
-                weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)*4
+                weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)*4.
                 weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)
              end if
              if (walls(i+1,j+2).eq.0) then
@@ -303,7 +303,7 @@ contains
 
           do m=1,dist%s
           do d=1,dist%info%ndims
-             forces(m,d,i,j) = rho(m,i,j)*sum(phases(m)%gf &
+             forces(m,d,i,j) = -rho(m,i,j)*sum(phases(m)%gf &
                   *(gradrho(:,d,i,j)/weightsum(d)),1)
           end do
           end do
