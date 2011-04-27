@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         09 December 2010
 !!!       on:            14:16:32 MST
-!!!     last modified:   21 April 2011
-!!!       at:            09:57:46 MDT
+!!!     last modified:   26 April 2011
+!!!       at:            16:11:46 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -141,7 +141,7 @@
       call PetscOptionsGetBool(options%my_prefix, '-mpiio', options%mpiio, flag, ierr)
 
       if (help) call PetscPrintf(options%comm, &
-           "  -walls_type <1>: number of phases\n", ierr)
+           "  -walls_type <1>: 1: PETSc .dat file, 2: from initialize_walls subroutine\n", ierr)
       call PetscOptionsGetInt(options%my_prefix, '-walls_type', options%walls_type, flag, ierr)
 
       if (help) call PetscPrintf(options%comm, &

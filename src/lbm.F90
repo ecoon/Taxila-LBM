@@ -315,7 +315,7 @@
          end if
 
          ! check for output
-         if(mod(lcv_step,kwrite).eq.0) then
+         if((kwrite > 0) .and. (mod(lcv_step,kwrite).eq.0)) then
             if (lbm%grid%info%rank.eq.0) then
                write(*,*) 'outputing step', lcv_step, 'to file', lbm%io%counter
             endif

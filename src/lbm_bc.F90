@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   21 April 2011
-!!!       at:            17:51:43 MDT
+!!!     last modified:   27 April 2011
+!!!       at:            09:23:46 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -267,33 +267,39 @@ contains
 
     ! -- x
     if ((dist%info%xs.eq.1).and.((bc%flags(BOUNDARY_XM).eq.BC_FLUX).or.&
+         (bc%flags(BOUNDARY_XM).eq.BC_VELOCITY).or.&
          (bc%flags(BOUNDARY_XM).eq.BC_DIRICHLET))) then
        forces(:,:,1,:,:) = 0
     endif
 
     if ((dist%info%xe.eq.dist%info%NX).and.((bc%flags(BOUNDARY_XP).eq.BC_FLUX).or. &
+         (bc%flags(BOUNDARY_XP).eq.BC_VELOCITY).or.&
          (bc%flags(BOUNDARY_XP).eq.BC_DIRICHLET))) then
        forces(:,:,dist%info%NX,:,:) = 0
     endif
 
     ! -- y
     if ((dist%info%ys.eq.1).and.((bc%flags(BOUNDARY_YM).eq.BC_FLUX).or.&
+         (bc%flags(BOUNDARY_YM).eq.BC_VELOCITY).or.&
          (bc%flags(BOUNDARY_YM).eq.BC_DIRICHLET))) then
        forces(:,:,:,1,:) = 0
     endif
 
     if ((dist%info%ye.eq.dist%info%NY).and.((bc%flags(BOUNDARY_YP).eq.BC_FLUX).or. &
+         (bc%flags(BOUNDARY_YP).eq.BC_VELOCITY).or.&
          (bc%flags(BOUNDARY_YP).eq.BC_DIRICHLET))) then
        forces(:,:,:,dist%info%NY,:) = 0
     endif
 
     ! -- z
     if ((dist%info%zs.eq.1).and.((bc%flags(BOUNDARY_ZM).eq.BC_FLUX).or.&
+         (bc%flags(BOUNDARY_ZM).eq.BC_VELOCITY).or.&
          (bc%flags(BOUNDARY_ZM).eq.BC_DIRICHLET))) then
        forces(:,:,:,:,1) = 0
     endif
 
     if ((dist%info%ze.eq.dist%info%NZ).and.((bc%flags(BOUNDARY_ZP).eq.BC_FLUX).or. &
+         (bc%flags(BOUNDARY_ZM).eq.BC_VELOCITY).or.&
          (bc%flags(BOUNDARY_ZP).eq.BC_DIRICHLET))) then
        forces(:,:,:,:,dist%info%NZ) = 0
     endif
@@ -308,22 +314,26 @@ contains
 
     ! -- x
     if ((dist%info%xs.eq.1).and.((bc%flags(BOUNDARY_XM).eq.BC_FLUX).or.&
+         (bc%flags(BOUNDARY_XM).eq.BC_VELOCITY).or.&
          (bc%flags(BOUNDARY_XM).eq.BC_DIRICHLET))) then
        forces(:,:,1,:) = 0
     endif
 
     if ((dist%info%xe.eq.dist%info%NX).and.((bc%flags(BOUNDARY_XP).eq.BC_FLUX).or. &
+         (bc%flags(BOUNDARY_XP).eq.BC_VELOCITY).or.&
          (bc%flags(BOUNDARY_XP).eq.BC_DIRICHLET))) then
        forces(:,:,dist%info%NX,:) = 0
     endif
 
     ! -- y
     if ((dist%info%ys.eq.1).and.((bc%flags(BOUNDARY_YM).eq.BC_FLUX).or.&
+         (bc%flags(BOUNDARY_YM).eq.BC_VELOCITY).or.&
          (bc%flags(BOUNDARY_YM).eq.BC_DIRICHLET))) then
        forces(:,:,:,1) = 0
     endif
 
     if ((dist%info%ye.eq.dist%info%NY).and.((bc%flags(BOUNDARY_YP).eq.BC_FLUX).or. &
+         (bc%flags(BOUNDARY_XP).eq.BC_VELOCITY).or.&
          (bc%flags(BOUNDARY_YP).eq.BC_DIRICHLET))) then
        forces(:,:,:,dist%info%NY) = 0
     endif
