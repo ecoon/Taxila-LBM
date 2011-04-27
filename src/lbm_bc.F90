@@ -6,7 +6,7 @@
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
 !!!     last modified:   27 April 2011
-!!!       at:            09:23:46 MDT
+!!!       at:            13:09:18 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -333,7 +333,7 @@ contains
     endif
 
     if ((dist%info%ye.eq.dist%info%NY).and.((bc%flags(BOUNDARY_YP).eq.BC_FLUX).or. &
-         (bc%flags(BOUNDARY_XP).eq.BC_VELOCITY).or.&
+         (bc%flags(BOUNDARY_YP).eq.BC_VELOCITY).or.&
          (bc%flags(BOUNDARY_YP).eq.BC_DIRICHLET))) then
        forces(:,:,:,dist%info%NY) = 0
     endif
