@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            09:24:24 MDT
-!!!     last modified:   13 April 2011
-!!!       at:            10:25:04 MDT
+!!!     last modified:   26 April 2011
+!!!       at:            16:37:14 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -115,11 +115,12 @@ contains
 
     call DMDACreate3d(grid%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
          btype(Z_DIRECTION), grid%info%stencil_type, grid%info%NX, grid%info%NY, &
-         grid%info%NZ, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, &
+         grid%info%NZ, grid%info%nproc_x, grid%info%nproc_y, grid%info%nproc_z, &
          grid%da_sizes(ONEDOF), grid%info%stencil_size, PETSC_NULL_INTEGER, &
-         PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, grid%da(ONEDOF), ierr)
+         PETSC_NULL_INTEGER, PETSC_NULL_INTEGER,grid%da(ONEDOF), ierr)
 
-    call DMDAGetCorners(grid%da(ONEDOF), xs, ys, zs, grid%info%xl, grid%info%yl, grid%info%zl, ierr)
+    call DMDAGetCorners(grid%da(ONEDOF), xs, ys, zs, grid%info%xl, grid%info%yl, &
+         grid%info%zl, ierr)
     call DMDAGetGhostCorners(grid%da(ONEDOF), gxs, gys, gzs, grid%info%gxl, grid%info%gyl, &
          grid%info%gzl, ierr)
     call DMDAGetInfo(grid%da(ONEDOF), PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
