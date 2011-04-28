@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   27 April 2011
-!!!       at:            13:09:18 MDT
+!!!     last modified:   28 April 2011
+!!!       at:            09:46:24 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -299,7 +299,7 @@ contains
     endif
 
     if ((dist%info%ze.eq.dist%info%NZ).and.((bc%flags(BOUNDARY_ZP).eq.BC_FLUX).or. &
-         (bc%flags(BOUNDARY_ZM).eq.BC_VELOCITY).or.&
+         (bc%flags(BOUNDARY_ZP).eq.BC_VELOCITY).or.&
          (bc%flags(BOUNDARY_ZP).eq.BC_DIRICHLET))) then
        forces(:,:,:,:,dist%info%NZ) = 0
     endif
