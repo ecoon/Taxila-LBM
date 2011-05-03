@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            17:30:22 MST
-!!!     last modified:   21 April 2011
-!!!       at:            17:25:32 MDT
+!!!     last modified:   03 May 2011
+!!!       at:            10:21:42 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -99,7 +99,7 @@
 
     ! get average values on xp edge
     if (bc_flags(BOUNDARY_XP).eq.BC_DIRICHLET) then
-       conc_xm = .TRUE.
+       conc_xp = .TRUE.
        do m=1,dist%s
           call PetscOptionsGetReal(options%my_prefix,'-bc_conc_xp_specie'// &
                char(m+48), xp3_ave(m), flag, ierr)
