@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            15:15:25 MDT
-!!!     last modified:   25 April 2011
-!!!       at:            15:20:08 MDT
+!!!     last modified:   02 May 2011
+!!!       at:            17:05:10 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -69,8 +69,15 @@ contains
     type(relaxation_type),pointer:: relax
     allocate(relax)
     relax%comm = comm
+    relax%id = 0
     relax%s = -1
     relax%b = -1
+    relax%mode = RELAXATION_MODE_SRT
+
+    nullify(relax%tau)
+    nullify(relax%s1)
+    nullify(relax%tau_mrt)
+
     relax%d_k = 0.
     relax%c_s2 = 1.d0/3.d0
 

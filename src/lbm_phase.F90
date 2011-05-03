@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            13:43:00 MDT
-!!!     last modified:   25 April 2011
-!!!       at:            15:27:18 MDT
+!!!     last modified:   02 May 2011
+!!!       at:            17:02:53 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -34,7 +34,6 @@ module LBM_Phase_module
      PetscScalar,pointer :: mm ! molecular mass
      PetscScalar,pointer :: gw ! solid affinity? for phase-wall interaction forces
      PetscScalar,pointer,dimension(:) :: gf ! phase-phase force coefs
-     PetscScalar,pointer :: tau ! relaxation time
 
      ! dependent parameters, for equilf and collision
      type(relaxation_type),pointer:: relax
@@ -108,7 +107,6 @@ contains
     nullify(phase%mm)
     nullify(phase%gw)
     nullify(phase%gf)
-    nullify(phase%tau)
     nullify(phase%relax)
 
     phase%name = ''
@@ -159,7 +157,7 @@ contains
 
     ! create the bag
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
-    sizeofdata = (3+phase%s)*sizeofscalar
+    sizeofdata = (2+phase%s)*sizeofscalar
     call PetscBagCreate(phase%comm, sizeofdata, phase%bag, ierr)
     call PetscBagSetName(phase%bag, TRIM(options%my_prefix)//phase%name, "", ierr)
     call PetscBagGetData(phase%bag, phase%data, ierr)
@@ -182,7 +180,6 @@ contains
 
     call RelaxationSetMode(phase%relax, options%flow_relaxation_mode)
     call RelaxationSetFromOptions(phase%relax, options, ierr)
-    phase%tau => phase%relax%tau
   end subroutine PhaseSetFromOptions
 
   subroutine PhaseDestroy(phase, ierr)
