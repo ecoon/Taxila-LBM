@@ -127,7 +127,7 @@ contains
     oneontau = 1.d0/relax%tau
     if (relax%mode .eq. RELAXATION_MODE_MRT) then
        relax%tau_mrt(0) = oneontau !1.d0
-       relax%tau_mrt(1) = relax%s1 !oneontau !0.5d0 !0.7d0
+       relax%tau_mrt(1) = oneontau !relax%s1 !oneontau !0.5d0 !0.7d0
        relax%tau_mrt(2) = oneontau !1.d0 !1.5d0
        relax%tau_mrt(3) = oneontau !1.d0
        relax%tau_mrt(4) = oneontau !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !1.5d0 !0.8d0
