@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            15:34:44 MDT
-!!!     last modified:   25 April 2011
-!!!       at:            15:24:08 MDT
+!!!     last modified:   02 May 2011
+!!!       at:            17:07:36 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -29,10 +29,9 @@ module LBM_Specie_module
      ! sizes and identifiers (set pre-bag)
      PetscInt s
      PetscInt id
-     PetscInt phase
 
      ! bagged parameters
-     PetscScalar,pointer::  garbage
+     PetscInt,pointer:: phase
 
      ! dependent parameters
      type(relaxation_type),pointer:: relax
@@ -77,17 +76,18 @@ contains
     call SpecieSetName(specie, name)
   end function SpecieCreateOne
  
-  function SpecieCreateN(comm, n) result(specie)
+  function SpecieCreateN(comm, n) result(species)
     MPI_Comm comm
     PetscInt n
-    type(specie_type),pointer,dimension(:):: specie
+    type(specie_type),pointer,dimension(:):: species
     type(specie_type),pointer:: aspecie
     PetscInt lcv
     character(len=MAXWORDLENGTH):: name
-    allocate(specie(n))
+    allocate(species(1:n))
+    name = ''
 
     do lcv=1,n
-       aspecie => specie(lcv)
+       aspecie => species(lcv)
        aspecie%comm = comm
        call SpecieInitialize(aspecie)
        aspecie%relax => RelaxationCreate(comm)
@@ -103,6 +103,7 @@ contains
     specie%id = 0
     specie%name = ''
     nullify(specie%data)
+    nullify(specie%relax)
     specie%bag = 0
   end subroutine SpecieInitialize
   
@@ -149,17 +150,19 @@ contains
     call RelaxationSetName(specie%relax, specie%name)
 
     ! create the bag
-    call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
-    sizeofdata = sizeofscalar
+    call PetscDataTypeGetSize(PETSC_INT, sizeofint, ierr)
+    sizeofdata = sizeofint
     call PetscBagCreate(specie%comm, sizeofdata, specie%bag, ierr)
     call PetscBagSetName(specie%bag, TRIM(options%my_prefix)//trim(specie%name), "", ierr)
     call PetscBagGetData(specie%bag, specie%data, ierr)
 
     ! register data
-    call PetscBagRegisterScalar(specie%bag, specie%data%garbage, 0.d0, &
-         trim(options%my_prefix)//'garbage_'//trim(specie%name), 'Specie garbage', ierr)
-    specie%garbage => specie%data%garbage
+    call PetscBagRegisterScalar(specie%bag, specie%data%phase, 1, &
+         trim(options%my_prefix)//'phase_'//trim(specie%name), &
+         'Phase of which specie is a component', ierr)
+    specie%phase => specie%data%phase
 
+    call RelaxationSetMode(specie%relax, options%transport_relaxation_mode)
     call RelaxationSetFromOptions(specie%relax, options, ierr)
   end subroutine SpecieSetFromOptions
 
