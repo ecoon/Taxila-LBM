@@ -133,6 +133,7 @@
       zero = 0.d0
 
       ! set up the DA sizes
+      print*, SHAPE(lbm%grid%da_sizes)
       lbm%grid%da_sizes(ONEDOF) = 1
       lbm%grid%da_sizes(NPHASEDOF) = lbm%flow%nphases
       lbm%grid%da_sizes(NPHASEXBDOF) = lbm%flow%nphases*(lbm%flow%disc%b+1)
@@ -339,16 +340,20 @@
       return
     end subroutine LBMRun
 
-    subroutine LBMInitializeWalls(lbm, init_subroutine)
+    subroutine LBMInitializeWalls(lbm)
       type(lbm_type) lbm
-      external :: init_subroutine
+      external :: initialize_walls
       PetscErrorCode ierr
       PetscInt vsize
 
-      call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-      call init_subroutine(lbm%walls_a, lbm%options%walls_file, lbm%grid%info)
-      call LBMSetGhostWalls(lbm, lbm%walls_a)
-      call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+      if (lbm%options%walls_type.eq.WALLS_TYPE_PETSC) then
+         call LBMInitializeWallsPetsc(lbm, lbm%options%walls_file)
+      else
+         call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+         call initialize_walls(lbm%walls_a, lbm%options%walls_file, lbm%grid%info)
+         call LBMSetGhostWalls(lbm, lbm%walls_a)
+         call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+      end if
     end subroutine LBMInitializeWalls
 
     subroutine LBMInitializeWallsPetsc(lbm, filename)
