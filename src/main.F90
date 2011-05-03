@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
-!!!     last modified:   21 April 2011
-!!!       at:            10:38:54 MDT
+!!!     last modified:   02 May 2011
+!!!       at:            11:07:20 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -58,11 +58,7 @@ program MAIN
   if (lbm%grid%info%rank.eq.0) then
      write(*,*) 'initialization of walls'
   end if
-  if (lbm%options%walls_type.eq.WALLS_TYPE_PETSC) then
-     call LBMInitializeWallsPetsc(lbm, options%walls_file)
-  else
-     call LBMInitializeWalls(lbm, initialize_walls)
-  end if
+  call LBMInitializeWalls(lbm)
   
   ! set boundary conditions
   call BCSetValues(lbm%flow%bc, lbm%flow%distribution, options, initialize_bcs)

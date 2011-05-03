@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         04 April 2011
 !!!       on:            14:35:39 MDT
-!!!     last modified:   22 April 2011
-!!!       at:            11:54:29 MDT
+!!!     last modified:   02 May 2011
+!!!       at:            17:02:28 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -41,7 +41,6 @@ module LBM_Transport_module
      type(grid_type),pointer:: grid
      type(distribution_type),pointer:: distribution
      type(bc_type),pointer:: bc
-     PetscInt relaxation_mode
      
      PetscBool io_fi
      PetscBool io_rho
@@ -85,7 +84,6 @@ contains
     transport%disc => DiscretizationCreate(transport%comm)
     transport%distribution => DistributionCreate(transport%comm)
     transport%bc => BCCreate(transport%comm)
-    transport%relaxation_mode = RELAXATION_MODE_SRT
 
     transport%solidmass = 0
     transport%solidmass_g = 0
@@ -141,7 +139,6 @@ contains
     transport%nspecies = options%nspecies
     transport%ndims = options%ndims
     transport%species => SpecieCreate(transport%comm, transport%nspecies)
-    transport%relaxation_mode = options%transport_relaxation_mode
     transport%reactive_matrix = options%transport_reactive_matrix
 
     call DiscretizationSetType(transport%disc, options%transport_disc)

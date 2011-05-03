@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            09:24:24 MDT
-!!!     last modified:   26 April 2011
-!!!       at:            16:37:14 MDT
+!!!     last modified:   02 May 2011
+!!!       at:            18:06:19 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -91,6 +91,8 @@ contains
 
     allocate(grid%da(1:grid%nda))
     allocate(grid%da_sizes(1:grid%nda))
+    grid%da_sizes(:) = 0
+    grid%da(:) = 0
   end subroutine GridSetFromOptions
 
   subroutine GridSetUp(grid)
