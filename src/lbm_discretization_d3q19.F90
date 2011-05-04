@@ -67,8 +67,9 @@ contains
     allocate(disc%ci(0:disc%b,1:disc%ndims))
     allocate(disc%weights(0:disc%b))
     allocate(disc%opposites(0:disc%b))
-    allocate(disc%mt_mrt(0:disc%b,0:disc%b))                ! transpose of M
-    allocate(disc%mmt_mrt(0:disc%b))                        ! diagonal M dot MT matrix 
+    allocate(disc%mt_mrt(0:disc%b,0:disc%b))         ! transpose of M
+    allocate(disc%mmt_mrt(0:disc%b))                 ! diagonal M dot MT matrix 
+    allocate(disc%ffw(1:4*disc%stencil_size))        ! slightly larger than needed in all cases
 
     disc%opposites(ORIGIN) = ORIGIN
     disc%opposites(EAST) = WEST
@@ -122,7 +123,38 @@ contains
     disc%mt_mrt(:,17) = (/  0,  0,  0,  0,  0,  0,  0, -1, -1,  1,  1,  0,  0,  0,  0,  1, -1, -1,  1 /)
     disc%mt_mrt(:,18) = (/  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1, -1, -1, -1, -1,  1,  1 /)
 
-    disc%mmt_mrt = (/ 19, 2394, 252, 10, 40, 10, 40, 10, 40, 36, 72, 12, 24, 4, 4, 4, 8, 8, 8 /) 
+    disc%mmt_mrt = (/ 19, 2394, 252, 10, 40, 10, 40, 10, 40, 36, 72, 12, 24, 4, 4, 4, 8, 8, 8 /)
+
+    disc%ffw = 0.0
+    if(disc%stencil_size.eq.1) then
+      disc%ffw(1) = 1./6.
+      disc%ffw(2) = 1./12.
+    end if
+
+    if(disc%stencil_size.eq.2) then 
+      disc%ffw(1) = 4./45.
+      disc%ffw(2) = 1./21.
+      disc%ffw(3) = 2./105.
+      disc%ffw(4) = 5./504.
+      disc%ffw(5) = 1./315.
+      disc%ffw(6) = 1./630.
+      disc%ffw(8) = 1./5040.
+    end if
+
+    if(disc%stencil_size.eq.3) then 
+      disc%ffw( 1) = 352./5355.
+      disc%ffw( 2) = 38./1071.
+      disc%ffw( 3) = 271./14280.
+      disc%ffw( 4) = 139./14280.
+      disc%ffw( 5) = 53./10710.
+      disc%ffw( 6) = 5./2142.
+      disc%ffw( 7) = 1./4284.   ! This is w_{221}(9) in Sbragaglia, Phys Rev E (2007)
+      disc%ffw( 8) = 41./85680.
+      disc%ffw( 9) = 1./5355.   ! This is w_{300}(9) in Sbragaglia, Phys Rev E (2007)
+      disc%ffw(10) = 1./10710.
+      disc%ffw(11) = 1./42840.    
+    end if
+
   end subroutine DiscretizationSetup_D3Q19
 
   subroutine DiscretizationSetupRelax_D3Q19(disc, relax)
