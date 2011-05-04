@@ -57,5 +57,7 @@ module LBM_Relaxation_Bag_Data_type_module
   type, public :: relaxation_bag_data_type
      PetscScalar tau ! relaxation time
      PetscScalar s1  ! MRT relaxation time
+     PetscScalar s2  ! MRT relaxation time
+     PetscScalar s3  ! MRT relaxation time
   end type relaxation_bag_data_type
 end module LBM_Relaxation_Bag_Data_type_module
