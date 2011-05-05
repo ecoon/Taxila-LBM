@@ -59,6 +59,8 @@ contains
 
     ! local
     PetscInt i,j,k,m,n,d
+    PetscScalar,dimension(dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: tmp
     PetscScalar,dimension(dist%s, dist%info%ndims, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: gradrho
     PetscScalar,dimension(dist%info%ndims):: weightsum
@@ -90,6 +92,9 @@ contains
 !!$    end do
 !!$    end do
 !!$    end do
+
+    gradrho = 0.d0
+    weightsum = 0.d0
 
     do k=dist%info%zs,dist%info%ze
     do j=dist%info%ys,dist%info%ye
@@ -132,8 +137,7 @@ contains
                   - dist%disc%ffw(1)*(rho(:,i,j,k-1)-rho(:,i,j,k)) 
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(1)
           end if
-
-
+   
           ! diagonals squared length 2 (x and y)
           if (walls(i+1,j+1,k).eq.0) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
@@ -236,19 +240,31 @@ contains
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(2)
           end if 
 
+          !write(*,*) weightsum(X_DIRECTION), weightsum(Y_DIRECTION), weightsum(Z_DIRECTION)
+          !write(*,*) gradrho(1,X_DIRECTION,i,j,k), gradrho(1,Y_DIRECTION,i,j,k), gradrho(1,Z_DIRECTION,i,j,k)
+
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           !!!!! Calc. FF force using gradrho !!!!!
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           do m=1,dist%s
           do d=1,dist%info%ndims
+!!$             forces(m,d,i,j,k) = -rho(m,i,j,k)*sum(phases(m)%gf &
+!!$                  *(gradrho(:,d,i,j,k)/weightsum(d)),1)
              forces(m,d,i,j,k) = -rho(m,i,j,k)*sum(phases(m)%gf &
-                  *(gradrho(:,d,i,j,k)/weightsum(d)),1)
+                  *(gradrho(:,d,i,j,k)),1)
           end do
           end do
        end if
+    
     end do
+    !write(*,*) i, j, k
+    !write (*,"(2f11.7)",advance="no") forces(1,3,1,j,k)
     end do
+    !write(*,*)
     end do
+    !write(*,*)
+
+    !write(*,*) dist%disc%ffw
 
   end subroutine LBMAddFluidFluidForcesD3
 
