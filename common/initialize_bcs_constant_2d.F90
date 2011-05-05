@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            17:30:22 MST
-!!!     last modified:   21 April 2011
-!!!       at:            17:23:52 MDT
+!!!     last modified:   05 May 2011
+!!!       at:            10:14:37 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -90,6 +90,13 @@
     ym3_ave_p = 0.d0
     yp3_ave_f = 0.d0
     ym3_ave_f = 0.d0
+
+    if (help) call PetscPrintf(options%comm, "-bc_pressure_{xy}{mp}_phase*: "// &
+         "density of phase * for a Dirichlet BC\n", ierr)
+    if (help) call PetscPrintf(options%comm, "-bc_velocity_{xy}{mp}_avg: "// &
+         "mean velocity for constant velocity, or max velocity for Poiseuille flow\n", ierr)
+    if (help) call PetscPrintf(options%comm, "-bc_flux_{xy}{mp}_phase*: "// &
+         "normal volumetric flux of phase *\n", ierr)
 
     ! get average values on minus edge
     if (bc_flags(BOUNDARY_XM).eq.BC_VELOCITY) then
