@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            15:34:44 MDT
-!!!     last modified:   02 May 2011
-!!!       at:            17:07:36 MDT
+!!!     last modified:   05 May 2011
+!!!       at:            10:29:53 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -157,7 +157,7 @@ contains
     call PetscBagGetData(specie%bag, specie%data, ierr)
 
     ! register data
-    call PetscBagRegisterScalar(specie%bag, specie%data%phase, 1, &
+    call PetscBagRegisterInt(specie%bag, specie%data%phase, 1, &
          trim(options%my_prefix)//'phase_'//trim(specie%name), &
          'Phase of which specie is a component', ierr)
     specie%phase => specie%data%phase
