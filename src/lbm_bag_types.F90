@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            16:59:38 MDT
-!!!     last modified:   02 May 2011
-!!!       at:            16:57:47 MDT
+!!!     last modified:   05 May 2011
+!!!       at:            10:30:04 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -33,7 +33,7 @@ module LBM_Specie_Bag_Data_type_module
 
   ! physical parameters for a chemical specie
   type, public :: specie_bag_data_type
-     PetscInt phase ! this is crap, but Porter's gfortran doesn't like empty types
+     PetscInt phase 
   end type specie_bag_data_type
 end module LBM_Specie_Bag_Data_type_module
 
