@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         20 April 2011
 !!!       on:            16:58:06 MDT
-!!!     last modified:   22 April 2011
-!!!       at:            09:46:02 MDT
+!!!     last modified:   05 May 2011
+!!!       at:            10:18:47 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -41,9 +41,9 @@
 
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
 
-    if (help) call PetscPrintf(options%comm, "-bc_conc_pointsource <val>':"// &
+    if (help) call PetscPrintf(options%comm, "-bc_conc_pointsource <val>: "// &
          "set the psi flux of primary specie in the inward normal direction", ierr)
-    if (help) call PetscPrintf(options%comm, "-bc_conc_pointsource_location <val>':"// &
+    if (help) call PetscPrintf(options%comm, "-bc_conc_pointsource_location <val>: "// &
          "set the location of the point source in y-grid points", ierr)
     pointsource_conc = 0.d0
 
