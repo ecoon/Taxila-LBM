@@ -60,7 +60,7 @@ contains
     allocate(disc%opposites(0:disc%b))
     allocate(disc%mt_mrt(0:disc%b,0:disc%b))         ! transpose of M
     allocate(disc%mmt_mrt(0:disc%b))                 ! diagonal M dot MT matrix
-    allocate(disc%ffw(1:4*disc%stencil_size))  
+    allocate(disc%ffw(1:4*disc%stencil_size))        ! slightly larger than needed in all cases
 
     disc%opposites(ORIGIN) = ORIGIN
     disc%opposites(EAST) = WEST
@@ -127,12 +127,12 @@ contains
     oneontau = 1.d0/relax%tau
     if (relax%mode .eq. RELAXATION_MODE_MRT) then
        relax%tau_mrt(0) = oneontau !1.d0
-       relax%tau_mrt(1) = relax%s1 !oneontau !0.5d0 !0.7d0
-       relax%tau_mrt(2) = oneontau !1.d0 !1.5d0
+       relax%tau_mrt(1) = relax%s1 !0.7d0
+       relax%tau_mrt(2) = relax%s2 !1.d0 !1.5d0
        relax%tau_mrt(3) = oneontau !1.d0
-       relax%tau_mrt(4) = oneontau !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !1.5d0 !0.8d0
+       relax%tau_mrt(4) = relax%s3 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !0.8d0
        relax%tau_mrt(5) = oneontau !1.d0
-       relax%tau_mrt(6) = oneontau !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !1.5d0 !0.8d0
+       relax%tau_mrt(6) = relax%s3 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !0.8d0
        relax%tau_mrt(7) = oneontau
        relax%tau_mrt(8) = oneontau
     end if
