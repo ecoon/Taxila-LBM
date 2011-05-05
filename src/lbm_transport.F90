@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         04 April 2011
 !!!       on:            14:35:39 MDT
-!!!     last modified:   02 May 2011
-!!!       at:            17:02:28 MDT
+!!!     last modified:   05 May 2011
+!!!       at:            10:06:13 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -140,6 +140,8 @@ contains
     transport%ndims = options%ndims
     transport%species => SpecieCreate(transport%comm, transport%nspecies)
     transport%reactive_matrix = options%transport_reactive_matrix
+
+    call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
 
     call DiscretizationSetType(transport%disc, options%transport_disc)
     call DiscretizationSetSizes(transport%disc, transport%grid%info%stencil_size)

@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            17:30:22 MST
-!!!     last modified:   03 May 2011
-!!!       at:            10:21:42 MDT
+!!!     last modified:   05 May 2011
+!!!       at:            10:15:48 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -75,6 +75,11 @@
     ym3_ave = 0.d0
     zp3_ave = 0.d0
     zm3_ave = 0.d0
+
+    if (help) call PetscPrintf(options%comm, "-bc_conc_{xyz}{mp}_specie*: "// &
+         "concentration of specie * for a Dirichlet BC\n", ierr)
+    if (help) call PetscPrintf(options%comm, "-bc_conc_flux_{xyz}{mp}_specie*: "// &
+         "normal volumetric flux of specie *\n", ierr)
 
     ! get average values on xm edge
     if (bc_flags(BOUNDARY_XM).eq.BC_DIRICHLET) then

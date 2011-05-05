@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         09 December 2010
 !!!       on:            14:16:32 MST
-!!!     last modified:   26 April 2011
-!!!       at:            16:11:46 MDT
+!!!     last modified:   05 May 2011
+!!!       at:            10:36:02 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -140,8 +140,8 @@
       if (help) call PetscPrintf(options%comm, "  -mpiio: use mpiio for i/o\n", ierr)
       call PetscOptionsGetBool(options%my_prefix, '-mpiio', options%mpiio, flag, ierr)
 
-      if (help) call PetscPrintf(options%comm, &
-           "  -walls_type <1>: 1: PETSc .dat file, 2: from initialize_walls subroutine\n", ierr)
+      if (help) call PetscPrintf(options%comm, "  -walls_type <1>: enum: (1) use "// &
+           "PETSc .dat file, (2) from initialize_walls subroutine\n", ierr)
       call PetscOptionsGetInt(options%my_prefix, '-walls_type', options%walls_type, flag, ierr)
 
       if (help) call PetscPrintf(options%comm, &
