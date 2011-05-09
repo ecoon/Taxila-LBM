@@ -6,7 +6,7 @@
 ###     created:         28 January 2011
 ###       on:            09:52:47 MST
 ###     last modified:   09 May 2011
-###       at:            16:24:37 MDT
+###       at:            17:04:29 MDT
 ###     URL:             http://www.ldeo.columbia.edu/~ecoon/
 ###     email:           ecoon _at_ lanl.gov
 ###  
@@ -169,6 +169,8 @@ def suite():
     thesuite.addTest(LBMTest('bubble_2D', 'SRT', 'bubble test with SRT'))
     thesuite.addTest(LBMTest('bubble_2D', 'MRT', 'bubble test with MRT'))
     thesuite.addTest(LBMTest('bubble_2D', 'hots', 'bubble test with SRT+hots'))
+    thesuite.addTest(LBMTest('flushing_3D', '3D', 'flushing problem, 3D, with flux/pressure bcs'))
+    thesuite.addTest(LBMTest('flushing_2D', '2D', 'flushing problem, 2D, with flux/pressure bcs'))
     return thesuite
 
 
