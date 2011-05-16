@@ -6,8 +6,8 @@
 ###     version:         
 ###     created:         28 January 2011
 ###       on:            10:57:45 MST
-###     last modified:   15 March 2011
-###       at:            11:42:11 MDT
+###     last modified:   09 May 2011
+###       at:            16:30:36 MDT
 ###     URL:             http://www.ldeo.columbia.edu/~ecoon/
 ###     email:           ecoon _at_ lanl.gov
 ###  
@@ -68,8 +68,15 @@ if __name__ == '__main__':
     eps = numpy.double(options.eps)
     print 'Testing:', test._file_prefix
 
+    if test._dim == 2:
+        tests = [('prs',1), ('u',2), ('rho',test._s)]
+    elif test._dim == 3:
+        tests = [('prs',1), ('u',3), ('rho',test._s)]
+    else:
+        raise RuntimeError('invalid dims')
+        
     for i in range(int(options.nsteps)+1):
-        for vecname, ndofs in  [('prs',1), ('u',3), ('rho',test._s)]:
+        for vecname, ndofs in  tests:
             testdata = test.loadVec(vecname+'%03d.dat'%i, ndofs)
             truedata = truth.loadVec(vecname+'%03d.dat'%i, ndofs)
             if options.rotate:
