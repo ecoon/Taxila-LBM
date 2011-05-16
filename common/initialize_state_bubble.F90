@@ -56,7 +56,7 @@
     character(len=30) bubblestring
 
     PetscInt i,j,k,m ! local values
-    PetscInt ly, ry, lz, rz
+    PetscInt lx, rx, ly, ry, lz, rz
 
     ! input data
     PetscBool help
@@ -84,6 +84,8 @@
 
     ! for odd length sides of 75
     ! also a 2d bubble (i.e. NX=1)
+    lx = (dist%info%NX+1)/2-26
+    rx = (dist%info%NX+1)/2+26
     ly = (dist%info%NY+1)/2-26
     ry = (dist%info%NY+1)/2+26
     lz = (dist%info%NZ+1)/2-26
@@ -97,7 +99,7 @@
     do i=dist%info%xs,dist%info%xe
        do j=dist%info%ys,dist%info%ye
           do k=dist%info%zs,dist%info%ze
-             if((j.ge.ly.and.j.le.ry).and.(k.ge.lz.and.k.le.rz)) then
+             if((i.ge.lx.and.i.le.rx).and.(j.ge.ly.and.j.le.ry).and.(k.ge.lz.and.k.le.rz)) then
                 bound(i,j,k)=.true.
              endif
           enddo
