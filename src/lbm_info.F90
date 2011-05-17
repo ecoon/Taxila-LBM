@@ -6,7 +6,7 @@
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
 !!!     last modified:   17 May 2011
-!!!       at:            13:14:29 MDT
+!!!       at:            13:38:42 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -178,7 +178,7 @@ contains
     ! -- grid corners
     call PetscBagRegisterScalar(info%bag, info%data%corners(X_DIRECTION,1), 0.d0, &
          trim(options%my_prefix)//'x_start', 'lower x coordinate', ierr)
-    if info%periodic(X_DIRECTION) then
+    if (info%periodic(X_DIRECTION)) then
        default = 1.d0*(info%NX)
     else
        default = 1.d0*(info%NX-1)
@@ -188,7 +188,7 @@ contains
 
     call PetscBagRegisterScalar(info%bag, info%data%corners(Y_DIRECTION,1), 0.d0, &
          trim(options%my_prefix)//'y_start', 'lower y coordinate', ierr)
-    if info%periodic(Y_DIRECTION) then
+    if (info%periodic(Y_DIRECTION)) then
        default = 1.d0*(info%NY)
     else
        default = 1.d0*(info%NY-1)
@@ -199,7 +199,7 @@ contains
     if (info%ndims > 2) then
        call PetscBagRegisterScalar(info%bag, info%data%corners(Z_DIRECTION,1), 0.d0, &
             trim(options%my_prefix)//'z_start', 'lower z coordinate', ierr)
-       if info%periodic(Z_DIRECTION) then
+       if (info%periodic(Z_DIRECTION)) then
           default = 1.d0*(info%NZ)
        else
           default = 1.d0*(info%NZ-1)
