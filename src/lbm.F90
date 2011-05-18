@@ -119,15 +119,17 @@
       type(options_type) options
       PetscErrorCode ierr
 
-      call IOSetFromOptions(lbm%io, options, ierr)
-      call GridSetFromOptions(lbm%grid, options, ierr)
+      call IOSetFromOptions(lbm%io, options, ierr);CHKERRQ(ierr)
+      call GridSetFromOptions(lbm%grid, options, ierr);CHKERRQ(ierr)
       call GridSetName(lbm%grid, lbm%name)
+      call GridSetPhysicalScales(lbm%grid, ierr);CHKERRQ(ierr)
       call FlowSetGrid(lbm%flow, lbm%grid)
-      call FlowSetFromOptions(lbm%flow, options, ierr)
+      call FlowSetFromOptions(lbm%flow, options, ierr);CHKERRQ(ierr)
+      call FlowSetPhysicalScales(lbm%flow,ierr);CHKERRQ(ierr)
       if (options%transport_disc /= NULL_DISCRETIZATION) then
          lbm%transport => TransportCreate(lbm%comm)
          call TransportSetGrid(lbm%transport, lbm%grid)
-         call TransportSetFromOptions(lbm%transport, options, ierr)
+         call TransportSetFromOptions(lbm%transport, options, ierr);CHKERRQ(ierr)
       end if
     end subroutine LBMSetFromOptions
 

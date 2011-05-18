@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            09:24:24 MDT
-!!!     last modified:   02 May 2011
-!!!       at:            18:06:19 MDT
+!!!     last modified:   18 May 2011
+!!!       at:            11:41:22 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -30,6 +30,7 @@ module LBM_Grid_module
      type(info_type), pointer:: info
      PetscInt,pointer,dimension(:) :: da_sizes
      PetscInt nda
+     PetscScalar length_scale
      character(len=MAXWORDLENGTH) name       
   end type grid_type
 
@@ -37,6 +38,7 @@ module LBM_Grid_module
        GridDestroy, &
        GridSetName, &
        GridSetFromOptions, &
+       GridSetPhysicalScales, &
        GridSetUp, &
        GridViewCoordinates
 
@@ -73,6 +75,23 @@ contains
     character(len=MAXWORDLENGTH) name       
     grid%name = name
   end subroutine GridSetName
+
+  subroutine GridSetPhysicalScales(grid, ierr)
+    type(grid_type) grid
+    PetscErrorCode ierr
+    PetscScalar,parameter:: eps=1.e-8
+
+    grid%length_scale = grid%info%gridsize(X_DIRECTION)
+    if (abs(grid%info%gridsize(Y_DIRECTION)-grid%length_scale) > eps) then
+       SETERRQ(PETSC_COMM_WORLD, 1, &
+            'Lattice sizes must be equal, check grid parameters.', ierr)
+    end if
+    if (grid%info%ndims > 2) then
+       if (abs(grid%info%gridsize(Z_DIRECTION)-grid%length_scale) > eps) then
+          SETERRQ(PETSC_COMM_WORLD,1,'Lattice sizes must be equal, check grid parameters.', ierr)
+       end if
+    end if
+  end subroutine GridSetPhysicalScales
 
   subroutine GridSetFromOptions(grid, options, ierr)
     use LBM_Options_module
