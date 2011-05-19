@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   27 April 2011
-!!!       at:            12:57:13 MDT
+!!!     last modified:   18 May 2011
+!!!       at:            09:51:11 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -122,7 +122,8 @@ contains
     type(info_type) info
     type(options_type) options
     PetscErrorCode ierr
-      
+    
+    PetscScalar default
     PetscSizeT sizeofint, sizeofscalar, sizeofbool, sizeofdata
 
     ! grab, allocate sizes
@@ -176,18 +177,35 @@ contains
 
     ! -- grid corners
     call PetscBagRegisterScalar(info%bag, info%data%corners(X_DIRECTION,1), 0.d0, &
-         trim(options%my_prefix)//'x_start', 'lower x coordinate', ierr)
-    call PetscBagRegisterScalar(info%bag, info%data%corners(X_DIRECTION,2), 1.d0, &
-         trim(options%my_prefix)//'x_end', 'upper x coordinate', ierr)
+         trim(options%my_prefix)//'x_start', 'lower x coordinate [m]', ierr)
+    if (info%periodic(X_DIRECTION)) then
+       default = 1.d0*(info%NX)
+    else
+       default = 1.d0*(info%NX-1)
+    end if
+    call PetscBagRegisterScalar(info%bag, info%data%corners(X_DIRECTION,2), default, &
+         trim(options%my_prefix)//'x_end', 'upper x coordinate [m]', ierr)
+
     call PetscBagRegisterScalar(info%bag, info%data%corners(Y_DIRECTION,1), 0.d0, &
-         trim(options%my_prefix)//'y_start', 'lower y coordinate', ierr)
-    call PetscBagRegisterScalar(info%bag, info%data%corners(Y_DIRECTION,2), 1.d0, &
-         trim(options%my_prefix)//'y_end', 'upper y coordinate', ierr)
+         trim(options%my_prefix)//'y_start', 'lower y coordinate [m]', ierr)
+    if (info%periodic(Y_DIRECTION)) then
+       default = 1.d0*(info%NY)
+    else
+       default = 1.d0*(info%NY-1)
+    end if
+    call PetscBagRegisterScalar(info%bag, info%data%corners(Y_DIRECTION,2), default, &
+         trim(options%my_prefix)//'y_end', 'upper y coordinate [m]', ierr)
+
     if (info%ndims > 2) then
        call PetscBagRegisterScalar(info%bag, info%data%corners(Z_DIRECTION,1), 0.d0, &
-            trim(options%my_prefix)//'z_start', 'lower z coordinate', ierr)
-       call PetscBagRegisterScalar(info%bag, info%data%corners(Z_DIRECTION,2), 1.d0, &
-            trim(options%my_prefix)//'z_end', 'upper z coordinate', ierr)
+            trim(options%my_prefix)//'z_start', 'lower z coordinate [m]', ierr)
+       if (info%periodic(Z_DIRECTION)) then
+          default = 1.d0*(info%NZ)
+       else
+          default = 1.d0*(info%NZ-1)
+       end if
+       call PetscBagRegisterScalar(info%bag, info%data%corners(Z_DIRECTION,2), default, &
+            trim(options%my_prefix)//'z_end', 'upper z coordinate [m]', ierr)
     end if
     info%corners => info%data%corners
       

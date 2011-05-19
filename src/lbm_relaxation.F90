@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            15:15:25 MDT
-!!!     last modified:   02 May 2011
-!!!       at:            17:05:10 MDT
+!!!     last modified:   18 May 2011
+!!!       at:            10:51:16 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -31,6 +31,7 @@ module LBM_Relaxation_module
      PetscInt s
      PetscInt b
      PetscInt mode
+     
      PetscScalar,pointer :: tau ! relaxation time
      PetscScalar,pointer :: s1  ! MRT relaxation time
      PetscScalar,pointer :: s2  ! MRT relaxation time
@@ -144,7 +145,7 @@ contains
          trim(options%my_prefix)//'tau_'//trim(relax%name), 'relaxation time', ierr)
     relax%tau => relax%data%tau
 
-     call PetscBagRegisterScalar(relax%bag, relax%data%s1, 1.d0, &
+    call PetscBagRegisterScalar(relax%bag, relax%data%s1, 1.d0, &
          trim(options%my_prefix)//'s1_'//trim(relax%name), 'MRT relaxation time', ierr)
     relax%s1 => relax%data%s1
 

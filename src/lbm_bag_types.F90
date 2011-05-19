@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            16:59:38 MDT
-!!!     last modified:   05 May 2011
-!!!       at:            10:30:04 MDT
+!!!     last modified:   18 May 2011
+!!!       at:            10:41:26 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -24,6 +24,8 @@ module LBM_Phase_Bag_Data_type_module
   type, public :: phase_bag_data_type
      PetscScalar mm ! molecular mass
      PetscScalar gw ! solid affinity? for phase-wall interaction forces
+     PetscScalar viscosity
+     PetscScalar density
      PetscScalar,dimension(NMAX_PHASES) :: gf ! phase-phase force coefs
   end type phase_bag_data_type
 end module LBM_Phase_Bag_Data_type_module

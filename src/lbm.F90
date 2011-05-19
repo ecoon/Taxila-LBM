@@ -53,6 +53,11 @@
        module procedure LBMInitializeState_FlowTransport
     end interface
     
+    interface LBMInit
+       module procedure LBMInit1
+       module procedure LBMInit2
+    end interface
+
     public :: LBMCreate, &
          LBMDestroy, &
          LBMSetName, &
@@ -114,15 +119,17 @@
       type(options_type) options
       PetscErrorCode ierr
 
-      call IOSetFromOptions(lbm%io, options, ierr)
-      call GridSetFromOptions(lbm%grid, options, ierr)
+      call IOSetFromOptions(lbm%io, options, ierr);CHKERRQ(ierr)
+      call GridSetFromOptions(lbm%grid, options, ierr);CHKERRQ(ierr)
       call GridSetName(lbm%grid, lbm%name)
+      call GridSetPhysicalScales(lbm%grid, ierr);CHKERRQ(ierr)
       call FlowSetGrid(lbm%flow, lbm%grid)
-      call FlowSetFromOptions(lbm%flow, options, ierr)
+      call FlowSetFromOptions(lbm%flow, options, ierr);CHKERRQ(ierr)
+      call FlowSetPhysicalScales(lbm%flow,ierr);CHKERRQ(ierr)
       if (options%transport_disc /= NULL_DISCRETIZATION) then
          lbm%transport => TransportCreate(lbm%comm)
          call TransportSetGrid(lbm%transport, lbm%grid)
-         call TransportSetFromOptions(lbm%transport, options, ierr)
+         call TransportSetFromOptions(lbm%transport, options, ierr);CHKERRQ(ierr)
       end if
     end subroutine LBMSetFromOptions
 
@@ -161,11 +168,18 @@
       CHKERRQ(ierr)
       return
     end subroutine LBMSetUp
+    
+    subroutine LBMInit1(lbm, istep)
+      type(lbm_type) lbm
+      PetscInt istep
+      call LBMInit2(lbm, istep, PETSC_FALSE)
+    end subroutine LBMInit1
 
-    subroutine LBMInit(lbm, istep)
+    subroutine LBMInit2(lbm, istep, supress_output)
       type(lbm_type) lbm
       PetscInt istep
       PetscErrorCode ierr
+      PetscBool supress_output
 
       call DMDALocalToLocalBegin(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, &
            lbm%walls, ierr)
@@ -194,7 +208,7 @@
          end if
 
          ! update values and view
-         if (lbm%grid%info%rank.eq.0) then
+         if ((.not.supress_output).and.(lbm%grid%info%rank.eq.0)) then
             write(*,*) 'outputing step', istep, 'to file', lbm%io%counter
          endif
 
@@ -203,30 +217,38 @@
             call FlowUpdateMoments(lbm%flow, lbm%walls_a)
             call FlowUpdateDiagnostics(lbm%flow, lbm%walls_a)
          end if
-         call FlowOutputDiagnostics(lbm%flow, lbm%walls_a, lbm%io)
+         if (.not.supress_output) then
+            call FlowOutputDiagnostics(lbm%flow, lbm%walls_a, lbm%io)
+         end if
 
          if (associated(lbm%transport)) then
             call TransportUpdateMoments(lbm%transport, lbm%walls_a)
             call TransportUpdateDiagnostics(lbm%transport, lbm%walls_a)
-            call TransportOutputDiagnostics(lbm%transport, lbm%walls_a, lbm%io)
+            if (.not.supress_output) then
+               call TransportOutputDiagnostics(lbm%transport, lbm%walls_a, lbm%io)
+            end if
          end if
 
-         ! view walls
-         call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-         call DMLocalToGlobalBegin(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, lbm%walls_g, ierr)
-         call DMLocalToGlobalEnd(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, lbm%walls_g, ierr)
-         call IOView(lbm%io, lbm%walls_g, 'walls')
-         call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+         if (.not.supress_output) then
+            ! view walls
+            call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+            call DMLocalToGlobalBegin(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, &
+                 lbm%walls_g, ierr)
+            call DMLocalToGlobalEnd(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, &
+                 lbm%walls_g, ierr)
+            call IOView(lbm%io, lbm%walls_g, 'walls')
+            call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
 
-         ! view grid coordinates
-         call GridViewCoordinates(lbm%grid, lbm%io)
+            ! view grid coordinates
+            call GridViewCoordinates(lbm%grid, lbm%io)
+         end if
       else
          ! just get arrays
          call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
          call FlowGetArrays(lbm%flow, ierr)
       endif
       call IOIncrementCounter(lbm%io)
-    end subroutine LBMInit
+    end subroutine LBMInit2
 
     subroutine LBMRun(lbm, istep, kstep, kwrite)
       ! input

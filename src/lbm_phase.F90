@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            13:43:00 MDT
-!!!     last modified:   02 May 2011
-!!!       at:            17:02:53 MDT
+!!!     last modified:   18 May 2011
+!!!       at:            11:49:32 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -29,10 +29,13 @@ module LBM_Phase_module
      ! sizes and identifiers (set pre-bag)
      PetscInt s
      PetscInt id
-
+     PetscScalar time_scale
+     
      ! bagged parameters
      PetscScalar,pointer :: mm ! molecular mass
      PetscScalar,pointer :: gw ! solid affinity? for phase-wall interaction forces
+     PetscScalar,pointer :: viscosity ! kinematic viscoscity, in m^2/s
+     PetscScalar,pointer :: density ! reference density, in kg/m^3
      PetscScalar,pointer,dimension(:) :: gf ! phase-phase force coefs
 
      ! dependent parameters, for equilf and collision
@@ -103,6 +106,7 @@ contains
     type(phase_type) phase
     phase%s = -1
     phase%id = 0
+    phase%time_scale = 0
 
     nullify(phase%mm)
     nullify(phase%gw)
@@ -154,10 +158,12 @@ contains
     call PetscOptionsGetString(options%my_prefix, "-phase"//trim(paramname)//"_name", &
          phase%name, flag, ierr)
     call RelaxationSetName(phase%relax, phase%name)
+    call RelaxationSetMode(phase%relax, options%flow_relaxation_mode)
+    call RelaxationSetFromOptions(phase%relax, options, ierr)
 
     ! create the bag
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
-    sizeofdata = (2+phase%s)*sizeofscalar
+    sizeofdata = (4+phase%s)*sizeofscalar
     call PetscBagCreate(phase%comm, sizeofdata, phase%bag, ierr)
     call PetscBagSetName(phase%bag, TRIM(options%my_prefix)//phase%name, "", ierr)
     call PetscBagGetData(phase%bag, phase%data, ierr)
@@ -166,9 +172,21 @@ contains
     call PetscBagRegisterScalar(phase%bag, phase%data%gw, 0.d0, &
          trim(options%my_prefix)//'gw_'//trim(phase%name), 'Phase-solid interaction potential coefficient', ierr)
     phase%gw => phase%data%gw
+
     call PetscBagRegisterScalar(phase%bag, phase%data%mm, 1.d0, &
          trim(options%my_prefix)//'mm_'//trim(phase%name), 'molecular mass', ierr)
     phase%mm => phase%data%mm
+
+    call PetscBagRegisterScalar(phase%bag, phase%data%viscosity, -999.d0, &
+         trim(options%my_prefix)//'viscosity_'//trim(phase%name), 'kinematic viscosity [m^2/s], defaults to ND value', &
+         ierr)
+    phase%viscosity => phase%data%viscosity
+
+    call PetscBagRegisterScalar(phase%bag, phase%data%density, -999.d0, &
+         trim(options%my_prefix)//'density_'//trim(phase%name), &
+         'density [kg/m^3], defaults to ND value', ierr)
+    phase%density => phase%data%density
+
     phase%relax%d_k = 1.d0 - 2.d0/(3.d0*phase%mm)
 
     do lcv=1,phase%s
@@ -178,8 +196,6 @@ contains
     end do
     phase%gf => phase%data%gf(1:options%nphases)
 
-    call RelaxationSetMode(phase%relax, options%flow_relaxation_mode)
-    call RelaxationSetFromOptions(phase%relax, options, ierr)
   end subroutine PhaseSetFromOptions
 
   subroutine PhaseDestroy(phase, ierr)
