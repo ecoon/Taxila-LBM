@@ -65,6 +65,7 @@
          LBMSetUp, &
          LBMInit, &
          LBMRun, &
+         LBMOutput, &
          LBMInitializeWalls, &
          LBMInitializeWallsPetsc, &
          LBMInitializeState, &
@@ -105,6 +106,7 @@
       if (associated(lbm%transport)) call TransportDestroy(lbm%transport,ierr)
       call GridDestroy(lbm%grid, ierr)
       call IODestroy(lbm%io, ierr)
+      if (associated(lbm%options%waypoints)) deallocate(lbm%options%waypoints)
       return
     end subroutine LBMDestroy
 
@@ -253,13 +255,13 @@
     subroutine LBMRun(lbm, istep, kstep, kwrite)
       ! input
       type(lbm_type) lbm
-      integer istep
-      integer kstep
-      integer kwrite
+      PetscInt istep
+      PetscInt kstep
+      PetscInt kwrite
 
       ! local
       PetscErrorCode ierr
-      integer lcv_step
+      PetscInt lcv_step
       type(timing_type),pointer:: timer1, timer2, timer3
       character(len=MAXWORDLENGTH) timerunits
       character(len=MAXWORDLENGTH) timername
@@ -337,22 +339,17 @@
             call DistributionCommunicateFi(lbm%transport%distribution)
          end if
 
+         
          ! check for output
-         if((kwrite > 0) .and. (mod(lcv_step,kwrite).eq.0)) then
-            if (lbm%grid%info%rank.eq.0) then
-               write(*,*) 'outputing step', lcv_step, 'to file', lbm%io%counter
+         if (lbm%options%current_waypoint > 0) then
+            if (lbm%options%waypoints(lbm%options%current_waypoint) .eq. lcv_step) then
+               call LBMOutput(lbm, lcv_step)
+               lbm%options%current_waypoint = lbm%options%current_waypoint + 1
+            else if((kwrite > 0) .and. (mod(lcv_step,kwrite).eq.0)) then
+               call LBMOutput(lbm, lcv_step)
             endif
-            if ((.not.lbm%options%steadystate).or. &
-                 (lcv_step < lbm%options%steadystate_rampup_steps)) then
-               call FlowUpdateDiagnostics(lbm%flow, lbm%walls_a)
-               call FlowOutputDiagnostics(lbm%flow, lbm%walls_a, lbm%io)
-            end if
-
-            if (associated(lbm%transport)) then
-               call TransportUpdateDiagnostics(lbm%transport, lbm%walls_a)
-               call TransportOutputDiagnostics(lbm%transport, lbm%walls_a, lbm%io)
-            end if
-            call IOIncrementCounter(lbm%io)
+         else if((kwrite > 0) .and. (mod(lcv_step,kwrite).eq.0)) then
+            call LBMOutput(lbm, lcv_step)
          endif
       end do
 
@@ -361,6 +358,26 @@
       call TimingDestroy(timer1)
       return
     end subroutine LBMRun
+    
+    subroutine LBMOutput(lbm, istep)
+      type(lbm_type) lbm
+      PetscInt istep
+
+      if (lbm%grid%info%rank.eq.0) then
+         write(*,*) 'outputing step', istep, 'to file', lbm%io%counter
+      endif
+      if ((.not.lbm%options%steadystate).or. &
+           (istep < lbm%options%steadystate_rampup_steps)) then
+         call FlowUpdateDiagnostics(lbm%flow, lbm%walls_a)
+         call FlowOutputDiagnostics(lbm%flow, lbm%walls_a, lbm%io)
+      end if
+      
+      if (associated(lbm%transport)) then
+         call TransportUpdateDiagnostics(lbm%transport, lbm%walls_a)
+         call TransportOutputDiagnostics(lbm%transport, lbm%walls_a, lbm%io)
+      end if
+      call IOIncrementCounter(lbm%io)
+    end subroutine LBMOutput
 
     subroutine LBMInitializeWalls(lbm)
       type(lbm_type) lbm
@@ -520,8 +537,16 @@
       type(lbm_type) lbm
       PetscInt istep, kwrite
       PetscErrorCode ierr
-      
-      lbm%io%counter = istep/kwrite
+
+      if (lbm%options%restart_counter > 0 ) then
+         lbm%io%counter = lbm%options%restart_counter
+      else if (kwrite > 0) then
+         lbm%io%counter = istep/kwrite
+      else
+         SETERRQ(PETSC_COMM_WORLD, 1, &
+              'must set -restart_counter to define which file to restart from', ierr)
+      end if
+
       if (lbm%grid%info%rank.eq.0) then
          write(*,*) 'reading step', istep, 'from file', lbm%io%counter
       endif

@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         09 December 2010
 !!!       on:            14:16:32 MST
-!!!     last modified:   05 May 2011
-!!!       at:            10:36:02 MDT
+!!!     last modified:   20 May 2011
+!!!       at:            14:11:37 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -29,6 +29,9 @@
        PetscInt kprint, kwrite
        PetscBool restart
        PetscInt istep
+       PetscInt restart_counter
+       PetscInt current_waypoint
+       PetscInt, pointer:: waypoints(:)
 
        character(len=MAXSTRINGLENGTH):: output_prefix
        character(len=MAXSTRINGLENGTH):: walls_file
@@ -67,8 +70,11 @@
       options%kprint = 0
       options%kwrite = 1
       options%restart = PETSC_FALSE
+      options%restart_counter = -1
       options%istep = 0
       options%mpiio = PETSC_FALSE
+
+      options%current_waypoint = 0
 
       options%output_prefix = 'test_solution/'
       options%walls_file = 'geometry.dat'
@@ -109,6 +115,8 @@
       character(len=MAXWORDLENGTH):: name
       character(len=MAXWORDLENGTH):: test_discretization
       PetscInt tmpdims
+      PetscInt wpnum, wpdummy, lcv
+      character(len=3):: wpstring
 
       call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
     
@@ -127,6 +135,9 @@
 
       if (help) call PetscPrintf(options%comm, "  -istep=<0>: initial timestep\n", ierr)
       call PetscOptionsGetInt(options%my_prefix, '-istep', options%istep, flag, ierr)
+      if (help) call PetscPrintf(options%comm, "  -restart_counter=<0>: file number to read in\n", ierr)
+      call PetscOptionsGetInt(options%my_prefix, '-restart_counter', &
+           options%restart_counter, flag, ierr)
 
       if (help) call PetscPrintf(options%comm, "  -output_file_prefix=<test_solution/>: "// &
            "prefix for solution data output files\n", ierr)
@@ -240,6 +251,42 @@
               "  -reactive_matrix: allow dissolution/precipitation\n", ierr)
          call PetscOptionsGetBool(options%my_prefix,'-reactive_matrix', &
               options%transport_reactive_matrix, flag, ierr)
+      end if
+      
+      wpnum = 0
+      wpstring = ''
+      wpdummy = 0
+      do 
+         wpnum = wpnum + 1
+         if (wpnum > 99) then
+            write(wpstring, '(I3)') wpnum
+         else if (wpnum > 9) then
+            write(wpstring, '(I2)') wpnum
+         else 
+            write(wpstring, '(I1)') wpnum
+         end if
+         if (help) call PetscPrintf(options%comm, &
+              "  -waypoint"//TRIM(wpstring)//" <-1>: set a waypoint to do i/o at this step\n", ierr)
+         call PetscOptionsGetInt(options%my_prefix,'-waypoint'//TRIM(wpstring), &
+              wpdummy, flag, ierr)
+         if (.not.flag) exit
+      end do
+
+      if (wpnum > 1) then
+         allocate(options%waypoints(wpnum))
+         options%waypoints = -1
+         do lcv=1,wpnum-1
+            if (lcv > 99) then
+               write(wpstring, '(I3)') lcv
+            else if (lcv > 9) then
+               write(wpstring, '(I2)') lcv
+            else 
+               write(wpstring, '(I1)') lcv
+            end if
+            call PetscOptionsGetInt(options%my_prefix,'-waypoint'//TRIM(wpstring), &
+                 options%waypoints(lcv), flag, ierr)
+         end do
+         options%current_waypoint = 1
       end if
       return
     end subroutine OptionsSetUp
