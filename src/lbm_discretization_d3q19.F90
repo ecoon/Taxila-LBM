@@ -141,6 +141,7 @@ contains
       disc%ffw(8) = 1./5040.
     end if
 
+    ! Not implemented yet
     if(disc%stencil_size.eq.3) then 
       disc%ffw( 1) = 352./5355.
       disc%ffw( 2) = 38./1071.
@@ -148,9 +149,9 @@ contains
       disc%ffw( 4) = 139./14280.
       disc%ffw( 5) = 53./10710.
       disc%ffw( 6) = 5./2142.
-      disc%ffw( 7) = 1./4284.   ! This is w_{221}(9) in Sbragaglia, Phys Rev E (2007)
+      disc%ffw( 7) = 1./4284.   ! w_{221}(9) in Sbragaglia, Phys Rev E (2007)
       disc%ffw( 8) = 41./85680.
-      disc%ffw( 9) = 1./5355.   ! This is w_{300}(9) in Sbragaglia, Phys Rev E (2007)
+      disc%ffw( 9) = 1./5355.   ! w_{300}(9) in Sbragaglia, Phys Rev E (2007)
       disc%ffw(10) = 1./10710.
       disc%ffw(11) = 1./42840.    
     end if
@@ -166,16 +167,16 @@ contains
     oneontau = 1.d0/relax%tau
 
     if (relax%mode .eq. RELAXATION_MODE_MRT) then
-       !! Curently following the code Qinjun gave me.
+       !! Not tested yet
        relax%tau_mrt(0) = oneontau
        relax%tau_mrt(1) = oneontau
        relax%tau_mrt(2) = oneontau
-       relax%tau_mrt(3) = oneontau  ! 0.d0
-       relax%tau_mrt(4) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
-       relax%tau_mrt(5) = oneontau  ! 0.d0
-       relax%tau_mrt(6) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
-       relax%tau_mrt(7) = oneontau  !0.d0
-       relax%tau_mrt(8) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
+       relax%tau_mrt(3) = oneontau !0.d0
+       relax%tau_mrt(4) = oneontau !8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
+       relax%tau_mrt(5) = oneontau !0.d0
+       relax%tau_mrt(6) = oneontau !8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
+       relax%tau_mrt(7) = oneontau !0.d0
+       relax%tau_mrt(8) = oneontau !8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
        relax%tau_mrt(9) = oneontau
        relax%tau_mrt(10) = oneontau
        relax%tau_mrt(11) = oneontau
@@ -183,9 +184,9 @@ contains
        relax%tau_mrt(13) = oneontau
        relax%tau_mrt(14) = oneontau
        relax%tau_mrt(15) = oneontau
-       relax%tau_mrt(16) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
-       relax%tau_mrt(17) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
-       relax%tau_mrt(18) = 8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
+       relax%tau_mrt(16) = oneontau !8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
+       relax%tau_mrt(17) = oneontau !8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
+       relax%tau_mrt(18) = oneontau !8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
     end if
   end subroutine DiscretizationSetupRelax_D3Q19
 
