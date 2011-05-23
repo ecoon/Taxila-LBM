@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         09 December 2010
 !!!       on:            14:16:32 MST
-!!!     last modified:   20 May 2011
-!!!       at:            14:11:37 MDT
+!!!     last modified:   23 May 2011
+!!!       at:            15:33:32 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -75,6 +75,7 @@
       options%mpiio = PETSC_FALSE
 
       options%current_waypoint = 0
+      nullify(options%waypoints)
 
       options%output_prefix = 'test_solution/'
       options%walls_file = 'geometry.dat'
