@@ -169,24 +169,24 @@ contains
     if (relax%mode .eq. RELAXATION_MODE_MRT) then
        !! Not tested yet
        relax%tau_mrt(0) = oneontau
-       relax%tau_mrt(1) = oneontau
-       relax%tau_mrt(2) = oneontau
-       relax%tau_mrt(3) = oneontau !0.d0
-       relax%tau_mrt(4) = oneontau !8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
-       relax%tau_mrt(5) = oneontau !0.d0
-       relax%tau_mrt(6) = oneontau !8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
-       relax%tau_mrt(7) = oneontau !0.d0
-       relax%tau_mrt(8) = oneontau !8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
-       relax%tau_mrt(9) = oneontau
-       relax%tau_mrt(10) = oneontau
-       relax%tau_mrt(11) = oneontau
-       relax%tau_mrt(12) = oneontau
-       relax%tau_mrt(13) = oneontau
-       relax%tau_mrt(14) = oneontau
-       relax%tau_mrt(15) = oneontau
-       relax%tau_mrt(16) = oneontau !8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
-       relax%tau_mrt(17) = oneontau !8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
-       relax%tau_mrt(18) = oneontau !8.d0*(2.d0-oneontau)/(8.d0 - oneontau)
+       relax%tau_mrt(1) = 0.6 !oneontau  !s_e
+       relax%tau_mrt(2) = 1.4 !oneontau  !s_ep
+       relax%tau_mrt(3) = oneontau 
+       relax%tau_mrt(4) = 1.99 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_q
+       relax%tau_mrt(5) = oneontau 
+       relax%tau_mrt(6) = 1.99 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_q
+       relax%tau_mrt(7) = oneontau 
+       relax%tau_mrt(8) = 1.99  !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_q
+       relax%tau_mrt(9) = oneontau  !s_v
+       relax%tau_mrt(10) = 0.1 !oneontau !s_pi
+       relax%tau_mrt(11) = oneontau !s_v
+       relax%tau_mrt(12) = 0.1 !oneontau !s_pi
+       relax%tau_mrt(13) = oneontau !s_v
+       relax%tau_mrt(14) = oneontau !s_v
+       relax%tau_mrt(15) = oneontau !s_v
+       relax%tau_mrt(16) = 0.3 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_m
+       relax%tau_mrt(17) = 0.3 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_m
+       relax%tau_mrt(18) = 0.3 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_m
     end if
   end subroutine DiscretizationSetupRelax_D3Q19
 

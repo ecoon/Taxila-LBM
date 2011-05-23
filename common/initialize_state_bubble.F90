@@ -84,12 +84,12 @@
 
     ! for odd length sides of 75
     ! also a 2d bubble (i.e. NX=1)
-    lx = (dist%info%NX+1)/2-26
-    rx = (dist%info%NX+1)/2+26
-    ly = (dist%info%NY+1)/2-26
-    ry = (dist%info%NY+1)/2+26
-    lz = (dist%info%NZ+1)/2-26
-    rz = (dist%info%NZ+1)/2+26
+    lx = (dist%info%NX+1)/2-10
+    rx = (dist%info%NX+1)/2+10
+    ly = (dist%info%NY+1)/2-10
+    ry = (dist%info%NY+1)/2+10
+    lz = (dist%info%NZ+1)/2-10
+    rz = (dist%info%NZ+1)/2+10
 
     write(bubblestring,'(a,I4,I4,I4,I4)') 'bubble format:', ly, ry, lz, rz
     call PetscPrintf(options%comm, bubblestring, ierr)
