@@ -1177,7 +1177,7 @@ contains
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           if(dist%info%stencil_size > 2) then
              ! N/S/E/W squared length 9 
-             if (walls(i+2,j).eq.0) then
+             if (walls(i+3,j).eq.0) then
                 gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
                      + 3.*dist%disc%ffw(9)*(rho(:,i+3,j)-rho(:,i,j)) 
                 weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(9)*9.
