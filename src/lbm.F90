@@ -58,6 +58,11 @@
        module procedure LBMInit2
     end interface
 
+    interface LBMRun
+       module procedure LBMRun1
+       module procedure LBMRun2
+    end interface
+
     public :: LBMCreate, &
          LBMDestroy, &
          LBMSetName, &
@@ -252,12 +257,21 @@
       call IOIncrementCounter(lbm%io)
     end subroutine LBMInit2
 
-    subroutine LBMRun(lbm, istep, kstep, kwrite)
+    subroutine LBMRun1(lbm, istep, kstep, kwrite)
+      type(lbm_type) lbm
+      PetscInt istep
+      PetscInt kstep
+      PetscInt kwrite
+      call LBMRun2(lbm, istep, kstep, kwrite, PETSC_FALSE)
+    end subroutine LBMRun1
+
+    subroutine LBMRun2(lbm, istep, kstep, kwrite, supress_output)
       ! input
       type(lbm_type) lbm
       PetscInt istep
       PetscInt kstep
       PetscInt kwrite
+      PetscBool supress_output
 
       ! local
       PetscErrorCode ierr
@@ -354,10 +368,10 @@
       end do
 
       timerunits = 'timestep'
-      call TimingEndPerUnit(timer1, (kstep-istep+1), timerunits)
+      call TimingEndPerUnit(timer1, (kstep-istep+1), timerunits, supress_output)
       call TimingDestroy(timer1)
       return
-    end subroutine LBMRun
+    end subroutine LBMRun2
     
     subroutine LBMOutput(lbm, istep)
       type(lbm_type) lbm
