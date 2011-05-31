@@ -184,49 +184,43 @@ contains
     PetscInt,intent(in),dimension(0:dist%b):: directions
     PetscScalar,intent(in),dimension(dist%s,dist%info%ndims):: pvals
 
-    PetscScalar vtmp
+    PetscScalar rhovtmp
     PetscScalar,dimension(0:dist%b)::ftmp
     integer m
-    vtmp = 0
+    rhovtmp = 0
 
     ! written for the NORTH boundary.
     do m=1,dist%s
        ftmp = 0.0
-       if (pvals(m,1).eq.0.d0) then
-          vtmp = 0.d0
-       else
-          vtmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) &
-               + fi(m,directions(WEST)) + 2.*(fi(m,directions(NORTH)) &
-               + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST)))
-          vtmp = vtmp/pvals(m,1)-1.0       
-       end if
-       
+       rhovtmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) &
+            + fi(m,directions(WEST)) + 2.*(fi(m,directions(NORTH)) &
+            + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST)))
+       rhovtmp = rhovtmp - pvals(m,1)
+
        ! Choice should not affect the momentum significantly
        ftmp(directions(SOUTH)) = fi(m,directions(NORTH))
        ftmp(directions(SOUTHWEST)) = fi(m,directions(NORTHEAST))
        ftmp(directions(SOUTHEAST)) = fi(m,directions(NORTHWEST))
-              
+       
        fi(m,directions(SOUTH)) = 1./3.*ftmp(directions(SOUTH)) &
-            - 2./3.*pvals(m,1)*vtmp &
+            - 2./3.*rhovtmp &
             - 2./3.*(ftmp(directions(SOUTHWEST)) + ftmp(directions(SOUTHEAST))) &
             + 2./3.*(fi(m,directions(NORTH)) + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST)))
        
        fi(m,directions(SOUTHWEST)) = 1./3.*ftmp(directions(SOUTHWEST)) &
-            - 1./6.*pvals(m,1)*vtmp &
+            - 1./6.*rhovtmp &
             + 1./2.*(fi(m,directions(EAST)) - fi(m,directions(WEST))) &
             + 1./6.*(fi(m,directions(NORTH)) - ftmp(directions(SOUTH))) &
             - 1./3.*(fi(m,directions(NORTHWEST)) - ftmp(directions(SOUTHEAST))) &
             + 2./3.*fi(m,directions(NORTHEAST))
        
        fi(m,directions(SOUTHEAST)) = 1./3.*ftmp(directions(SOUTHEAST)) &
-            - 1./6.*pvals(m,1)*vtmp &
+            - 1./6.*rhovtmp &
             - 1./2.*(fi(m,directions(EAST)) - fi(m,directions(WEST))) &
             + 1./6.*(fi(m,directions(NORTH)) - ftmp(directions(SOUTH))) &
             - 1./3.*(fi(m,directions(NORTHEAST)) - ftmp(directions(SOUTHWEST))) &
             + 2./3.*fi(m,directions(NORTHWEST))
-       
     enddo
-    return
   end subroutine DiscApplyBCDirichletToBoundary_D2Q9
 
   subroutine DiscApplyBCVelocityToBoundary_D2Q9(disc, fi, fvals, directions, cardinals, &
