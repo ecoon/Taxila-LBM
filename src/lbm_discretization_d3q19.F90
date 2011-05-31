@@ -253,7 +253,7 @@ contains
             + fi(m,directions(SOUTHEAST)) + 2.*(fi(m,directions(DOWN)) &
             + fi(m,directions(WESTDOWN)) + fi(m,directions(EASTDOWN)) &
             + fi(m,directions(SOUTHDOWN)) + fi(m,directions(NORTHDOWN)))
-       wtmp = 1.0-wtmp/pvals(m,1)
+       wtmp = wtmp - pvals(m,1)
        
        ! Choice should not affect the momentum significantly
        ftmp(directions(UP)) = fi(m,directions(DOWN))
@@ -263,7 +263,7 @@ contains
        ftmp(directions(SOUTHUP)) = fi(m,directions(NORTHDOWN))
        
        fi(m,directions(UP)) = 2./3.*ftmp(directions(UP)) &
-            + 1./3.*pvals(m,1)*wtmp &
+            + 1./3.*wtmp &
             - 1./3.*(ftmp(directions(EASTUP))+ ftmp(directions(WESTUP)) &
             + ftmp(directions(NORTHUP)) + ftmp(directions(SOUTHUP))) &
             + 1./3.*(fi(m,directions(DOWN)) &
@@ -271,7 +271,7 @@ contains
             + fi(m,directions(SOUTHDOWN)) + fi(m,directions(NORTHDOWN)))
        
        fi(m,directions(EASTUP)) = 1./3.*ftmp(directions(EASTUP)) &
-            + 1./6.*pvals(m,1)*wtmp &
+            + 1./6.*wtmp &
             - 1./2.*(fi(m,directions(EAST)) &
             - fi(m,directions(WEST)) + fi(m,directions(NORTHEAST)) &
             - fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
@@ -283,7 +283,7 @@ contains
             + 2./3.*fi(m,directions(WESTDOWN))
        
        fi(m,directions(WESTUP)) = 1./3.*ftmp(directions(WESTUP)) &
-            + 1./6.*pvals(m,1)*wtmp &
+            + 1./6.*wtmp &
             + 1./2.*(fi(m,directions(EAST)) &
             - fi(m,directions(WEST)) + fi(m,directions(NORTHEAST)) &
             - fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
@@ -295,7 +295,7 @@ contains
             + 2./3.*fi(m,directions(EASTDOWN))
        
        fi(m,directions(NORTHUP)) = 1./3.*ftmp(directions(NORTHUP)) &
-            + 1./6.*pvals(m,1)*wtmp &
+            + 1./6.*wtmp &
             - 1./2.*(fi(m,directions(NORTH)) &
             - fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
             + fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
@@ -307,7 +307,7 @@ contains
             + 2./3.*fi(m,directions(SOUTHDOWN))
        
        fi(m,directions(SOUTHUP)) = 1./3.*ftmp(directions(SOUTHUP)) &
-            + 1./6.*pvals(m,1)*wtmp &
+            + 1./6.*wtmp &
             + 1./2.*(fi(m,directions(NORTH)) &
             - fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
             + fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
