@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            09:24:24 MDT
-!!!     last modified:   18 May 2011
-!!!       at:            11:41:22 MDT
+!!!     last modified:   31 May 2011
+!!!       at:            16:36:10 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -122,7 +122,7 @@ contains
     PetscInt xs,gxs
     PetscInt ys,gys
     PetscInt zs,gzs
-    PetscInt,allocatable,dimension(:):: ownership_x, ownership_y, ownership_z
+
     integer lcv
 
     btype(:) = DMDA_BOUNDARY_GHOSTED
@@ -134,28 +134,39 @@ contains
        btype(Z_DIRECTION) = PETSC_NULL_INTEGER
     end if
 
-    call DMDACreate3d(grid%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
-         btype(Z_DIRECTION), grid%info%stencil_type, grid%info%NX, grid%info%NY, &
-         grid%info%NZ, grid%info%nproc_x, grid%info%nproc_y, grid%info%nproc_z, &
-         grid%da_sizes(ONEDOF), grid%info%stencil_size, PETSC_NULL_INTEGER, &
-         PETSC_NULL_INTEGER, PETSC_NULL_INTEGER,grid%da(ONEDOF), ierr)
+    if (associated(grid%info%ownership_x)) then
+       ! most of this is pre-calculated or provided in options
+       call DMDACreate3d(grid%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
+            btype(Z_DIRECTION), grid%info%stencil_type, grid%info%NX, grid%info%NY, &
+            grid%info%NZ, grid%info%nproc_x, grid%info%nproc_y, grid%info%nproc_z, &
+            grid%da_sizes(ONEDOF), grid%info%stencil_size, grid%info%ownership_x, &
+            grid%info%ownership_y, grid%info%ownership_z,grid%da(ONEDOF), ierr)
+    else
+       call DMDACreate3d(grid%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
+            btype(Z_DIRECTION), grid%info%stencil_type, grid%info%NX, grid%info%NY, &
+            grid%info%NZ, grid%info%nproc_x, grid%info%nproc_y, grid%info%nproc_z, &
+            grid%da_sizes(ONEDOF), grid%info%stencil_size, PETSC_NULL_INTEGER, &
+            PETSC_NULL_INTEGER, PETSC_NULL_INTEGER,grid%da(ONEDOF), ierr)
+       
+       call DMDAGetInfo(grid%da(ONEDOF), PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
+            PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, grid%info%nproc_x, &
+            grid%info%nproc_y, grid%info%nproc_z, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
+            PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
+            PETSC_NULL_INTEGER, ierr)
+       allocate(grid%info%ownership_x(1:grid%info%nproc_x))
+       allocate(grid%info%ownership_y(1:grid%info%nproc_y))
+       allocate(grid%info%ownership_z(1:grid%info%nproc_z))
+       grid%info%ownership_x = 0
+       grid%info%ownership_y = 0
+       grid%info%ownership_z = 0
+       call DMDAGetOwnershipRanges(grid%da(ONEDOF),grid%info%ownership_x, &
+            grid%info%ownership_y,grid%info%ownership_z,ierr)
+    end if
 
     call DMDAGetCorners(grid%da(ONEDOF), xs, ys, zs, grid%info%xl, grid%info%yl, &
          grid%info%zl, ierr)
-    call DMDAGetGhostCorners(grid%da(ONEDOF), gxs, gys, gzs, grid%info%gxl, grid%info%gyl, &
+    call DMDAGetGhostCorners(grid%da(ONEDOF), gxs, gys, gzs, grid%info%gxl, grid%info%gyl,&
          grid%info%gzl, ierr)
-    call DMDAGetInfo(grid%da(ONEDOF), PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
-         PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, grid%info%nproc_x, &
-         grid%info%nproc_y, grid%info%nproc_z, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
-         PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
-         PETSC_NULL_INTEGER, ierr)
-    allocate(ownership_x(1:grid%info%nproc_x))
-    allocate(ownership_y(1:grid%info%nproc_y))
-    allocate(ownership_z(1:grid%info%nproc_z))
-    ownership_x = 0
-    ownership_y = 0
-    ownership_z = 0
-    call DMDAGetOwnershipRanges(grid%da(ONEDOF),ownership_x,ownership_y,ownership_z,ierr)
     
     ! set grid%info including corners
     grid%info%xs = xs+1
@@ -184,12 +195,9 @@ contains
             grid%info%NX, grid%info%NY, grid%info%NZ, &
             grid%info%nproc_x, grid%info%nproc_y, grid%info%nproc_z, &
             grid%da_sizes(lcv), grid%info%stencil_size, &
-            ownership_x, ownership_y, ownership_z, &
+            grid%info%ownership_x, grid%info%ownership_y, grid%info%ownership_z, &
             grid%da(lcv), ierr)
     end do
-    deallocate(ownership_x)
-    deallocate(ownership_y)
-    deallocate(ownership_z)
 
     ! set the names
     call PetscObjectSetName(grid%da(ONEDOF), trim(grid%name)//'DA_one', ierr)

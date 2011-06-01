@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   18 May 2011
-!!!       at:            09:51:11 MDT
+!!!     last modified:   31 May 2011
+!!!       at:            16:24:41 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -43,6 +43,7 @@ module LBM_Info_module
      PetscInt nproc_x, nproc_y, nproc_z, nprocs
      PetscInt rank
      PetscReal,pointer,dimension(:) :: gridsize
+     PetscInt,pointer,dimension(:):: ownership_x, ownership_y, ownership_z
 
      ! bag
      character(len=MAXWORDLENGTH):: name
@@ -260,6 +261,9 @@ contains
     PetscErrorCode ierr
     
     if (associated(info%gridsize)) deallocate(info%gridsize)
+    if (associated(info%ownership_x)) deallocate(info%ownership_x)
+    if (associated(info%ownership_y)) deallocate(info%ownership_y)
+    if (associated(info%ownership_z)) deallocate(info%ownership_z)
     if (info%bag /= 0) call PetscBagDestroy(info%bag, ierr)
   end subroutine InfoDestroy
 end module LBM_Info_module
