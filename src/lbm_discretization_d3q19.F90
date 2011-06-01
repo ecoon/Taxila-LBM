@@ -253,7 +253,7 @@ contains
             + fi(m,directions(SOUTHEAST)) + 2.*(fi(m,directions(DOWN)) &
             + fi(m,directions(WESTDOWN)) + fi(m,directions(EASTDOWN)) &
             + fi(m,directions(SOUTHDOWN)) + fi(m,directions(NORTHDOWN)))
-       wtmp = wtmp - pvals(m,1)
+       wtmp = pvals(m,1) - wtmp
        
        ! Choice should not affect the momentum significantly
        ftmp(directions(UP)) = fi(m,directions(DOWN))
