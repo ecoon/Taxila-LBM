@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            14:06:07 MDT
-!!!     last modified:   18 April 2011
-!!!       at:            13:52:57 MDT
+!!!     last modified:   03 June 2011
+!!!       at:            10:07:56 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -465,7 +465,7 @@ contains
     do k=dist%info%zs,dist%info%ze
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
-    if (walls(i,j,k).eq.1) then
+    if (walls(i,j,k) > 0) then
        call DistributionBouncebackSite(dist, fi(:,:,i,j,k))
     end if
     end do
@@ -486,7 +486,7 @@ contains
 
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
-    if (walls(i,j).eq.1) then
+    if (walls(i,j) > 0) then
        call DistributionBouncebackSite(dist, fi(:,:,i,j))
     end if
     end do

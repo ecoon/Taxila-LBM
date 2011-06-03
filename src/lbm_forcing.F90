@@ -66,33 +66,6 @@ contains
     PetscScalar,dimension(dist%info%ndims):: weightsum
     PetscErrorCode ierr
 
-!!$    do m=1,dist%s
-!!$       call DistributionGatherValueToDirection(dist, rho(m,:,:,:), tmp(m,:,:,:,:))
-!!$    end do
-!!$
-!!$    do k=dist%info%zs,dist%info%ze
-!!$    do j=dist%info%ys,dist%info%ye
-!!$    do i=dist%info%xs,dist%info%xe
-!!$       if (walls(i,j,k).eq.0) then
-!!$          do d=1,dist%info%ndims
-!!$             do n=1,2*dist%info%ndims
-!!$                do m=1,dist%s
-!!$                   forces(m,d,i,j,k) = forces(m,d,i,j,k) &
-!!$                      - rho(m,i,j,k)*sum(phases(m)%gf*tmp(:,n,i,j,k)*dist%disc%ci(n,d),1)
-!!$                enddo
-!!$             end do
-!!$             do n=2*dist%info%ndims+1,dist%b
-!!$                do m=1,dist%s
-!!$                   forces(m,d,i,j,k) = forces(m,d,i,j,k) &
-!!$                    - 0.5*rho(m,i,j,k)*sum(phases(m)%gf*tmp(:,n,i,j,k)*dist%disc%ci(n,d),1)
-!!$                enddo
-!!$             end do
-!!$          end do
-!!$       end if
-!!$    end do
-!!$    end do
-!!$    end do
-
     gradrho = 0.d0
     weightsum = 0.d0
 
