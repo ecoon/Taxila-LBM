@@ -441,16 +441,16 @@
       type(info_type) info
       PetscScalar,dimension(info%gxs:info%gxe,info%gys:info%gye):: walls
       if ((info%xs.eq.1).and.(.not.info%periodic(X_DIRECTION))) then
-         walls(info%gxs:info%xs-1,:) = 1.
+         walls(info%gxs:info%xs-1,:) = 999.
       end if
       if ((info%xe.eq.info%NX).and.(.not.info%periodic(X_DIRECTION))) then
-         walls(info%xe+1:info%gxe,:) = 1.
+         walls(info%xe+1:info%gxe,:) = 999.
       end if
       if ((info%ys.eq.1).and.(.not.info%periodic(Y_DIRECTION))) then
-         walls(:,info%gys:info%ys-1) = 1.
+         walls(:,info%gys:info%ys-1) = 999.
       end if
       if ((info%ye.eq.info%NY).and.(.not.info%periodic(Y_DIRECTION))) then
-         walls(:,info%ye+1:info%gye) = 1.
+         walls(:,info%ye+1:info%gye) = 999.
       end if
     end subroutine LBMSetGhostWallsD2
 
@@ -460,22 +460,22 @@
       type(info_type) info
       PetscScalar,dimension(info%gxs:info%gxe,info%gys:info%gye,info%gzs:info%gze):: walls
       if ((info%xs.eq.1).and.(.not.info%periodic(X_DIRECTION))) then
-         walls(info%gxs:info%xs-1,:,:) = 1.
+         walls(info%gxs:info%xs-1,:,:) = 999.
       end if
       if ((info%xe.eq.info%NX).and.(.not.info%periodic(X_DIRECTION))) then
-         walls(info%xe+1:info%gxe,:,:) = 1.
+         walls(info%xe+1:info%gxe,:,:) = 999.
       end if
       if ((info%ys.eq.1).and.(.not.info%periodic(Y_DIRECTION))) then
-         walls(:,info%gys:info%ys-1,:) = 1.
+         walls(:,info%gys:info%ys-1,:) = 999.
       end if
       if ((info%ye.eq.info%NY).and.(.not.info%periodic(Y_DIRECTION))) then
-         walls(:,info%ye+1:info%gye,:) = 1.
+         walls(:,info%ye+1:info%gye,:) = 999.
       end if
       if ((info%zs.eq.1).and.(.not.info%periodic(Z_DIRECTION))) then
-         walls(:,:,info%gzs:info%zs-1) = 1.
+         walls(:,:,info%gzs:info%zs-1) = 999.
       end if
       if ((info%ze.eq.info%NZ).and.(.not.info%periodic(Z_DIRECTION))) then
-         walls(:,:,info%ze+1:info%gze) = 1.
+         walls(:,:,info%ze+1:info%gze) = 999.
       end if
     end subroutine LBMSetGhostWallsD3
 
