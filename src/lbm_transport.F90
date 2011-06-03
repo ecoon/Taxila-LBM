@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         04 April 2011
 !!!       on:            14:35:39 MDT
-!!!     last modified:   05 May 2011
-!!!       at:            10:06:13 MDT
+!!!     last modified:   03 June 2011
+!!!       at:            10:08:13 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -502,7 +502,7 @@ contains
     do k=transport%distribution%info%zs,transport%distribution%info%ze
     do j=transport%distribution%info%ys,transport%distribution%info%ye
     do i=transport%distribution%info%xs,transport%distribution%info%xe
-    if (walls(i,j,k).eq.1) then
+    if (walls(i,j,k) > 0) then
        do n=1,dist%b
           if (walls(i+transport%disc%ci(n,X_DIRECTION), j+transport%disc%ci(n,Y_DIRECTION),&
                k+transport%disc%ci(n,Z_DIRECTION)).eq.0) then
@@ -532,7 +532,7 @@ contains
     PetscInt i,j,m,n
     do j=transport%distribution%info%ys,transport%distribution%info%ye
     do i=transport%distribution%info%xs,transport%distribution%info%xe
-    if (walls(i,j).eq.1) then
+    if (walls(i,j) > 0) then
        do n=1,dist%b
           if (walls(i+transport%disc%ci(n,X_DIRECTION), &
                j+transport%disc%ci(n,Y_DIRECTION)).eq.0) then

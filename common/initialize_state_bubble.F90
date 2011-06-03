@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         14 January 2011
 !!!       on:            17:27:04 MST
-!!!     last modified:   25 April 2011
-!!!       at:            15:35:59 MDT
+!!!     last modified:   03 June 2011
+!!!       at:            10:09:10 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -115,7 +115,7 @@
        rho(2,:,:,:)=rho2(2)
     end where
 
-    where(walls.eq.1)
+    where(walls > 0)
        rho(1,:,:,:) = 0
        rho(2,:,:,:) = 0
     end where
