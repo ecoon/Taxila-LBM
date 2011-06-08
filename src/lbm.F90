@@ -76,7 +76,8 @@
          LBMInitializeState, &
          LBMInitializeStateRestarted, &
          LBMLoadSteadyStateFlow, &
-         LBMGetCorners
+         LBMGetCorners, &
+         LBMCommunicateWalls
 
   contains
     function LBMCreate(comm) result(lbm)
@@ -175,6 +176,18 @@
       return
     end subroutine LBMSetUp
     
+    subroutine LBMCommunicateWalls(lbm)
+      type(lbm_type) lbm
+      PetscErrorCode ierr
+
+      call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+      call DMDALocalToLocalBegin(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, &
+           lbm%walls, ierr)
+      call DMDALocalToLocalEnd(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, &
+           lbm%walls, ierr)
+      call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+    end subroutine LBMCommunicateWalls
+
     subroutine LBMInit1(lbm, istep)
       type(lbm_type) lbm
       PetscInt istep
@@ -187,10 +200,8 @@
       PetscErrorCode ierr
       PetscBool supress_output
 
-      call DMDALocalToLocalBegin(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, &
-           lbm%walls, ierr)
-      call DMDALocalToLocalEnd(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, &
-           lbm%walls, ierr)
+      call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
+      call LBMCommunicateWalls(lbm)
 
       if (istep.eq.0) then
          call DMDALocalToLocalBegin(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi, &
@@ -207,7 +218,6 @@
          end if
 
          ! get arrays
-         call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
          call FlowGetArrays(lbm%flow, ierr)
          if (associated(lbm%transport)) then
             call TransportGetArrays(lbm%transport, ierr)
@@ -250,7 +260,6 @@
          end if
       else
          ! just get arrays
-         call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
          call FlowGetArrays(lbm%flow, ierr)
       endif
       call IOIncrementCounter(lbm%io)
