@@ -309,39 +309,39 @@ contains
           end if
 
           ! diagonals squared length 4
-          if (walls(i+2,j,k).eq.0) then
+          if (walls(i+2,j,k).eq.0.and.walls(i+1,j,k).eq.0.) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + 2.*dist%disc%ffw(4)*(rho(:,i+2,j,k)-rho(:,i,j,k)) 
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(4)*4. 
            end if
-           if (walls(i-2,j,k).eq.0) then
+           if (walls(i-2,j,k).eq.0.and.walls(i-1,j,k).eq.0.) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - 2.*dist%disc%ffw(4)*(rho(:,i-2,j,k)-rho(:,i,j,k))
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(4)*4.
           end if
-          if (walls(i,j+2,k).eq.0) then
+          if (walls(i,j+2,k).eq.0.and.walls(i,j+1,k).eq.0.) then
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
                   + 2.*dist%disc%ffw(4)*(rho(:,i,j+2,k)-rho(:,i,j,k)) 
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(4)*4.
           end if
-          if (walls(i,j-2,k).eq.0) then
+          if (walls(i,j-2,k).eq.0.and.walls(i,j-1,k).eq.0.) then
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
                   - 2.*dist%disc%ffw(4)*(rho(:,i,j-2,k)-rho(:,i,j,k)) 
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(4)*4.
           end if
-          if (walls(i,j,k+2).eq.0) then
+          if (walls(i,j,k+2).eq.0.and.walls(i,j,k+1).eq.0.) then
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
                   + 2.*dist%disc%ffw(4)*(rho(:,i,j,k+2)-rho(:,i,j,k)) 
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(4)*4.
           end if
-          if (walls(i,j,k-2).eq.0) then
+          if (walls(i,j,k-2).eq.0.and.walls(i,j,k-1).eq.0.) then
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
                   - 2.*dist%disc%ffw(4)*(rho(:,i,j,k-2)-rho(:,i,j,k)) 
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(4)*4.
           end if
 
           ! diagonals squared length 5 (x: 2 and -2)
-          if (walls(i+2,j+1,k).eq.0) then
+          if (walls(i+2,j+1,k).eq.0.and.(walls(i+1,j+1,k).eq.0.or.walls(i+1,j,k).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + 2.*dist%disc%ffw(5)*(rho(:,i+2,j+1,k)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -349,7 +349,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)*4.
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)
           end if
-          if (walls(i-2,j+1,k).eq.0) then
+          if (walls(i-2,j+1,k).eq.0.and.(walls(i-1,j+1,k).eq.0.or.walls(i-1,j,k).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - 2.*dist%disc%ffw(5)*(rho(:,i-2,j+1,k)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -357,7 +357,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)*4.
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)
           end if
-          if (walls(i-2,j-1,k).eq.0) then
+          if (walls(i-2,j-1,k).eq.0.and.(walls(i-1,j-1,k).eq.0.or.walls(i-1,j,k).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - 2.*dist%disc%ffw(5)*(rho(:,i-2,j-1,k)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -365,7 +365,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)*4.
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)
           end if
-          if (walls(i+2,j-1,k).eq.0) then
+          if (walls(i+2,j-1,k).eq.0.and.(walls(i+1,j-1,k).eq.0.or.walls(i+1,j,k).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + 2.*dist%disc%ffw(5)*(rho(:,i+2,j-1,k)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -373,7 +373,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)*4.
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)
           end if
-          if (walls(i+2,j,k+1).eq.0) then
+          if (walls(i+2,j,k+1).eq.0.and.(walls(i+1,j,k+1).eq.0.or.walls(i+1,j,k).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + 2.*dist%disc%ffw(5)*(rho(:,i+2,j,k+1)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -381,7 +381,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)*4.
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(5)
           end if
-          if (walls(i-2,j,k+1).eq.0) then
+          if (walls(i-2,j,k+1).eq.0.and.(walls(i-1,j,k+1).eq.0.or.walls(i-1,j,k).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - 2.*dist%disc%ffw(5)*(rho(:,i-2,j,k+1)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -389,7 +389,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)*4.
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(5)
           end if
-          if (walls(i-2,j,k-1).eq.0) then
+          if (walls(i-2,j,k-1).eq.0.and.(walls(i-1,j,k-1).eq.0.or.walls(i-1,j,k).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - 2.*dist%disc%ffw(5)*(rho(:,i-2,j,k-1)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -397,7 +397,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)*4.
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(5)
           end if
-          if (walls(i+2,j,k-1).eq.0) then
+          if (walls(i+2,j,k-1).eq.0.and.(walls(i+1,j,k-1).eq.0.or.walls(i+1,j,k).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + 2.*dist%disc%ffw(5)*(rho(:,i+2,j,k-1)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -407,7 +407,7 @@ contains
           end if
 
           ! diagonals squared length 5 (y: 2 and -2)
-          if (walls(i+1,j+2,k).eq.0) then
+          if (walls(i+1,j+2,k).eq.0.and.(walls(i+1,j+1,k).eq.0.or.walls(i,j+1,k).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + dist%disc%ffw(5)*(rho(:,i+1,j+2,k)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -415,7 +415,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)*4.
           end if
-          if (walls(i-1,j+2,k).eq.0) then
+          if (walls(i-1,j+2,k).eq.0.and.(walls(i-1,j+1,k).eq.0.or.walls(i,j+1,k).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - dist%disc%ffw(5)*(rho(:,i-1,j+2,k)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -423,7 +423,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)*4.
           end if
-          if (walls(i-1,j-2,k).eq.0) then
+          if (walls(i-1,j-2,k).eq.0.and.(walls(i-1,j-1,k).eq.0.or.walls(i,j-1,k).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - dist%disc%ffw(5)*(rho(:,i-1,j-2,k)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -431,7 +431,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)*4.
           end if
-          if (walls(i+1,j-2,k).eq.0) then
+          if (walls(i+1,j-2,k).eq.0.and.(walls(i+1,j-1,k).eq.0.or.walls(i,j-1,k).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + dist%disc%ffw(5)*(rho(:,i+1,j-2,k)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -439,7 +439,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)*4.
           end if
-          if (walls(i,j+2,k+1).eq.0) then
+          if (walls(i,j+2,k+1).eq.0.and.(walls(i,j+1,k+1).eq.0.or.walls(i,j+1,k).eq.0)) then
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
                   + 2.*dist%disc%ffw(5)*(rho(:,i,j+2,k+1)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -447,7 +447,7 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)*4.
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(5)
           end if
-          if (walls(i,j-2,k+1).eq.0) then
+          if (walls(i,j-2,k+1).eq.0.and.(walls(i,j-1,k+1).eq.0.or.walls(i,j-1,k).eq.0)) then
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
                   - 2.*dist%disc%ffw(5)*(rho(:,i,j-2,k+1)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -455,7 +455,7 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)*4.
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(5)
           end if
-          if (walls(i,j+2,k-1).eq.0) then
+          if (walls(i,j+2,k-1).eq.0.and.(walls(i,j+1,k-1).eq.0.or.walls(i,j+1,k).eq.0)) then
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
                   + 2.*dist%disc%ffw(5)*(rho(:,i,j+2,k-1)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -463,7 +463,7 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)*4.
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(5)
           end if
-          if (walls(i,j-2,k-1).eq.0) then
+          if (walls(i,j-2,k-1).eq.0.and.(walls(i,j-1,k-1).eq.0.or.walls(i,j-1,k).eq.0)) then
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
                   - 2.*dist%disc%ffw(5)*(rho(:,i,j-2,k-1)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -473,7 +473,7 @@ contains
           end if
 
           ! diagonals squared length 5 (z: 2 and -2)
-          if (walls(i+1,j,k+2).eq.0) then
+          if (walls(i+1,j,k+2).eq.0.and.(walls(i+1,j,k+1).eq.0.or.walls(i,j,k+1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + dist%disc%ffw(5)*(rho(:,i+1,j,k+2)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -481,7 +481,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(5)*4.
           end if
-          if (walls(i,j+1,k+2).eq.0) then
+          if (walls(i,j+1,k+2).eq.0.and.(walls(i,j+1,k+1).eq.0.or.walls(i,j,k+1).eq.0)) then
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
                   + dist%disc%ffw(5)*(rho(:,i,j+1,k+2)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -489,7 +489,7 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(5)*4.
           end if
-          if (walls(i-1,j,k+2).eq.0) then
+          if (walls(i-1,j,k+2).eq.0.and.(walls(i-1,j,k+1).eq.0.or.walls(i,j,k+1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - dist%disc%ffw(5)*(rho(:,i-1,j,k+2)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -497,7 +497,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(5)*4.
           end if
-          if (walls(i,j-1,k+2).eq.0) then
+          if (walls(i,j-1,k+2).eq.0.and.(walls(i,j-1,k+1).eq.0.or.walls(i,j,k+1).eq.0)) then
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
                   - dist%disc%ffw(5)*(rho(:,i,j-1,k+2)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -506,7 +506,7 @@ contains
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(5)*4.
           end if
 
-          if (walls(i+1,j,k-2).eq.0) then
+          if (walls(i+1,j,k-2).eq.0.and.(walls(i+1,j,k-1).eq.0.or.walls(i,j,k-1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + dist%disc%ffw(5)*(rho(:,i+1,j,k-2)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -514,7 +514,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(5)*4.
           end if
-          if (walls(i,j+1,k-2).eq.0) then
+          if (walls(i,j+1,k-2).eq.0.and.(walls(i,j+1,k-1).eq.0.or.walls(i,j,k-1).eq.0)) then
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
                   + dist%disc%ffw(5)*(rho(:,i,j+1,k-2)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -522,7 +522,7 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(5)
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(5)*4.
           end if
-          if (walls(i-1,j,k-2).eq.0) then
+          if (walls(i-1,j,k-2).eq.0.and.(walls(i-1,j,k-1).eq.0.or.walls(i,j,k-1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - dist%disc%ffw(5)*(rho(:,i-1,j,k-2)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -530,7 +530,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(5)
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(5)*4.
           end if
-          if (walls(i,j-1,k-2).eq.0) then
+          if (walls(i,j-1,k-2).eq.0.and.(walls(i,j-1,k-1).eq.0.or.walls(i,j,k-1).eq.0)) then
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
                   - dist%disc%ffw(5)*(rho(:,i,j-1,k-2)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -540,7 +540,9 @@ contains
           end if
 
           ! diagonals squared length 6 (x: 2 and -2)
-          if (walls(i+2,j+1,k+1).eq.0) then
+          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+          if (walls(i+2,j+1,k+1).eq.0.and.(walls(i+1,j+1,k  ).eq.0.or.walls(i+1,j,k  ).eq.0.or. &
+                                           walls(i+1,j+1,k+1).eq.0.or.walls(i+1,j,k+1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + 2.*dist%disc%ffw(6)*(rho(:,i+2,j+1,k+1)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -551,7 +553,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)
           end if
-          if (walls(i-2,j+1,k+1).eq.0) then
+          if (walls(i-2,j+1,k+1).eq.0.and.(walls(i-1,j+1,k).eq.0.or.walls(i-1,j,k).eq.0.or. &
+                                           walls(i-1,j+1,k+1).eq.0.or.walls(i-1,j,k+1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - 2.*dist%disc%ffw(6)*(rho(:,i-2,j+1,k+1)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -562,7 +565,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)
           end if
-          if (walls(i-2,j-1,k+1).eq.0) then
+          if (walls(i-2,j-1,k+1).eq.0.and.(walls(i-1,j-1,k  ).eq.0.or.walls(i-1,j,k  ).eq.0.or. &
+                                           walls(i-1,j-1,k+1).eq.0.or.walls(i-1,j,k+1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - 2.*dist%disc%ffw(6)*(rho(:,i-2,j-1,k+1)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -573,7 +577,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)
           end if
-          if (walls(i+2,j-1,k+1).eq.0) then
+          if (walls(i+2,j-1,k+1).eq.0.and.(walls(i+1,j-1,k  ).eq.0.or.walls(i+1,j,k  ).eq.0.or. &
+                                           walls(i+1,j-1,k+1).eq.0.or.walls(i+1,j,k+1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + 2.*dist%disc%ffw(6)*(rho(:,i+2,j-1,k+1)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -584,7 +589,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)
           end if
-          if (walls(i+2,j+1,k-1).eq.0) then
+          if (walls(i+2,j+1,k-1).eq.0.and.(walls(i+1,j+1,k  ).eq.0.or.walls(i+1,j,k  ).eq.0.or. &
+                                           walls(i+1,j+1,k-1).eq.0.or.walls(i+1,j,k-1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + 2.*dist%disc%ffw(6)*(rho(:,i+2,j+1,k-1)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -595,7 +601,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)
           end if
-          if (walls(i-2,j+1,k-1).eq.0) then
+          if (walls(i-2,j+1,k-1).eq.0.and.(walls(i-1,j+1,k  ).eq.0.or.walls(i-1,j,k  ).eq.0.or. &
+                                           walls(i-1,j+1,k-1).eq.0.or.walls(i-1,j,k-1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - 2.*dist%disc%ffw(6)*(rho(:,i-2,j+1,k-1)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -606,7 +613,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)
           end if
-          if (walls(i-2,j-1,k-1).eq.0) then
+          if (walls(i-2,j-1,k-1).eq.0.and.(walls(i-1,j-1,k  ).eq.0.or.walls(i-1,j,k  ).eq.0.or. &
+                                           walls(i-1,j-1,k-1).eq.0.or.walls(i-1,j,k-1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - 2.*dist%disc%ffw(6)*(rho(:,i-2,j-1,k-1)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -617,7 +625,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)
           end if
-          if (walls(i+2,j-1,k-1).eq.0) then
+          if (walls(i+2,j-1,k-1).eq.0.and.(walls(i+1,j-1,k  ).eq.0.or.walls(i+1,j,k  ).eq.0.or. &
+                                           walls(i+1,j-1,k-1).eq.0.or.walls(i+1,j,k-1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + 2.*dist%disc%ffw(6)*(rho(:,i+2,j-1,k-1)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -630,7 +639,8 @@ contains
           end if
 
           ! diagonals squared length 6 (y: 2 and -2)
-          if (walls(i+1,j+2,k+1).eq.0) then
+          if (walls(i+1,j+2,k+1).eq.0.and.(walls(i+1,j+1,k  ).eq.0.or.walls(i,j+1,k  ).eq.0.or. &
+                                           walls(i+1,j+1,k+1).eq.0.or.walls(i,j+1,k+1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + dist%disc%ffw(6)*(rho(:,i+1,j+2,k+1)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -641,7 +651,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)*4.
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)
           end if
-          if (walls(i-1,j+2,k+1).eq.0) then
+          if (walls(i-1,j+2,k+1).eq.0.and.(walls(i-1,j+1,k  ).eq.0.or.walls(i,j+1,k  ).eq.0.or. &
+                                           walls(i-1,j+1,k+1).eq.0.or.walls(i,j+1,k+1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - dist%disc%ffw(6)*(rho(:,i-1,j+2,k+1)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -652,7 +663,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)*4.
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)
           end if
-          if (walls(i-1,j-2,k+1).eq.0) then
+          if (walls(i-1,j-2,k+1).eq.0.and.(walls(i-1,j-1,k  ).eq.0.or.walls(i,j-1,k  ).eq.0.or. &
+                                           walls(i-1,j-1,k+1).eq.0.or.walls(i,j-1,k+1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - dist%disc%ffw(6)*(rho(:,i-1,j-2,k+1)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -663,7 +675,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)*4.
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)
           end if
-          if (walls(i+1,j-2,k+1).eq.0) then
+          if (walls(i+1,j-2,k+1).eq.0.and.(walls(i+1,j-1,k  ).eq.0.or.walls(i,j-1,k  ).eq.0.or. &
+                                           walls(i+1,j-1,k+1).eq.0.or.walls(i,j-1,k+1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + dist%disc%ffw(6)*(rho(:,i+1,j-2,k+1)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -674,7 +687,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)*4.
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)
           end if
-          if (walls(i+1,j+2,k-1).eq.0) then
+          if (walls(i+1,j+2,k-1).eq.0.and.(walls(i+1,j+1,k  ).eq.0.or.walls(i,j+1,k  ).eq.0.or. &
+                                           walls(i+1,j+1,k-1).eq.0.or.walls(i,j+1,k-1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + dist%disc%ffw(6)*(rho(:,i+1,j+2,k-1)-rho(:,i,j,k))
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -685,7 +699,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)*4.
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)
           end if
-          if (walls(i-1,j-2,k-1).eq.0) then
+          if (walls(i-1,j-2,k-1).eq.0.and.(walls(i-1,j-1,k  ).eq.0.or.walls(i,j-1,k  ).eq.0.or. &
+                                           walls(i-1,j-1,k-1).eq.0.or.walls(i,j-1,k-1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - dist%disc%ffw(6)*(rho(:,i-1,j-2,k-1)-rho(:,i,j,k))
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -696,7 +711,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)*4.
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)
           end if
-          if (walls(i-1,j+2,k-1).eq.0) then
+          if (walls(i-1,j+2,k-1).eq.0.and.(walls(i-1,j+1,k  ).eq.0.or.walls(i,j+1,k  ).eq.0.or. &
+                                           walls(i-1,j+1,k-1).eq.0.or.walls(i,j+1,k-1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - dist%disc%ffw(6)*(rho(:,i-1,j+2,k-1)-rho(:,i,j,k))
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -707,7 +723,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)*4.
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)
           end if
-          if (walls(i+1,j-2,k-1).eq.0) then
+          if (walls(i+1,j-2,k-1).eq.0.and.(walls(i+1,j-1,k  ).eq.0.or.walls(i,j-1,k  ).eq.0.or. &
+                                           walls(i+1,j-1,k-1).eq.0.or.walls(i,j-1,k-1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + dist%disc%ffw(6)*(rho(:,i+1,j-2,k-1)-rho(:,i,j,k))
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -720,7 +737,8 @@ contains
           end if
 
           ! diagonals squared length 6 (z: 2 and -2)
-          if (walls(i+1,j+1,k+2).eq.0) then
+          if (walls(i+1,j+1,k+2).eq.0.and.(walls(i+1,j+1,k+1).eq.0.or.walls(i,j  ,k+1).eq.0.or. &
+                                           walls(i+1,j  ,k+1).eq.0.or.walls(i,j+1,k+1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + dist%disc%ffw(6)*(rho(:,i+1,j+1,k+2)-rho(:,i,j,k))
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -731,7 +749,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)*4.
           end if
-          if (walls(i-1,j+1,k+2).eq.0) then
+          if (walls(i-1,j+1,k+2).eq.0.and.(walls(i-1,j+1,k+1).eq.0.or.walls(i,j  ,k+1).eq.0.or. &
+                                           walls(i-1,j  ,k+1).eq.0.or.walls(i,j+1,k+1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,x_DIRECTION,i,j,k) &
                   - dist%disc%ffw(6)*(rho(:,i-1,j+1,k+2)-rho(:,i,j,k))
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -742,7 +761,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)*4.
           end if
-          if (walls(i-1,j-1,k+2).eq.0) then
+          if (walls(i-1,j-1,k+2).eq.0.and.(walls(i-1,j-1,k+1).eq.0.or.walls(i,j  ,k+1).eq.0.or. &
+                                           walls(i-1,j  ,k+1).eq.0.or.walls(i,j-1,k+1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - dist%disc%ffw(6)*(rho(:,i-1,j-1,k+2)-rho(:,i,j,k))
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -753,7 +773,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)*4.
           end if
-          if (walls(i+1,j-1,k+2).eq.0) then
+          if (walls(i+1,j-1,k+2).eq.0.and.(walls(i+1,j-1,k+1).eq.0.or.walls(i,j  ,k+1).eq.0.or. &
+                                           walls(i+1,j  ,k+1).eq.0.or.walls(i,j-1,k+1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + dist%disc%ffw(6)*(rho(:,i+1,j-1,k+2)-rho(:,i,j,k))
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -764,7 +785,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)*4.
           end if
-          if (walls(i+1,j+1,k-2).eq.0) then
+          if (walls(i+1,j+1,k-2).eq.0.and.(walls(i+1,j+1,k-1).eq.0.or.walls(i,j  ,k-1).eq.0.or. &
+                                           walls(i+1,j  ,k-1).eq.0.or.walls(i,j+1,k-1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + dist%disc%ffw(6)*(rho(:,i+1,j+1,k-2)-rho(:,i,j,k))
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -775,7 +797,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)*4.
           end if
-          if (walls(i-1,j+1,k-2).eq.0) then
+          if (walls(i-1,j+1,k-2).eq.0.and.(walls(i-1,j+1,k-1).eq.0.or.walls(i,j  ,k-1).eq.0.or. &
+                                           walls(i-1,j  ,k-1).eq.0.or.walls(i,j+1,k-1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - dist%disc%ffw(6)*(rho(:,i-1,j+1,k-2)-rho(:,i,j,k))
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -786,7 +809,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)*4.
           end if
-          if (walls(i-1,j-1,k-2).eq.0) then
+          if (walls(i-1,j-1,k-2).eq.0.and.(walls(i-1,j-1,k-1).eq.0.or.walls(i,j  ,k-1).eq.0.or. &
+                                           walls(i-1,j  ,k-1).eq.0.or.walls(i,j-1,k-1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - dist%disc%ffw(6)*(rho(:,i-1,j-1,k-2)-rho(:,i,j,k))
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -797,7 +821,8 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(6)
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(6)*4.
           end if
-          if (walls(i+1,j-1,k-2).eq.0) then
+          if (walls(i+1,j-1,k-2).eq.0.and.(walls(i+1,j-1,k-1).eq.0.or.walls(i,j  ,k-1).eq.0.or. &
+                                           walls(i+1,j  ,k-1).eq.0.or.walls(i,j-1,k-1).eq.0)) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + dist%disc%ffw(6)*(rho(:,i+1,j-1,k-2)-rho(:,i,j,k))
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -810,7 +835,7 @@ contains
           end if
 
           ! diagonals squared length 8 (x and y)
-          if (walls(i+2,j+2,k).eq.0) then
+          if (walls(i+2,j+2,k).eq.0.and.walls(i+1,j+1,k).eq.0) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + 2.*dist%disc%ffw(8)*(rho(:,i+2,j+2,k)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -818,7 +843,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(8)*4.
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(8)*4.
           end if
-          if (walls(i-2,j+2,k).eq.0) then
+          if (walls(i-2,j+2,k).eq.0.and.walls(i-1,j+1,k).eq.0) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - 2.*dist%disc%ffw(8)*(rho(:,i-2,j+2,k)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -826,7 +851,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(8)*4.
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(8)*4.
           end if
-          if (walls(i-2,j-2,k).eq.0) then
+          if (walls(i-2,j-2,k).eq.0.and.walls(i-1,j-1,k).eq.0) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - 2.*dist%disc%ffw(8)*(rho(:,i-2,j-2,k)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -834,7 +859,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(8)*4.
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(8)*4.
           end if
-          if (walls(i+2,j-2,k).eq.0) then
+          if (walls(i+2,j-2,k).eq.0.and.walls(i+1,j-1,k).eq.0) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + 2.*dist%disc%ffw(8)*(rho(:,i+2,j-2,k)-rho(:,i,j,k)) 
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
@@ -844,7 +869,7 @@ contains
           end if
 
           ! diagonals squared length 8 (x and z)
-          if (walls(i+2,j,k+2).eq.0) then
+          if (walls(i+2,j,k+2).eq.0.and.walls(i+1,j,k+1).eq.0) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + 2.*dist%disc%ffw(8)*(rho(:,i+2,j,k+2)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -852,7 +877,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(8)*4.
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(8)*4.
           end if
-          if (walls(i-2,j,k+2).eq.0) then
+          if (walls(i-2,j,k+2).eq.0.and.walls(i-1,j,k+1).eq.0) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - 2.*dist%disc%ffw(8)*(rho(:,i-2,j,k+2)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -860,7 +885,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(8)*4.
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(8)*4.
           end if
-          if (walls(i-2,j,k-2).eq.0) then
+          if (walls(i-2,j,k-2).eq.0.and.walls(i-1,j,k-1).eq.0) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   - 2.*dist%disc%ffw(8)*(rho(:,i-2,j,k-2)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -868,7 +893,7 @@ contains
              weightsum(X_DIRECTION) = weightsum(X_DIRECTION) + dist%disc%ffw(8)*4.
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(8)*4.
           end if
-          if (walls(i+2,j,k-2).eq.0) then
+          if (walls(i+2,j,k-2).eq.0.and.walls(i+1,j,k-1).eq.0) then
              gradrho(:,X_DIRECTION,i,j,k) = gradrho(:,X_DIRECTION,i,j,k) &
                   + 2.*dist%disc%ffw(8)*(rho(:,i+2,j,k-2)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -878,7 +903,7 @@ contains
           end if
 
           ! diagonals squared length 8 (y and z)
-          if (walls(i,j+2,k+2).eq.0) then
+          if (walls(i,j+2,k+2).eq.0.and.walls(i,j+1,k+1).eq.0) then
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
                   + 2.*dist%disc%ffw(8)*(rho(:,i,j+2,k+2)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -886,7 +911,7 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(8)*4.
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(8)*4.
           end if
-          if (walls(i,j-2,k+2).eq.0) then
+          if (walls(i,j-2,k+2).eq.0.and.walls(i,j-1,k+1).eq.0) then
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
                   - 2.*dist%disc%ffw(8)*(rho(:,i,j-2,k+2)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -894,7 +919,7 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(8)*4.
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(8)*4.
           end if
-          if (walls(i,j-2,k-2).eq.0) then
+          if (walls(i,j-2,k-2).eq.0.and.walls(i,j-1,k-1).eq.0) then
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
                   - 2.*dist%disc%ffw(8)*(rho(:,i,j-2,k-2)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
@@ -902,7 +927,7 @@ contains
              weightsum(Y_DIRECTION) = weightsum(Y_DIRECTION) + dist%disc%ffw(8)*4.
              weightsum(Z_DIRECTION) = weightsum(Z_DIRECTION) + dist%disc%ffw(8)*4.
           end if
-          if (walls(i,j+2,k-2).eq.0) then
+          if (walls(i,j+2,k-2).eq.0.and.walls(i,j+1,k-1).eq.0) then
              gradrho(:,Y_DIRECTION,i,j,k) = gradrho(:,Y_DIRECTION,i,j,k) &
                   + 2.*dist%disc%ffw(8)*(rho(:,i,j+2,k-2)-rho(:,i,j,k)) 
              gradrho(:,Z_DIRECTION,i,j,k) = gradrho(:,Z_DIRECTION,i,j,k) &
