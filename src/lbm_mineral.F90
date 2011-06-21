@@ -6,7 +6,7 @@
 !!!     created:         21 June 2011
 !!!       on:            10:44:10 MDT
 !!!     last modified:   21 June 2011
-!!!       at:            12:05:40 MDT
+!!!       at:            12:43:09 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -146,6 +146,6 @@ contains
            trim(options%my_prefix)//trim(paramname), &
            'mineral-phase interaction potential coefficient', ierr)
     end do
-    mineral%gw => mineral%data%gw(1:options%nminerals)
+    mineral%gw => mineral%data%gw(1:options%nphases)
   end subroutine MineralSetFromOptions
 end module LBM_Mineral_module
