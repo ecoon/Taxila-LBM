@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            09:24:24 MDT
-!!!     last modified:   31 May 2011
-!!!       at:            16:36:10 MDT
+!!!     last modified:   21 June 2011
+!!!       at:            13:42:39 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -188,7 +188,7 @@ contains
     
     grid%info%xyzl = grid%info%xl*grid%info%yl*grid%info%zl
     grid%info%gxyzl = grid%info%gxl*grid%info%gyl*grid%info%gzl
-    
+
     do lcv=2,grid%nda
        call DMDACreate3d(grid%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
             btype(Z_DIRECTION), grid%info%stencil_type, &
@@ -210,7 +210,7 @@ contains
        call PetscObjectSetName(grid%da(NSPECIEXBDOF), &
             trim(grid%name)//'DA_NSPECIEXB', ierr)
     end if
-    
+
     ! set the coordinates, but only on the one-dof (no need for extra memory)
     if (grid%info%ndims > 2) then
        call DMDASetUniformCoordinates(grid%da(ONEDOF), &
@@ -231,6 +231,7 @@ contains
             grid%info%corners(Y_DIRECTION,1), grid%info%corners(Y_DIRECTION,2), &
             0.d0, 1.d0, ierr)
     end if
+    CHKERRQ(ierr)
   end subroutine GridSetUp
 
   subroutine GridViewCoordinates(grid, io)
