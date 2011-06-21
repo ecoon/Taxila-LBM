@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            13:43:00 MDT
-!!!     last modified:   18 May 2011
-!!!       at:            11:49:32 MDT
+!!!     last modified:   21 June 2011
+!!!       at:            12:02:39 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -33,7 +33,6 @@ module LBM_Phase_module
      
      ! bagged parameters
      PetscScalar,pointer :: mm ! molecular mass
-     PetscScalar,pointer :: gw ! solid affinity? for phase-wall interaction forces
      PetscScalar,pointer :: viscosity ! kinematic viscoscity, in m^2/s
      PetscScalar,pointer :: density ! reference density, in kg/m^3
      PetscScalar,pointer,dimension(:) :: gf ! phase-phase force coefs
@@ -109,7 +108,6 @@ contains
     phase%time_scale = 0
 
     nullify(phase%mm)
-    nullify(phase%gw)
     nullify(phase%gf)
     nullify(phase%relax)
 
@@ -163,15 +161,10 @@ contains
 
     ! create the bag
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
-    sizeofdata = (4+phase%s)*sizeofscalar
+    sizeofdata = (4+NMAX_PHASES)*sizeofscalar
     call PetscBagCreate(phase%comm, sizeofdata, phase%bag, ierr)
     call PetscBagSetName(phase%bag, TRIM(options%my_prefix)//phase%name, "", ierr)
     call PetscBagGetData(phase%bag, phase%data, ierr)
-
-    ! register data
-    call PetscBagRegisterScalar(phase%bag, phase%data%gw, 0.d0, &
-         trim(options%my_prefix)//'gw_'//trim(phase%name), 'Phase-solid interaction potential coefficient', ierr)
-    phase%gw => phase%data%gw
 
     call PetscBagRegisterScalar(phase%bag, phase%data%mm, 1.d0, &
          trim(options%my_prefix)//'mm_'//trim(phase%name), 'molecular mass', ierr)

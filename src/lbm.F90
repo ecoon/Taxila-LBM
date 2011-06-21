@@ -302,7 +302,7 @@
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
             call DistributionCommunicateDensity(lbm%flow%distribution)
-            call FlowCalcForces(lbm%flow, lbm%walls%walls_a)
+            call FlowCalcForces(lbm%flow, lbm%walls)
             call BCZeroForces(lbm%flow%bc, lbm%flow%forces, lbm%flow%distribution)
          ! reaction?
 
