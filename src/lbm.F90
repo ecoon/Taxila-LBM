@@ -136,7 +136,6 @@
 
     subroutine LBMSetUp(lbm)
       type(lbm_type) lbm
-      PetscErrorCode ierr
       PetscScalar zero
       zero = 0.d0
 
@@ -156,8 +155,6 @@
       if (associated(lbm%transport)) then
          call TransportSetUp(lbm%transport)
       end if
-
-      CHKERRQ(ierr)
       return
     end subroutine LBMSetUp
     
