@@ -6,7 +6,7 @@
 !!!     created:         21 June 2011
 !!!       on:            10:44:10 MDT
 !!!     last modified:   21 June 2011
-!!!       at:            10:58:45 MDT
+!!!       at:            12:05:40 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -17,6 +17,7 @@
 
 module LBM_Mineral_module
   use petsc
+  use LBM_Mineral_Bag_Data_type_module
   implicit none
 
   private
@@ -26,7 +27,22 @@ module LBM_Mineral_module
     MPI_Comm comm
     PetscInt id
     character(len=MAXWORDLENGTH):: name
+
+    ! bagged parameters
+    PetscScalar,pointer,dimension(:) :: gw ! phase-mineral force coefs
+
+    type(mineral_bag_data_type),pointer:: data
+    PetscBag bag
   end type mineral_type
+
+  interface PetscBagGetData
+     subroutine PetscBagGetData(bag, data, ierr)
+       use LBM_Mineral_Bag_Data_type_module
+       PetscBag bag
+       type(mineral_bag_data_type),pointer :: data
+       PetscErrorCode ierr
+     end subroutine PetscBagGetData
+  end interface
   
   interface MineralCreate
     module procedure MineralCreateOne
@@ -48,6 +64,9 @@ contains
     allocate(mineral)
     mineral%comm = comm
     mineral%id = 0
+    nullify(mineral%gw)
+    nullify(mineral%data)
+    mineral%bag = 0
     name = 'mineral1'
     call MineralSetName(mineral, name)
   end function MineralCreateOne
@@ -65,6 +84,9 @@ contains
     do lcv=1,n
        amineral => minerals(lcv)
        amineral%comm = comm
+       nullify(amineral%gw)
+       nullify(amineral%data)
+       amineral%bag = 0
        call MineralSetID(amineral, lcv)
        name = 'mineral'//char(lcv+48)
        call MineralSetName(amineral, name)
@@ -94,8 +116,9 @@ contains
     type(options_type) options
     PetscErrorCode ierr
 
+    PetscSizeT sizeofscalar, sizeofdata
     PetscInt lcv
-    character(len=MAXWORDLENGTH):: paramname
+    character(len=MAXWORDLENGTH):: paramname,phasename
     PetscBool help, flag
     write(paramname, '(I1)') mineral%id
     
@@ -105,5 +128,24 @@ contains
          trim(paramname)//">: name the mineral -- for use with parameter options\n", ierr)
     call PetscOptionsGetString(options%my_prefix, "-mineral"//trim(paramname)//"_name", &
          mineral%name, flag, ierr)
+
+    ! create the bag
+    call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
+    sizeofdata = (NMAX_PHASES)*sizeofscalar
+    call PetscBagCreate(mineral%comm, sizeofdata, mineral%bag, ierr)
+    call PetscBagSetName(mineral%bag, TRIM(options%my_prefix)//mineral%name, "", ierr)
+    call PetscBagGetData(mineral%bag, mineral%data, ierr)
+
+    ! register data
+    do lcv=1,options%nphases
+      write(paramname, '(I1)') lcv
+      call PetscOptionsGetString(options%my_prefix, "-phase"//trim(paramname)//"_name", &
+           phasename, flag, ierr)
+      paramname = 'gw_'//trim(mineral%name)//'_'//trim(phasename)
+      call PetscBagRegisterScalar(mineral%bag, mineral%data%gw(lcv), 0.d0, &
+           trim(options%my_prefix)//trim(paramname), &
+           'mineral-phase interaction potential coefficient', ierr)
+    end do
+    mineral%gw => mineral%data%gw(1:options%nminerals)
   end subroutine MineralSetFromOptions
 end module LBM_Mineral_module
