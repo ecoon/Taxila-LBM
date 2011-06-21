@@ -141,9 +141,6 @@
       zero = 0.d0
 
       ! set up the DA sizes
-      print*, 'onedof:', ONEDOF
-      print*, 'nx:', lbm%grid%info%NX
-      print*, 'SHAPE:', SHAPE(lbm%grid%da_sizes)
       lbm%grid%da_sizes(ONEDOF) = 1
       lbm%grid%da_sizes(NPHASEDOF) = lbm%flow%nphases
       lbm%grid%da_sizes(NPHASEXBDOF) = lbm%flow%nphases*(lbm%flow%disc%b+1)
