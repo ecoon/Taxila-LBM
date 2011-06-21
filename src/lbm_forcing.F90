@@ -18,6 +18,7 @@ module LBM_Forcing_module
   use LBM_Distribution_Function_type_module
   use LBM_Distribution_Function_module
   use LBM_Phase_module
+  use LBM_Walls_module
   use petsc
   implicit none
 
@@ -1303,57 +1304,57 @@ contains
   ! New code added by MLP.  This accounts for fluid-solid forces on the 
   ! diagonals, which is not accounted for in the other version.
  
-  subroutine LBMAddFluidSolidForces(dist, phases, rho, walls, forces)
+  subroutine LBMAddFluidSolidForces(dist, phases, walls, rho, forces)
     !     NONLOCAL IN WALLS
     type(distribution_type) dist
     type(phase_type) phases(dist%s)
+    type(walls_type) walls
     PetscScalar,dimension(1:dist%s, 1:dist%info%gxyzl):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims, 1:dist%info%gxyzl):: forces
-    PetscScalar,dimension(1:dist%info%gxyzl):: walls
 
     select case(dist%info%ndims)
     case(2)
-       call LBMAddFluidSolidForcesD2(dist, phases, rho, walls, forces)
+       call LBMAddFluidSolidForcesD2(dist, phases, walls, rho, walls%walls_a, forces)
     case(3)
-       call LBMAddFluidSolidForcesD3(dist, phases, rho, walls, forces)
+       call LBMAddFluidSolidForcesD3(dist, phases, walls, rho, walls%walls_a, forces)
     end select
   end subroutine LBMAddFluidSolidForces
     
-  subroutine LBMAddFluidSolidForcesD3(dist, phases, rho, walls, forces)
+  subroutine LBMAddFluidSolidForcesD3(dist, phases, walls, rho, walldata, forces)
     type(distribution_type) dist
     type(phase_type) phases(dist%s)
+    type(walls_type) walls
     PetscScalar,dimension(dist%s, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: forces
     PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walldata
 
     ! local
     PetscInt i,j,k,m,n,d
     PetscScalar,dimension(0:dist%b,  dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: tmp
-    PetscScalar gw(1:dist%s)
     PetscErrorCode ierr
 
-    call DistributionGatherValueToDirection(dist, walls, tmp)
+    call DistributionGatherValueToDirection(dist, walldata, tmp)
 
-    do m=1,dist%s
-       gw(m) = phases(m)%gw
-    end do
-    
     do k=dist%info%zs,dist%info%ze
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
-    if (walls(i,j,k).eq.0) then
+    if (walldata(i,j,k).eq.0) then
        do d=1,dist%info%ndims
           do n=1,2*dist%info%ndims
-             forces(:,d,i,j,k) = forces(:,d,i,j,k) &
-                  - rho(:,i,j,k)*tmp(n,i,j,k)*dist%disc%ci(n,d)*gw
+            if ((tmp(n,i,j,k) > 0.d0).and.(tmp(n,i,j,k) < 998.d0)) then
+              forces(:,d,i,j,k) = forces(:,d,i,j,k) &
+                  - rho(:,i,j,k)*walls%minerals(int(tmp(n,i,j,k)))%gw(:)
+            end if
           end do
           do n=2*dist%info%ndims+1,dist%b
-             forces(:,d,i,j,k) = forces(:,d,i,j,k) &
-                  - 0.5*rho(:,i,j,k)*tmp(n,i,j,k)*dist%disc%ci(n,d)*gw
+            if ((tmp(n,i,j,k) > 0.d0).and.(tmp(n,i,j,k) < 998.d0)) then
+              forces(:,d,i,j,k) = forces(:,d,i,j,k) &
+                   - 0.5*rho(:,i,j,k)*walls%minerals(int(tmp(n,i,j,k)))%gw(:)
+            end if
           end do
        end do
     end if
@@ -1362,29 +1363,25 @@ contains
     end do
   end subroutine LBMAddFluidSolidForcesD3
 
-  subroutine LBMAddFluidSolidForcesD2(dist, phases, rho, walls, forces)
+  subroutine LBMAddFluidSolidForcesD2(dist, phases, walls, rho, walldata, forces)
     type(distribution_type) dist
     type(phase_type) phases(dist%s)
+    type(walls_type) walls
     PetscScalar,dimension(dist%s, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: forces
     PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: walls
+         dist%info%gys:dist%info%gye):: walldata
 
     ! local
     PetscInt i,j,m,n,d
     PetscScalar,dimension(0:dist%b,  dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: tmp
-    PetscScalar gw(1:dist%s)
     PetscErrorCode ierr
 
-    call DistributionGatherValueToDirection(dist, walls, tmp)
+    call DistributionGatherValueToDirection(dist, walldata, tmp)
 
-    do m=1,dist%s
-       gw(m) = phases(m)%gw
-    end do
-    
     ! The weights in here were 1 for the neighbors and 0.25 for the next 
     ! nearet neighbors without the HOD in FF.  Now I am setting the weights
     ! to 1/3 and 1/12 to be consisitent with the weight in the 4th order 
@@ -1392,15 +1389,19 @@ contains
 
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
-    if (walls(i,j).eq.0) then
+    if (walldata(i,j).eq.0) then
        do d=1,dist%info%ndims
           do n=1,2*dist%info%ndims
-             forces(:,d,i,j) = forces(:,d,i,j) &
-                  - 1./3.*rho(:,i,j)*tmp(n,i,j)*dist%disc%ci(n,d)*gw
+            if ((tmp(n,i,j) > 0.d0).and.(tmp(n,i,j) < 998.d0)) then
+              forces(:,d,i,j) = forces(:,d,i,j) &
+                   - 1./3.*rho(:,i,j)*walls%minerals(int(tmp(n,i,j)))%gw(:)
+            end if
           end do
           do n=2*dist%info%ndims+1,dist%b
-             forces(:,d,i,j) = forces(:,d,i,j) &
-                  - 1./12.*rho(:,i,j)*tmp(n,i,j)*dist%disc%ci(n,d)*gw
+            if ((tmp(n,i,j) > 0.d0).and.(tmp(n,i,j) < 998.d0)) then
+              forces(:,d,i,j) = forces(:,d,i,j) &
+                   - 1./12.*rho(:,i,j)*walls%minerals(int(tmp(n,i,j)))%gw(:)
+            end if
           end do
        end do
     end if
