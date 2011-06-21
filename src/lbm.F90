@@ -23,6 +23,7 @@
     use LBM_Discretization_module
     use LBM_Grid_module
     use LBM_Distribution_Function_module
+    use LBM_Walls_module
     use LBM_Flow_module
     use LBM_Transport_module
     use LBM_IO_module
@@ -37,13 +38,10 @@
        MPI_Comm comm
        type(options_type),pointer:: options
        type(grid_type),pointer:: grid
+       type(walls_type), pointer :: walls
        type(flow_type),pointer:: flow
        type(transport_type),pointer:: transport
        type(io_type),pointer :: io
-
-       Vec walls
-       Vec walls_g
-       PetscScalar,pointer:: walls_a(:)
 
        character(len=MAXWORDLENGTH) name       
     end type lbm_type
@@ -71,13 +69,10 @@
          LBMInit, &
          LBMRun, &
          LBMOutput, &
-         LBMInitializeWalls, &
-         LBMInitializeWallsPetsc, &
          LBMInitializeState, &
          LBMInitializeStateRestarted, &
          LBMLoadSteadyStateFlow, &
-         LBMGetCorners, &
-         LBMCommunicateWalls
+         LBMGetCorners
 
   contains
     function LBMCreate(comm) result(lbm)
@@ -90,12 +85,9 @@
       lbm%options => OptionsCreate(comm)
       lbm%grid => GridCreate(comm)
       lbm%io => IOCreate(comm)
+      lbm%walls => WallsCreate(lbm%comm)
       lbm%flow => FlowCreate(lbm%comm)
       nullify(lbm%transport)
-
-      lbm%walls = 0
-      lbm%walls_g = 0
-      nullify(lbm%walls_a)
 
       lbm%name = ''
     end function LBMCreate
@@ -104,9 +96,6 @@
     subroutine LBMDestroy(lbm, ierr)
       type(lbm_type) lbm
       PetscErrorCode ierr
-
-      if (lbm%walls /= 0) call VecDestroy(lbm%walls,ierr)
-      if (lbm%walls_g /= 0) call VecDestroy(lbm%walls_g,ierr)
 
       if (associated(lbm%flow)) call FlowDestroy(lbm%flow,ierr)
       if (associated(lbm%transport)) call TransportDestroy(lbm%transport,ierr)
@@ -131,6 +120,10 @@
       call GridSetFromOptions(lbm%grid, options, ierr);CHKERRQ(ierr)
       call GridSetName(lbm%grid, lbm%name)
       call GridSetPhysicalScales(lbm%grid, ierr);CHKERRQ(ierr)
+
+      call WallsSetGrid(lbm%walls, lbm%grid)
+      call WallsSetFromOptions(lbm%walls, options, ierr);CHKERRQ(ierr)
+      
       call FlowSetGrid(lbm%flow, lbm%grid)
       call FlowSetFromOptions(lbm%flow, options, ierr);CHKERRQ(ierr)
       call FlowSetPhysicalScales(lbm%flow,ierr);CHKERRQ(ierr)
@@ -148,6 +141,9 @@
       zero = 0.d0
 
       ! set up the DA sizes
+      print*, 'onedof:', ONEDOF
+      print*, 'nx:', lbm%grid%info%NX
+      print*, 'SHAPE:', SHAPE(lbm%grid%da_sizes)
       lbm%grid%da_sizes(ONEDOF) = 1
       lbm%grid%da_sizes(NPHASEDOF) = lbm%flow%nphases
       lbm%grid%da_sizes(NPHASEXBDOF) = lbm%flow%nphases*(lbm%flow%disc%b+1)
@@ -158,36 +154,16 @@
       end if
 
       call GridSetUp(lbm%grid)
+      call WallsSetUp(lbm%walls)
       call FlowSetUp(lbm%flow)
       if (associated(lbm%transport)) then
          call TransportSetUp(lbm%transport)
       end if
 
-      ! get vectors
-      call DMCreateLocalVector(lbm%grid%da(ONEDOF), lbm%walls, ierr)
-      call DMCreateGlobalVector(lbm%grid%da(ONEDOF), lbm%walls_g, ierr)
-
-      call VecSet(lbm%walls_g, zero, ierr)
-      call VecSet(lbm%walls, zero, ierr)
-
-      call PetscObjectSetName(lbm%walls_g, trim(lbm%name)//'walls', ierr)
-
       CHKERRQ(ierr)
       return
     end subroutine LBMSetUp
     
-    subroutine LBMCommunicateWalls(lbm)
-      type(lbm_type) lbm
-      PetscErrorCode ierr
-
-      call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-      call DMDALocalToLocalBegin(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, &
-           lbm%walls, ierr)
-      call DMDALocalToLocalEnd(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, &
-           lbm%walls, ierr)
-      call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-    end subroutine LBMCommunicateWalls
-
     subroutine LBMInit1(lbm, istep)
       type(lbm_type) lbm
       PetscInt istep
@@ -200,8 +176,7 @@
       PetscErrorCode ierr
       PetscBool supress_output
 
-      call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-      call LBMCommunicateWalls(lbm)
+      call WallsCommunicate(lbm%walls)
 
       if (istep.eq.0) then
          call DMDALocalToLocalBegin(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi, &
@@ -230,33 +205,25 @@
 
          if ((.not.lbm%options%steadystate).or. &
               (lbm%options%steadystate_rampup_steps > 0)) then
-            call FlowUpdateMoments(lbm%flow, lbm%walls_a)
-            call FlowUpdateDiagnostics(lbm%flow, lbm%walls_a)
+            call FlowUpdateMoments(lbm%flow, lbm%walls%walls_a)
+            call FlowUpdateDiagnostics(lbm%flow, lbm%walls%walls_a)
          end if
          if (.not.supress_output) then
-            call FlowOutputDiagnostics(lbm%flow, lbm%walls_a, lbm%io)
+            call FlowOutputDiagnostics(lbm%flow, lbm%walls%walls_a, lbm%io)
          end if
 
          if (associated(lbm%transport)) then
-            call TransportUpdateMoments(lbm%transport, lbm%walls_a)
-            call TransportUpdateDiagnostics(lbm%transport, lbm%walls_a)
+            call TransportUpdateMoments(lbm%transport, lbm%walls%walls_a)
+            call TransportUpdateDiagnostics(lbm%transport, lbm%walls%walls_a)
             if (.not.supress_output) then
-               call TransportOutputDiagnostics(lbm%transport, lbm%walls_a, lbm%io)
+               call TransportOutputDiagnostics(lbm%transport, lbm%walls%walls_a, lbm%io)
             end if
          end if
 
          if (.not.supress_output) then
-            ! view walls
-            call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-            call DMLocalToGlobalBegin(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, &
-                 lbm%walls_g, ierr)
-            call DMLocalToGlobalEnd(lbm%grid%da(ONEDOF), lbm%walls, INSERT_VALUES, &
-                 lbm%walls_g, ierr)
-            call IOView(lbm%io, lbm%walls_g, 'walls')
-            call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-
-            ! view grid coordinates
-            call GridViewCoordinates(lbm%grid, lbm%io)
+           call WallsOutputDiagnostics(lbm%walls, lbm%io)
+           ! view grid coordinates
+           call GridViewCoordinates(lbm%grid, lbm%io)
          end if
       else
          ! just get arrays
@@ -304,51 +271,51 @@
          ! internal fluid-solid boundary conditions
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
-            call FlowBounceback(lbm%flow, lbm%walls_a)
+            call FlowBounceback(lbm%flow, lbm%walls%walls_a)
          end if
 
          if (associated(lbm%transport)) then
-            call TransportReactWithWalls(lbm%transport, lbm%walls_a)
+            call TransportReactWithWalls(lbm%transport, lbm%walls%walls_a)
          end if
 
          ! external boundary conditions
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
-            call FlowApplyBCs(lbm%flow, lbm%walls_a)
+            call FlowApplyBCs(lbm%flow, lbm%walls%walls_a)
          end if
 
          if (associated(lbm%transport)) then
-            call TransportApplyBCs(lbm%transport, lbm%walls_a)
+            call TransportApplyBCs(lbm%transport, lbm%walls%walls_a)
          end if
 
          ! update moments for rho, psi
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
-            call FlowUpdateMoments(lbm%flow, lbm%walls_a)
+            call FlowUpdateMoments(lbm%flow, lbm%walls%walls_a)
          end if
 
          if (associated(lbm%transport)) then
-            call TransportUpdateMoments(lbm%transport, lbm%walls_a)
+            call TransportUpdateMoments(lbm%transport, lbm%walls%walls_a)
          end if
 
          ! add in momentum forcing terms
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
             call DistributionCommunicateDensity(lbm%flow%distribution)
-            call FlowCalcForces(lbm%flow, lbm%walls_a)
+            call FlowCalcForces(lbm%flow, lbm%walls%walls_a)
             call BCZeroForces(lbm%flow%bc, lbm%flow%forces, lbm%flow%distribution)
          ! reaction?
 
          ! collision
-            call FlowCollision(lbm%flow, lbm%walls_a)
+            call FlowCollision(lbm%flow, lbm%walls%walls_a)
          end if
 
          if (associated(lbm%transport)) then
             if ((.not.lbm%options%steadystate).or. &
                  (lcv_step < lbm%options%steadystate_rampup_steps)) then
-               call FlowUpdateDiagnostics(lbm%flow, lbm%walls_a)
+               call FlowUpdateDiagnostics(lbm%flow, lbm%walls%walls_a)
             end if
-            call TransportCollision(lbm%transport, lbm%walls_a, lbm%flow)
+            call TransportCollision(lbm%transport, lbm%walls%walls_a, lbm%flow)
          end if
 
          ! communicate, update fi
@@ -390,115 +357,26 @@
       endif
       if ((.not.lbm%options%steadystate).or. &
            (istep < lbm%options%steadystate_rampup_steps)) then
-         call FlowUpdateDiagnostics(lbm%flow, lbm%walls_a)
-         call FlowOutputDiagnostics(lbm%flow, lbm%walls_a, lbm%io)
+         call FlowUpdateDiagnostics(lbm%flow, lbm%walls%walls_a)
+         call FlowOutputDiagnostics(lbm%flow, lbm%walls%walls_a, lbm%io)
       end if
       
       if (associated(lbm%transport)) then
-         call TransportUpdateDiagnostics(lbm%transport, lbm%walls_a)
-         call TransportOutputDiagnostics(lbm%transport, lbm%walls_a, lbm%io)
+         call TransportUpdateDiagnostics(lbm%transport, lbm%walls%walls_a)
+         call TransportOutputDiagnostics(lbm%transport, lbm%walls%walls_a, lbm%io)
       end if
       call IOIncrementCounter(lbm%io)
     end subroutine LBMOutput
-
-    subroutine LBMInitializeWalls(lbm)
-      type(lbm_type) lbm
-      external :: initialize_walls
-      PetscErrorCode ierr
-      PetscInt vsize
-
-      if (lbm%options%walls_type.eq.WALLS_TYPE_PETSC) then
-         call LBMInitializeWallsPetsc(lbm, lbm%options%walls_file)
-      else
-         call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-         call initialize_walls(lbm%walls_a, lbm%options%walls_file, lbm%grid%info)
-         call LBMSetGhostWalls(lbm, lbm%walls_a)
-         call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-      end if
-    end subroutine LBMInitializeWalls
-
-    subroutine LBMInitializeWallsPetsc(lbm, filename)
-      type(lbm_type) lbm
-      character(len=MAXSTRINGLENGTH) filename
-      
-      PetscViewer viewer
-      PetscErrorCode ierr
-      call PetscViewerBinaryOpen(lbm%comm, filename, FILE_MODE_READ, viewer, ierr)
-      call VecLoad(lbm%walls_g, viewer, ierr)
-      call PetscViewerDestroy(viewer, ierr)
-      call DMGlobalToLocalBegin(lbm%grid%da(ONEDOF), lbm%walls_g, INSERT_VALUES, lbm%walls, ierr)
-      call DMGlobalToLocalEnd(lbm%grid%da(ONEDOF), lbm%walls_g, INSERT_VALUES, lbm%walls, ierr)
-      call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-      call LBMSetGhostWalls(lbm, lbm%walls_a)
-      call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-    end subroutine LBMInitializeWallsPetsc
-
-    subroutine LBMSetGhostWalls(lbm, walls)
-      type(lbm_type) lbm
-      PetscScalar,dimension(lbm%grid%info%gxyzl):: walls
-      select case(lbm%grid%info%ndims)
-      case (2)
-         call LBMSetGhostWallsD2(lbm, walls, lbm%grid%info)
-      case (3)
-         call LBMSetGhostWallsD3(lbm, walls, lbm%grid%info)
-      end select
-    end subroutine LBMSetGhostWalls 
-
-    subroutine LBMSetGhostWallsD2(lbm, walls, info)
-      use LBM_Info_module
-      type(lbm_type) lbm
-      type(info_type) info
-      PetscScalar,dimension(info%gxs:info%gxe,info%gys:info%gye):: walls
-      if ((info%xs.eq.1).and.(.not.info%periodic(X_DIRECTION))) then
-         walls(info%gxs:info%xs-1,:) = 999.
-      end if
-      if ((info%xe.eq.info%NX).and.(.not.info%periodic(X_DIRECTION))) then
-         walls(info%xe+1:info%gxe,:) = 999.
-      end if
-      if ((info%ys.eq.1).and.(.not.info%periodic(Y_DIRECTION))) then
-         walls(:,info%gys:info%ys-1) = 999.
-      end if
-      if ((info%ye.eq.info%NY).and.(.not.info%periodic(Y_DIRECTION))) then
-         walls(:,info%ye+1:info%gye) = 999.
-      end if
-    end subroutine LBMSetGhostWallsD2
-
-    subroutine LBMSetGhostWallsD3(lbm, walls, info)
-      use LBM_Info_module
-      type(lbm_type) lbm
-      type(info_type) info
-      PetscScalar,dimension(info%gxs:info%gxe,info%gys:info%gye,info%gzs:info%gze):: walls
-      if ((info%xs.eq.1).and.(.not.info%periodic(X_DIRECTION))) then
-         walls(info%gxs:info%xs-1,:,:) = 999.
-      end if
-      if ((info%xe.eq.info%NX).and.(.not.info%periodic(X_DIRECTION))) then
-         walls(info%xe+1:info%gxe,:,:) = 999.
-      end if
-      if ((info%ys.eq.1).and.(.not.info%periodic(Y_DIRECTION))) then
-         walls(:,info%gys:info%ys-1,:) = 999.
-      end if
-      if ((info%ye.eq.info%NY).and.(.not.info%periodic(Y_DIRECTION))) then
-         walls(:,info%ye+1:info%gye,:) = 999.
-      end if
-      if ((info%zs.eq.1).and.(.not.info%periodic(Z_DIRECTION))) then
-         walls(:,:,info%gzs:info%zs-1) = 999.
-      end if
-      if ((info%ze.eq.info%NZ).and.(.not.info%periodic(Z_DIRECTION))) then
-         walls(:,:,info%ze+1:info%gze) = 999.
-      end if
-    end subroutine LBMSetGhostWallsD3
 
     subroutine LBMInitializeState_Flow(lbm, init_subroutine)
       type(lbm_type) lbm
       external :: init_subroutine
       PetscErrorCode ierr
 
-      call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
       call FlowGetArrays(lbm%flow, ierr)
       call init_subroutine(lbm%flow%distribution%fi_a, lbm%flow%distribution%rho_a, &
-           lbm%flow%distribution%flux, lbm%walls_a, lbm%flow%distribution, &
+           lbm%flow%distribution%flux, lbm%walls%walls_a, lbm%flow%distribution, &
            lbm%flow%phases, lbm%options)
-      call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
       call FlowRestoreArrays(lbm%flow, ierr)
       return
     end subroutine LBMInitializeState_Flow
@@ -508,12 +386,10 @@
       external :: flow_subroutine, trans_subroutine
       PetscErrorCode ierr
 
-      call DMDAVecGetArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-      
       ! flow init
       call FlowGetArrays(lbm%flow, ierr)
       call flow_subroutine(lbm%flow%distribution%fi_a, lbm%flow%distribution%rho_a, &
-           lbm%flow%distribution%flux, lbm%walls_a, lbm%flow%distribution, &
+           lbm%flow%distribution%flux, lbm%walls%walls_a, lbm%flow%distribution, &
            lbm%flow%phases, lbm%options)
       call FlowRestoreArrays(lbm%flow, ierr)
 
@@ -521,11 +397,8 @@
       call TransportGetArrays(lbm%transport, ierr)
       call trans_subroutine(lbm%transport%distribution%fi_a, &
            lbm%transport%distribution%rho_a, lbm%transport%distribution%flux, &
-           lbm%walls_a, lbm%transport%distribution, lbm%transport%species, lbm%options)
+           lbm%walls%walls_a, lbm%transport%distribution, lbm%transport%species, lbm%options)
       call TransportRestoreArrays(lbm%transport, ierr)
-
-      call DMDAVecRestoreArrayF90(lbm%grid%da(ONEDOF), lbm%walls, lbm%walls_a, ierr)
-      return
     end subroutine LBMInitializeState_FlowTransport
 
     ! function LBMGetDMByIndex( lbm, dm_index ) result(dm)

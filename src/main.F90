@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
-!!!     last modified:   20 May 2011
-!!!       at:            12:21:06 MDT
+!!!     last modified:   21 June 2011
+!!!       at:            10:58:13 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -53,13 +53,6 @@ program MAIN
   call LBMSetFromOptions(lbm, options, ierr);CHKERRQ(ierr)
   call LBMSetUp(lbm)
 
-  ! --- initialize state
-  ! walls
-  if (lbm%grid%info%rank.eq.0) then
-     write(*,*) 'initialization of walls'
-  end if
-  call LBMInitializeWalls(lbm)
-  
   ! set boundary conditions
   call BCSetValues(lbm%flow%bc, lbm%flow%distribution, options, initialize_bcs)
   if (associated(lbm%transport)) then

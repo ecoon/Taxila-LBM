@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         09 December 2010
 !!!       on:            14:16:32 MST
-!!!     last modified:   23 May 2011
-!!!       at:            15:33:32 MDT
+!!!     last modified:   21 June 2011
+!!!       at:            10:53:48 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -34,15 +34,14 @@
        PetscInt, pointer:: waypoints(:)
 
        character(len=MAXSTRINGLENGTH):: output_prefix
-       character(len=MAXSTRINGLENGTH):: walls_file
        PetscBool mpiio
-       PetscInt walls_type
 
        PetscInt flow_disc
        PetscInt transport_disc
        PetscInt ndims
        PetscInt nphases
        PetscInt nspecies
+       PetscInt nminerals
        PetscInt flow_relaxation_mode
        PetscBool steadystate
        PetscInt steadystate_rampup_steps
@@ -78,12 +77,11 @@
       nullify(options%waypoints)
 
       options%output_prefix = 'test_solution/'
-      options%walls_file = 'geometry.dat'
-      options%walls_type = WALLS_TYPE_PETSC
       
       options%flow_disc = NULL_DISCRETIZATION
       options%transport_disc = NULL_DISCRETIZATION
       options%ndims = 0
+      options%nminerals = 1
       options%nphases = 1
       options%nspecies = 0
       options%flow_relaxation_mode = RELAXATION_MODE_SRT
@@ -144,22 +142,18 @@
            "prefix for solution data output files\n", ierr)
       call PetscOptionsGetString(options%my_prefix, '-output_file_prefix', options%output_prefix, flag, ierr)
 
-      if (help) then
-         call PetscPrintf(options%comm, "  -walls_file=<geometry.dat>: filename for porescale walls \n", ierr)
-      end if
-      call PetscOptionsGetString(options%my_prefix, '-walls_file', options%walls_file, flag, ierr)
-
       if (help) call PetscPrintf(options%comm, "  -mpiio: use mpiio for i/o\n", ierr)
       call PetscOptionsGetBool(options%my_prefix, '-mpiio', options%mpiio, flag, ierr)
-
-      if (help) call PetscPrintf(options%comm, "  -walls_type <1>: enum: (1) use "// &
-           "PETSc .dat file, (2) from initialize_walls subroutine\n", ierr)
-      call PetscOptionsGetInt(options%my_prefix, '-walls_type', options%walls_type, flag, ierr)
 
       if (help) call PetscPrintf(options%comm, &
            "  -flow_relaxation_mode <0>: flow relaxation as SRT=0, MRT=1\n", ierr)
       call PetscOptionsGetInt(options%my_prefix, '-flow_relaxation_mode', &
            options%flow_relaxation_mode, flag, ierr)
+
+      ! walls 
+      if (help) call PetscPrintf(options%comm, &
+           "  -nminerals <1>: number of minerals\n", ierr)
+      call PetscOptionsGetInt(options%my_prefix,'-nminerals', options%nminerals,flag,ierr)
 
       ! set the flow discretization
       if (help) call PetscPrintf(options%comm, &
