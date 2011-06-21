@@ -6,7 +6,7 @@
 !!!     created:         21 June 2011
 !!!       on:            10:07:45 MDT
 !!!     last modified:   21 June 2011
-!!!       at:            11:01:14 MDT
+!!!       at:            17:03:02 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -152,12 +152,10 @@ contains
            walls%walls, ierr)
       call DMDAVecGetArrayF90(walls%grid%da(ONEDOF), walls%walls, walls%walls_a, ierr)
       call WallsSetGhostNodes(walls, walls%walls_a)
-      call DMDAVecRestoreArrayF90(walls%grid%da(ONEDOF), walls%walls, walls%walls_a, ierr)
     else
       call DMDAVecGetArrayF90(walls%grid%da(ONEDOF), walls%walls, walls%walls_a, ierr)
       call initialize_walls(walls%walls_a, walls%filename, walls%grid%info)
       call WallsSetGhostNodes(walls, walls%walls_a)
-      call DMDAVecRestoreArrayF90(walls%grid%da(ONEDOF), walls%walls, walls%walls_a, ierr)
     end if
   end subroutine WallsSetUp
 
