@@ -6,7 +6,7 @@
 !!!     created:         22 June 2011
 !!!       on:            09:37:52 MDT
 !!!     last modified:   22 June 2011
-!!!       at:            10:52:39 MDT
+!!!       at:            11:53:45 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -79,81 +79,83 @@ module LBM_Logging_module
 contains
   subroutine LoggerCreate()
     PetscErrorCode ierr
-    allocate(logger)
-    call PetscLogStageRegister('Init Stage', logger%stage(INIT_STAGE), ierr)
-    call PetscLogStageRegister('Streaming Stage', logger%stage(STREAM_STAGE), ierr)
-    call PetscLogStageRegister('BC Stage', logger%stage(BC_STAGE), ierr)
-    call PetscLogStageRegister('Forcing Stage', logger%stage(FORCING_STAGE), ierr)
-    call PetscLogStageRegister('Collision Stage', logger%stage(COLLISION_STAGE), ierr)
-    call PetscLogStageRegister('Comm Stage', &
-         logger%stage(COMMUNICATION_STAGE), ierr)
-    call PetscLogStageRegister('Output Stage', logger%stage(OUTPUT_STAGE), ierr)
-    call PetscLogStageRegister('Destroy Stage', logger%stage(DESTROY_STAGE), ierr)
-
-    call PetscClassIdRegister('LBM', logger%class_lbm, ierr)
-
-    call PetscLogEventRegister('Init options', logger%class_lbm, &
-         logger%event_init_options, ierr)
-    call PetscLogEventRegister('Init SetFromOptions()', logger%class_lbm, &
-         logger%event_init_setfromoptions, ierr)
-    call PetscLogEventRegister('Init Grid', logger%class_lbm, &
-         logger%event_init_gridsetup, ierr)
-    call PetscLogEventRegister('Init Walls', logger%class_lbm, &
-         logger%event_init_wallssetup, ierr)
-    call PetscLogEventRegister('Init Flow', logger%class_lbm, &
-         logger%event_init_flowsetup, ierr)
-    call PetscLogEventRegister('Init Transport', logger%class_lbm, &
-         logger%event_init_transetup, ierr)
-    call PetscLogEventRegister('Init BCs', logger%class_lbm, &
-         logger%event_init_bcsetup, ierr)
-    call PetscLogEventRegister('Init ICs', logger%class_lbm, &
-         logger%event_init_icsetup, ierr)
-
-    call PetscLogEventRegister('Update Moments', logger%class_lbm, &
+    if (.not.associated(logger)) then
+      allocate(logger)
+      call PetscLogStageRegister('LBM Init Stage', logger%stage(INIT_STAGE), ierr)
+      call PetscLogStageRegister('Streaming Stage', logger%stage(STREAM_STAGE), ierr)
+      call PetscLogStageRegister('BC Stage', logger%stage(BC_STAGE), ierr)
+      call PetscLogStageRegister('Forcing Stage', logger%stage(FORCING_STAGE), ierr)
+      call PetscLogStageRegister('Collision Stage', logger%stage(COLLISION_STAGE), ierr)
+      call PetscLogStageRegister('Comm Stage', &
+           logger%stage(COMMUNICATION_STAGE), ierr)
+      call PetscLogStageRegister('LBM Out Stage', logger%stage(OUTPUT_STAGE), ierr)
+      call PetscLogStageRegister('Destroy Stage', logger%stage(DESTROY_STAGE), ierr)
+      
+      call PetscClassIdRegister('LBM', logger%class_lbm, ierr)
+      
+      call PetscLogEventRegister('Init options', logger%class_lbm, &
+           logger%event_init_options, ierr)
+      call PetscLogEventRegister('Init SetFromOptions()', logger%class_lbm, &
+           logger%event_init_setfromoptions, ierr)
+      call PetscLogEventRegister('Init Grid', logger%class_lbm, &
+           logger%event_init_gridsetup, ierr)
+      call PetscLogEventRegister('Init Walls', logger%class_lbm, &
+           logger%event_init_wallssetup, ierr)
+      call PetscLogEventRegister('Init Flow', logger%class_lbm, &
+           logger%event_init_flowsetup, ierr)
+      call PetscLogEventRegister('Init Transport', logger%class_lbm, &
+           logger%event_init_transetup, ierr)
+      call PetscLogEventRegister('Init BCs', logger%class_lbm, &
+           logger%event_init_bcsetup, ierr)
+      call PetscLogEventRegister('Init ICs', logger%class_lbm, &
+           logger%event_init_icsetup, ierr)
+      
+      call PetscLogEventRegister('Update Moments', logger%class_lbm, &
          logger%event_moments, ierr)
-    call PetscLogEventRegister('Update Soln', logger%class_lbm, &
-         logger%event_diagnostics, ierr)
+      call PetscLogEventRegister('Update Soln', logger%class_lbm, &
+           logger%event_diagnostics, ierr)
+      
+      call PetscLogEventRegister('Stream Flow', logger%class_lbm, &
+           logger%event_stream_flow, ierr)
+      call PetscLogEventRegister('Stream Transport', logger%class_lbm, &
+           logger%event_stream_tran, ierr)
+      
+      call PetscLogEventRegister('BC Flow Bounceback', logger%class_lbm, &
+           logger%event_bc_bounceback, ierr)
+      call PetscLogEventRegister('BC Transport React with Walls', logger%class_lbm, &
+           logger%event_bc_tranwallreact, ierr)
+      call PetscLogEventRegister('BC Exterior Flow', logger%class_lbm, &
+           logger%event_bc_flow, ierr)
+      call PetscLogEventRegister('BC Exterior Transport', logger%class_lbm, &
+           logger%event_bc_tran, ierr)
+      
+      call PetscLogEventRegister('Fluid-Fluid Forcing', logger%class_lbm, &
+           logger%event_forcing_fluidfluid, ierr)
+      call PetscLogEventRegister('Fluid-Solid Forcing', logger%class_lbm, &
+           logger%event_forcing_fluidsolid, ierr)
+      call PetscLogEventRegister('Body Forces', logger%class_lbm, &
+           logger%event_forcing_body, ierr)
+      
+      call PetscLogEventRegister('Collision Flow', logger%class_lbm, &
+           logger%event_collision_flow, ierr)
+      call PetscLogEventRegister('Collision Transport', logger%class_lbm, &
+           logger%event_collision_tran, ierr)
+      
+      call PetscLogEventRegister('Communicate f_i', logger%class_lbm, &
+           logger%event_communicate_fi, ierr)
+      call PetscLogEventRegister('Communicate density', logger%class_lbm, &
+           logger%event_communicate_rho, ierr)
 
-    call PetscLogEventRegister('Stream Flow', logger%class_lbm, &
-         logger%event_stream_flow, ierr)
-    call PetscLogEventRegister('Stream Transport', logger%class_lbm, &
-         logger%event_stream_tran, ierr)
-
-    call PetscLogEventRegister('BC Flow Bounceback', logger%class_lbm, &
-         logger%event_bc_bounceback, ierr)
-    call PetscLogEventRegister('BC Transport React with Walls', logger%class_lbm, &
-         logger%event_bc_tranwallreact, ierr)
-    call PetscLogEventRegister('BC Exterior Flow', logger%class_lbm, &
-         logger%event_bc_flow, ierr)
-    call PetscLogEventRegister('BC Exterior Transport', logger%class_lbm, &
-         logger%event_bc_tran, ierr)
-
-    call PetscLogEventRegister('Fluid-Fluid Forcing', logger%class_lbm, &
-         logger%event_forcing_fluidfluid, ierr)
-    call PetscLogEventRegister('Fluid-Solid Forcing', logger%class_lbm, &
-         logger%event_forcing_fluidsolid, ierr)
-    call PetscLogEventRegister('Body Forces', logger%class_lbm, &
-         logger%event_forcing_body, ierr)
-
-    call PetscLogEventRegister('Collision Flow', logger%class_lbm, &
-         logger%event_collision_flow, ierr)
-    call PetscLogEventRegister('Collision Transport', logger%class_lbm, &
-         logger%event_collision_tran, ierr)
-
-    call PetscLogEventRegister('Communicate f_i', logger%class_lbm, &
-         logger%event_communicate_fi, ierr)
-    call PetscLogEventRegister('Communicate density', logger%class_lbm, &
-         logger%event_communicate_rho, ierr)
-
-    call PetscLogEventRegister('Output Soln', logger%class_lbm, &
-         logger%event_output, ierr)
-    call PetscLogEventRegister('Output Grid', logger%class_lbm, &
-         logger%event_output_grid, ierr)
-    call PetscLogEventRegister('Output Walls', logger%class_lbm, &
-         logger%event_output_walls, ierr)
-
-    call PetscLogEventRegister('Destruction', logger%class_lbm, &
-         logger%event_cleanup, ierr)
+      call PetscLogEventRegister('Output Soln', logger%class_lbm, &
+           logger%event_output, ierr)
+      call PetscLogEventRegister('Output Grid', logger%class_lbm, &
+           logger%event_output_grid, ierr)
+      call PetscLogEventRegister('Output Walls', logger%class_lbm, &
+           logger%event_output_walls, ierr)
+      
+      call PetscLogEventRegister('Destruction', logger%class_lbm, &
+           logger%event_cleanup, ierr)
+    end if
   end subroutine LoggerCreate
   
   subroutine LoggerDestroy()
