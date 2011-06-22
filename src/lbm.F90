@@ -29,6 +29,7 @@
     use LBM_IO_module
     use LBM_Options_module
     use LBM_BC_module
+    use LBM_Logging_module
     implicit none
 
     private
@@ -36,11 +37,11 @@
 #include "lbm_definitions.h"
     type, public:: lbm_type
        MPI_Comm comm
-       type(options_type),pointer:: options
-       type(grid_type),pointer:: grid
+       type(options_type),pointer :: options
+       type(grid_type),pointer :: grid
        type(walls_type), pointer :: walls
-       type(flow_type),pointer:: flow
-       type(transport_type),pointer:: transport
+       type(flow_type),pointer :: flow
+       type(transport_type),pointer :: transport
        type(io_type),pointer :: io
 
        character(len=MAXWORDLENGTH) name       
@@ -137,6 +138,8 @@
     subroutine LBMSetUp(lbm)
       type(lbm_type) lbm
       PetscScalar zero
+      PetscErrorCode ierr
+
       zero = 0.d0
 
       ! set up the DA sizes
@@ -149,11 +152,21 @@
          lbm%grid%da_sizes(NSPECIEXBDOF) = lbm%transport%nspecies*(lbm%transport%disc%b+1)
       end if
 
+      call PetscLogEventBegin(logger%event_init_gridsetup,ierr)
       call GridSetUp(lbm%grid)
+      call PetscLogEventEnd(logger%event_init_gridsetup,ierr)
+
+      call PetscLogEventBegin(logger%event_init_wallssetup,ierr)
       call WallsSetUp(lbm%walls)
+      call PetscLogEventEnd(logger%event_init_wallssetup,ierr)
+
+      call PetscLogEventBegin(logger%event_init_flowsetup,ierr)
       call FlowSetUp(lbm%flow)
+      call PetscLogEventEnd(logger%event_init_flowsetup,ierr)
       if (associated(lbm%transport)) then
+         call PetscLogEventBegin(logger%event_init_transetup,ierr)
          call TransportSetUp(lbm%transport)
+         call PetscLogEventEnd(logger%event_init_transetup,ierr)
       end if
       return
     end subroutine LBMSetUp
@@ -199,11 +212,17 @@
 
          if ((.not.lbm%options%steadystate).or. &
               (lbm%options%steadystate_rampup_steps > 0)) then
+            call PetscLogEventBegin(logger%event_moments,ierr)
             call FlowUpdateMoments(lbm%flow, lbm%walls%walls_a)
+            call PetscLogEventEnd(logger%event_moments,ierr)
+            call PetscLogEventBegin(logger%event_diagnostics,ierr)
             call FlowUpdateDiagnostics(lbm%flow, lbm%walls%walls_a)
+            call PetscLogEventEnd(logger%event_diagnostics,ierr)
          end if
          if (.not.supress_output) then
+            call PetscLogEventBegin(logger%event_output,ierr)
             call FlowOutputDiagnostics(lbm%flow, lbm%walls%walls_a, lbm%io)
+            call PetscLogEventEnd(logger%event_output,ierr)
          end if
 
          if (associated(lbm%transport)) then
@@ -215,9 +234,13 @@
          end if
 
          if (.not.supress_output) then
+           call PetscLogEventBegin(logger%event_output_walls,ierr)
            call WallsOutputDiagnostics(lbm%walls, lbm%io)
+           call PetscLogEventEnd(logger%event_output_walls,ierr)
            ! view grid coordinates
+           call PetscLogEventBegin(logger%event_output_grid,ierr)
            call GridViewCoordinates(lbm%grid, lbm%io)
+           call PetscLogEventEnd(logger%event_output_grid,ierr)
          end if
       else
          ! just get arrays
@@ -252,87 +275,136 @@
       timername = trim(lbm%name)//'Simulation'
       timer1 => TimingCreate(lbm%comm, timername)
       do lcv_step = istep+1,kstep
+         call PetscLogStagePop(ierr)
+         call PetscLogStagePush(logger%stage(STREAM_STAGE), ierr)
          ! streaming
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
+            call PetscLogEventBegin(logger%event_stream_flow,ierr)
             call FlowStream(lbm%flow)
+            call PetscLogEventEnd(logger%event_stream_flow,ierr)
          end if
 
          if (associated(lbm%transport)) then
+            call PetscLogEventBegin(logger%event_stream_tran,ierr)
             call TransportStream(lbm%transport)
+            call PetscLogEventEnd(logger%event_stream_tran,ierr)
          end if
 
+         call PetscLogStagePop(ierr)
+         call PetscLogStagePush(logger%stage(BC_STAGE), ierr)
          ! internal fluid-solid boundary conditions
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
+            call PetscLogEventBegin(logger%event_bc_bounceback,ierr)
             call FlowBounceback(lbm%flow, lbm%walls%walls_a)
+            call PetscLogEventEnd(logger%event_bc_bounceback,ierr)
          end if
 
          if (associated(lbm%transport)) then
+            call PetscLogEventBegin(logger%event_bc_tranwallreact,ierr)
             call TransportReactWithWalls(lbm%transport, lbm%walls%walls_a)
+            call PetscLogEventEnd(logger%event_bc_tranwallreact,ierr)
          end if
 
          ! external boundary conditions
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
+            call PetscLogEventBegin(logger%event_bc_flow,ierr)
             call FlowApplyBCs(lbm%flow, lbm%walls%walls_a)
+            call PetscLogEventEnd(logger%event_bc_flow,ierr)
          end if
 
          if (associated(lbm%transport)) then
+            call PetscLogEventBegin(logger%event_bc_tran,ierr)
             call TransportApplyBCs(lbm%transport, lbm%walls%walls_a)
+            call PetscLogEventEnd(logger%event_bc_tran,ierr)
          end if
 
          ! update moments for rho, psi
+         call PetscLogStagePop(ierr)
+         call PetscLogStagePush(logger%stage(FORCING_STAGE), ierr)
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
+            call PetscLogEventBegin(logger%event_moments,ierr)
             call FlowUpdateMoments(lbm%flow, lbm%walls%walls_a)
+            call PetscLogEventEnd(logger%event_moments,ierr)
          end if
 
          if (associated(lbm%transport)) then
+            call PetscLogEventBegin(logger%event_moments,ierr)
             call TransportUpdateMoments(lbm%transport, lbm%walls%walls_a)
+            call PetscLogEventEnd(logger%event_moments,ierr)
          end if
 
          ! add in momentum forcing terms
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
+            call PetscLogEventBegin(logger%event_communicate_rho,ierr)
             call DistributionCommunicateDensity(lbm%flow%distribution)
+            call PetscLogEventEnd(logger%event_communicate_rho,ierr)
             call FlowCalcForces(lbm%flow, lbm%walls)
             call BCZeroForces(lbm%flow%bc, lbm%flow%forces, lbm%flow%distribution)
+         end if
          ! reaction?
 
          ! collision
+         call PetscLogStagePop(ierr)
+         call PetscLogStagePush(logger%stage(COLLISION_STAGE), ierr)
+         if ((.not.lbm%options%steadystate).or. &
+              (lcv_step < lbm%options%steadystate_rampup_steps)) then
+            call PetscLogEventBegin(logger%event_collision_flow,ierr)
             call FlowCollision(lbm%flow, lbm%walls%walls_a)
+            call PetscLogEventEnd(logger%event_collision_flow,ierr)
          end if
 
          if (associated(lbm%transport)) then
             if ((.not.lbm%options%steadystate).or. &
                  (lcv_step < lbm%options%steadystate_rampup_steps)) then
+               call PetscLogEventBegin(logger%event_diagnostics,ierr)
                call FlowUpdateDiagnostics(lbm%flow, lbm%walls%walls_a)
+               call PetscLogEventEnd(logger%event_diagnostics,ierr)
             end if
+            call PetscLogEventBegin(logger%event_collision_tran,ierr)
             call TransportCollision(lbm%transport, lbm%walls%walls_a, lbm%flow)
+            call PetscLogEventEnd(logger%event_collision_tran,ierr)
          end if
 
          ! communicate, update fi
+         call PetscLogStagePop(ierr)
+         call PetscLogStagePush(logger%stage(COMMUNICATION_STAGE), ierr)
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
+            call PetscLogEventBegin(logger%event_communicate_fi,ierr)
             call DistributionCommunicateFi(lbm%flow%distribution)
+            call PetscLogEventEnd(logger%event_communicate_fi,ierr)
          end if
 
          if (associated(lbm%transport)) then
+            call PetscLogEventBegin(logger%event_communicate_fi,ierr)
             call DistributionCommunicateFi(lbm%transport%distribution)
+            call PetscLogEventEnd(logger%event_communicate_fi,ierr)
          end if
 
          
          ! check for output
+         call PetscLogStagePop(ierr)
+         call PetscLogStagePush(logger%stage(OUTPUT_STAGE), ierr)
          if (lbm%options%current_waypoint > 0) then
             if (lbm%options%waypoints(lbm%options%current_waypoint) .eq. lcv_step) then
+               call PetscLogEventBegin(logger%event_output,ierr)
                call LBMOutput(lbm, lcv_step)
+               call PetscLogEventEnd(logger%event_output,ierr)
                lbm%options%current_waypoint = lbm%options%current_waypoint + 1
             else if((kwrite > 0) .and. (mod(lcv_step,kwrite).eq.0)) then
+               call PetscLogEventBegin(logger%event_output,ierr)
                call LBMOutput(lbm, lcv_step)
+               call PetscLogEventEnd(logger%event_output,ierr)
             endif
          else if((kwrite > 0) .and. (mod(lcv_step,kwrite).eq.0)) then
+            call PetscLogEventBegin(logger%event_output,ierr)
             call LBMOutput(lbm, lcv_step)
+            call PetscLogEventEnd(logger%event_output,ierr)
          endif
       end do
 
@@ -394,24 +466,6 @@
            lbm%walls%walls_a, lbm%transport%distribution, lbm%transport%species, lbm%options)
       call TransportRestoreArrays(lbm%transport, ierr)
     end subroutine LBMInitializeState_FlowTransport
-
-    ! function LBMGetDMByIndex( lbm, dm_index ) result(dm)
-    !   type(lbm_type) lbm
-    !   PetscInt dm_index
-    !   DM,pointer:: dm
-    !   PetscErrorCode ierr
-    !   nullify(dm)
-    !   select case(dm_index)
-    !   case (ONEDOF)
-    !      dm => lbm%grid%da(ONEDOF)
-    !   case (NPHASEDOF)
-    !      dm => lbm%grid%da(NPHASEDOF)
-    !   case (NPHASEXBDOF)
-    !      dm => lbm%grid%da(NPHASEXBDOF)
-    !   case (NFLOWDOF)
-    !      dm => lbm%grid%da(NFLOWDOF)
-    !   end select
-    ! end function LBMGetDMByIndex
 
     ! get the corner coordinates of the domain
     subroutine LBMGetCorners(lbm, corners)
