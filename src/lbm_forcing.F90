@@ -1343,20 +1343,22 @@ contains
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
     if (walldata(i,j,k).eq.0) then
-       do d=1,dist%info%ndims
-          do n=1,2*dist%info%ndims
-            if ((tmp(n,i,j,k) > 0.d0).and.(tmp(n,i,j,k) < 998.d0)) then
-              forces(:,d,i,j,k) = forces(:,d,i,j,k) &
-                  - rho(:,i,j,k)*walls%minerals(int(tmp(n,i,j,k)))%gw(:)
-            end if
+      do n=1,2*dist%info%ndims
+        if ((tmp(n,i,j,k) > 0.d0).and.(tmp(n,i,j,k) < 998.d0)) then
+          do d=1,dist%info%ndims
+            forces(:,d,i,j,k) = forces(:,d,i,j,k) &
+                 - rho(:,i,j,k)*walls%minerals(int(tmp(n,i,j,k)))%gw(:)
           end do
-          do n=2*dist%info%ndims+1,dist%b
-            if ((tmp(n,i,j,k) > 0.d0).and.(tmp(n,i,j,k) < 998.d0)) then
-              forces(:,d,i,j,k) = forces(:,d,i,j,k) &
-                   - 0.5*rho(:,i,j,k)*walls%minerals(int(tmp(n,i,j,k)))%gw(:)
-            end if
+        end if
+      end do
+      do n=2*dist%info%ndims+1,dist%b
+        if ((tmp(n,i,j,k) > 0.d0).and.(tmp(n,i,j,k) < 998.d0)) then
+          do d=1,dist%info%ndims
+            forces(:,d,i,j,k) = forces(:,d,i,j,k) &
+                 - 0.5*rho(:,i,j,k)*walls%minerals(int(tmp(n,i,j,k)))%gw(:)
           end do
-       end do
+        end if
+      end do
     end if
     end do
     end do
@@ -1390,20 +1392,22 @@ contains
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
     if (walldata(i,j).eq.0) then
-       do d=1,dist%info%ndims
-          do n=1,2*dist%info%ndims
-            if ((tmp(n,i,j) > 0.d0).and.(tmp(n,i,j) < 998.d0)) then
-              forces(:,d,i,j) = forces(:,d,i,j) &
-                   - 1./3.*rho(:,i,j)*walls%minerals(int(tmp(n,i,j)))%gw(:)
-            end if
+      do n=1,2*dist%info%ndims
+        if ((tmp(n,i,j) > 0.d0).and.(tmp(n,i,j) < 998.d0)) then
+          do d=1,dist%info%ndims
+            forces(:,d,i,j) = forces(:,d,i,j) &
+                 - 1./3.*rho(:,i,j)*walls%minerals(int(tmp(n,i,j)))%gw(:)*dist%disc%ci(n,d)
           end do
-          do n=2*dist%info%ndims+1,dist%b
-            if ((tmp(n,i,j) > 0.d0).and.(tmp(n,i,j) < 998.d0)) then
-              forces(:,d,i,j) = forces(:,d,i,j) &
-                   - 1./12.*rho(:,i,j)*walls%minerals(int(tmp(n,i,j)))%gw(:)
-            end if
+        end if
+      end do
+      do n=2*dist%info%ndims+1,dist%b
+        if ((tmp(n,i,j) > 0.d0).and.(tmp(n,i,j) < 998.d0)) then
+          do d=1,dist%info%ndims
+            forces(:,d,i,j) = forces(:,d,i,j) &
+                 - 1./12.*rho(:,i,j)*walls%minerals(int(tmp(n,i,j)))%gw(:)*dist%disc%ci(n,d)
           end do
-       end do
+        end if
+      end do
     end if
     end do
     end do
