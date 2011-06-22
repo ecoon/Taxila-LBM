@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
-!!!     last modified:   21 June 2011
-!!!       at:            10:58:13 MDT
+!!!     last modified:   22 June 2011
+!!!       at:            10:51:06 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -20,6 +20,7 @@ program MAIN
   use petsc
   use LBM_Options_module
   use LBM_BC_module
+  use LBM_Logging_module
   use LBM_module
   implicit none
 #include "lbm_definitions.h"
@@ -45,22 +46,30 @@ program MAIN
   call PetscInitialize(infile, ierr)
   lbm => LBMCreate(PETSC_COMM_WORLD)
   options => lbm%options
-  
+
+  call LoggerCreate()
+  call PetscLogStagePush(logger%stage(INIT_STAGE), ierr)
+
   ! initialize options and constants
   prefix = ''
+  call PetscLogEventBegin(logger%event_init_options,ierr)
   call OptionsSetPrefix(options, prefix)
   call OptionsSetUp(options)
+  call PetscLogEventEnd(logger%event_init_options,ierr)
   call LBMSetFromOptions(lbm, options, ierr);CHKERRQ(ierr)
   call LBMSetUp(lbm)
 
   ! set boundary conditions
+  call PetscLogEventBegin(logger%event_init_bcsetup,ierr)
   call BCSetValues(lbm%flow%bc, lbm%flow%distribution, options, initialize_bcs)
   if (associated(lbm%transport)) then
      call BCSetValues(lbm%transport%bc, lbm%transport%distribution, &
           options, initialize_bcs_transport)
   end if
+  call PetscLogEventEnd(logger%event_init_bcsetup,ierr)
 
   ! set initial conditions
+  call PetscLogEventBegin(logger%event_init_icsetup,ierr)
   if (options%restart) then
      call LBMInitializeStateRestarted(lbm, options%istep, options%kwrite)
      istep = options%istep
@@ -76,6 +85,7 @@ program MAIN
      end if
      istep=0
   endif
+  call PetscLogEventEnd(logger%event_init_icsetup,ierr)
   
   ! start lbm
   if (lbm%grid%info%rank.eq.0) then
@@ -85,7 +95,11 @@ program MAIN
   
   call LBMInit(lbm, istep)
   call LBMRun(lbm, istep, options%ntimes*options%npasses, options%kwrite)
+  call PetscLogStagePop(ierr)
+  call PetscLogStagePush(logger%stage(DESTROY_STAGE), ierr)
   call LBMDestroy(lbm, ierr)
+  call PetscLogStagePop(ierr)
+  call LoggerDestroy()
   call PetscFinalize(ierr)
   stop
 end program main
