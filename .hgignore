@@ -1,0 +1,18 @@
+# use glob syntax.
+syntax: glob
+
+*.orig
+*.o	# object files
+*.mod   # module files
+*.pyc	# python compiled files
+*~	# emacs leftovers
+*.so	# make your own library!
+mycode  # executable shouldn't be in in VC, won't work in general
+MyData
+runDuct
+runSimulation
+*.aux
+*.bbl
+*.blg
+*.log
+*.pdf
