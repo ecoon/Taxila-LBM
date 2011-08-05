@@ -1,5 +1,5 @@
 ifndef LBM_DIR
-  LBM_DIR:=$(shell pwd)/..
+  LBM_DIR:=$(shell pwd)/../..
 endif
 
 COMP:= $(shell basename $(shell mpif90 -show | cut -d" " -f 1))
@@ -8,7 +8,8 @@ ifndef MAKE
   MAKE=make
 endif
 
-LBM_SRC_DIR= $(LBM_DIR)/src
+LBM_SRC_DIR= $(LBM_DIR)/src/lbm
+LBM_UTIL_DIR= $(LBM_DIR)/src/utils
 LBM_INCLUDE_DIR= $(LBM_DIR)/include
 LBM_LIB_DIR= $(LBM_DIR)/lib
 LBM_MOD_DIR= $(LBM_LIB_DIR)/modules
@@ -48,9 +49,10 @@ endif
 
 MAIN = main.o 
 
-MODULES = timing.o \
-	string.o \
-	lbm_logging.o \
+UTILS = timing.o \
+	string.o
+
+MODULES = lbm_logging.o \
 	lbm_bag_types.o \
 	lbm_options.o \
 	lbm_io.o \
@@ -79,21 +81,59 @@ BEGINEX:
 	@echo "building lbm $(MAIN)"
 	@echo " with compiler family $(COMP)"
 
-library: BEGINLIB $(foreach obj, $(MODULES), $(LBM_LIB_DIR)/$(LBM_LIB_NAME)($(obj)))
-
+library: BEGINLIB utils $(foreach obj, $(MODULES), $(LBM_LIB_DIR)/$(LBM_LIB_NAME)($(obj)))
 BEGINLIB:
 	@echo "building lbm objects and library $(LBM_LIB_NAME) ... "
 	@echo " with compiler family $(COMP)"
 
 allclean: 
+	cd $(LBM_UTIL_DIR); $(MAKE) allclean
 	rm -f ./*.mod
 	rm -f ./*.o
 	rm -f $(LBM_LIB_DIR)/$(LBM_LIB_NAME)
 	rm -f $(LBM_MOD_DIR)/*.mod
+utils:
+	cd $(LBM_UTIL_DIR); $(MAKE) fortran
 
 tags:
 	rm -f TAGS
 	etags *.F90
+
+lbm_options.o: utils
+lbm_io.o: lbm_options.o
+lbm_info.o: lbm_bag_types.o lbm_options.o
+lbm_grid.o: lbm_info.o lbm_options.o
+lbm_distribution_function_type.o: lbm_bag_types.o lbm_info.o lbm_discretization_type.o 
+lbm_relaxation.o: lbm_bag_types.o lbm_options.o lbm_distribution_function_type.o
+lbm_phase.o: lbm_bag_types.o lbm_options.o lbm_relaxation.o
+lbm_species.o: lbm_bag_types.o lbm_options.o lbm_relaxation.o
+lbm_mineral.o: lbm_bag_types.o lbm_options.o
+lbm_discretization_d3q19.o: lbm_discretization_type.o lbm_distribution_function_type.o \
+	lbm_relaxation.o
+lbm_discretization_d2q9.o: lbm_discretization_type.o lbm_distribution_function_type.o \
+	lbm_relaxation.o
+lbm_discretization.o: lbm_discretization_type.o lbm_distribution_function_type.o \
+	lbm_relaxation.o lbm_discretization_d3q19.o lbm_discretization_d2q9.o
+lbm_distribution_function.o: lbm_info.o lbm_distribution_function_type.o \
+	lbm_discretization_type.o
+lbm_walls.o: lbm_options.o lbm_info.o lbm_grid.o lbm_mineral.o 
+lbm_forcing.o: lbm_distribution_function_type.o lbm_phase.o lbm_distribution_function.o \
+	lbm_walls.o 
+lbm_bc.o: lbm_options.o lbm_info.o lbm_grid.o lbm_distribution_function_type.o \
+	lbm_discretization.o
+lbm_flow.o: lbm_logging.o lbm_io.o lbm_options.o lbm_info.o lbm_grid.o \
+	lbm_distribution_function_type.o lbm_discretization_type.o lbm_relaxation.o \
+	lbm_phase.o lbm_discretization.o lbm_distribution_function.o lbm_walls.o \
+	lbm_forcing.o lbm_bc.o 
+lbm_transport.o: lbm_logging.o lbm_io.o lbm_options.o lbm_info.o lbm_grid.o \
+	lbm_distribution_function_type.o lbm_discretization_type.o lbm_relaxation.o \
+	lbm_phase.o lbm_discretization.o lbm_distribution_function.o lbm_walls.o \
+	lbm_forcing.o lbm_bc.o 
+lbm.o: utils lbm_logging.o lbm_options.o lbm_io.o lbm_info.o lbm_grid.o \
+	lbm_distribution_function_type.o lbm_discretization_type.o lbm_relaxation.o \
+	lbm_phase.o lbm_discretization.o lbm_distribution_function.o lbm_walls.o \
+	lbm_forcing.o lbm_bc.o lbm_flow.o lbm_transport.o
+main.o: lbm_logging.o lbm_options.o lbm_bc.o lbm.o
 
 include ${PETSC_DIR}/conf/variables
 include ${PETSC_DIR}/conf/rules
