@@ -249,20 +249,18 @@
       call IOIncrementCounter(lbm%io)
     end subroutine LBMInit2
 
-    subroutine LBMRun1(lbm, istep, kstep, kwrite)
+    subroutine LBMRun1(lbm, istep, kstep)
       type(lbm_type) lbm
       PetscInt istep
       PetscInt kstep
-      PetscInt kwrite
-      call LBMRun2(lbm, istep, kstep, kwrite, PETSC_FALSE)
+      call LBMRun2(lbm, istep, kstep, PETSC_FALSE)
     end subroutine LBMRun1
 
-    subroutine LBMRun2(lbm, istep, kstep, kwrite, supress_output)
+    subroutine LBMRun2(lbm, istep, kstep, supress_output)
       ! input
       type(lbm_type) lbm
       PetscInt istep
       PetscInt kstep
-      PetscInt kwrite
       PetscBool supress_output
 
       ! local
@@ -396,12 +394,12 @@
                call LBMOutput(lbm, lcv_step)
                call PetscLogEventEnd(logger%event_output,ierr)
                lbm%options%current_waypoint = lbm%options%current_waypoint + 1
-            else if((kwrite > 0) .and. (mod(lcv_step,kwrite).eq.0)) then
+            else if((lbm%options%kwrite > 0).and.(mod(lcv_step,lbm%options%kwrite).eq.0)) then
                call PetscLogEventBegin(logger%event_output,ierr)
                call LBMOutput(lbm, lcv_step)
                call PetscLogEventEnd(logger%event_output,ierr)
             endif
-         else if((kwrite > 0) .and. (mod(lcv_step,kwrite).eq.0)) then
+         else if((lbm%options%kwrite > 0).and.(mod(lcv_step,lbm%options%kwrite).eq.0)) then
             call PetscLogEventBegin(logger%event_output,ierr)
             call LBMOutput(lbm, lcv_step)
             call PetscLogEventEnd(logger%event_output,ierr)
@@ -481,7 +479,7 @@
       PetscInt istep, kwrite
       PetscErrorCode ierr
 
-      if (lbm%options%restart_counter > 0 ) then
+      if (lbm%options%restart_counter > -1) then
          lbm%io%counter = lbm%options%restart_counter
       else if (kwrite > 0) then
          lbm%io%counter = istep/kwrite

@@ -70,5 +70,7 @@ module LBM_Relaxation_Bag_Data_type_module
      PetscScalar s1  ! MRT relaxation time
      PetscScalar s2  ! MRT relaxation time
      PetscScalar s3  ! MRT relaxation time
+     PetscScalar s4  ! MRT relaxation time (only for 3D)
+     PetscScalar s5  ! MRT relaxation time (only for 3D)
   end type relaxation_bag_data_type
 end module LBM_Relaxation_Bag_Data_type_module
