@@ -16,3 +16,4 @@ runSimulation
 *.blg
 *.log
 *.pdf
+lib/lbm.a
