@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
-!!!     last modified:   21 April 2011
-!!!       at:            09:41:04 MDT
+!!!     last modified:   18 July 2011
+!!!       at:            17:58:15 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -50,6 +50,7 @@
     PetscScalar :: xp3_ave_p, xm3_ave_p, t
     PetscBool flag
     PetscInt i
+    PetscInt direction
 
     ! initialize state
     fi = 0.d0
@@ -58,18 +59,37 @@
     xp3_ave_p = 0.d0
     xm3_ave_p = 0.d0
 
-    call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_xp_phase1', xp3_ave_p, &
+    direction = 1
+    call PetscOptionsGetInt(options%my_prefix, '-gradient_direction', direction, &
          flag, ierr)
-    if (.not.flag) SETERRQ(1, 1, 'invalid boundary pressure for xp_phase1', ierr)
-    call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_xm_phase1', xm3_ave_p, &
-         flag, ierr)
-    if (.not.flag) SETERRQ(1, 1, 'invalid boundary value for xm_phase1', ierr)
 
-    do i=dist%info%xs,dist%info%xe
-       t = dble(i-1)/dble(dist%info%NX-1)
-       rho(1,i,:) = (1-t)*xm3_ave_p + t*xp3_ave_p
-    end do    
-    
+    select case(direction)
+    case(1)
+      call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_xp_phase1', xp3_ave_p, &
+           flag, ierr)
+      if (.not.flag) SETERRQ(1, 1, 'invalid boundary pressure for xp_phase1', ierr)
+      call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_xm_phase1', xm3_ave_p, &
+           flag, ierr)
+      if (.not.flag) SETERRQ(1, 1, 'invalid boundary value for xm_phase1', ierr)
+      
+      do i=dist%info%xs,dist%info%xe
+        t = dble(i-1)/dble(dist%info%NX-1)
+        rho(1,i,:) = (1-t)*xm3_ave_p + t*xp3_ave_p
+      end do
+    case(2)
+      call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_yp_phase1', xp3_ave_p, &
+           flag, ierr)
+      if (.not.flag) SETERRQ(1, 1, 'invalid boundary pressure for yp_phase1', ierr)
+      call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_ym_phase1', xm3_ave_p, &
+           flag, ierr)
+      if (.not.flag) SETERRQ(1, 1, 'invalid boundary value for ym_phase1', ierr)
+      
+      do i=dist%info%ys,dist%info%ye
+        t = dble(i-1)/dble(dist%info%NY-1)
+        rho(1,:,i) = (1-t)*xm3_ave_p + t*xp3_ave_p
+      end do
+    end select
+
     ! set state at equilibrium       
     nowalls = 0.d0
     call DiscretizationEquilf(dist%disc, rho, u, nowalls, fi, phases(1)%relax, dist)    
