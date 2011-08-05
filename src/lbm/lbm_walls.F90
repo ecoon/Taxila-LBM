@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         21 June 2011
 !!!       on:            10:07:45 MDT
-!!!     last modified:   21 June 2011
-!!!       at:            17:03:02 MDT
+!!!     last modified:   05 August 2011
+!!!       at:            10:51:05 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -171,7 +171,6 @@ contains
   end subroutine WallsSetGhostNodes
   
   subroutine WallsSetGhostNodesD2(walls, data, info)
-    use LBM_Info_module
     type(walls_type) walls
     type(info_type) info
     PetscScalar,dimension(info%gxs:info%gxe,info%gys:info%gye):: data
@@ -190,7 +189,6 @@ contains
   end subroutine WallsSetGhostNodesD2
   
   subroutine WallsSetGhostNodesD3(walls, data, info)
-    use LBM_Info_module
     type(walls_type) walls
     type(info_type) info
     PetscScalar,dimension(info%gxs:info%gxe,info%gys:info%gye,info%gzs:info%gze):: data

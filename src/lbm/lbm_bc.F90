@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   28 April 2011
-!!!       at:            09:46:24 MDT
+!!!     last modified:   05 August 2011
+!!!       at:            11:05:11 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -18,11 +18,11 @@
 #include "finclude/petscdmdef.h"
 
 module LBM_BC_module
-  use LBM_Options_module
   use LBM_Info_module
   use LBM_Grid_module
   use LBM_Distribution_Function_type_module
   use LBM_Discretization_module
+  use LBM_Options_module
   use petsc
   implicit none
   private
@@ -210,7 +210,6 @@ contains
 
   ! call initialize
   subroutine BCSetValues(bc, dist, options, bc_subroutine)
-    use LBM_Options_module
     type(bc_type) bc
     type(distribution_type) dist
     type(options_type) options
