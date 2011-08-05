@@ -62,14 +62,14 @@ else
   FORTRANOBJS += initialize_state_transport.o
 endif
 
-fortran: BEGIN $(FORTRANOBJS) chkopts
-	echo $(LBM_LIB_NAME)
+fortran: BEGIN source $(FORTRANOBJS) chkopts
+	@echo ""
+	@echo "Linking executable"
 	-${FLINKER} -o runSimulation $(FORTRANOBJS) $(MAIN) $(LBM_LIB_DIR)/$(LBM_LIB_NAME) ${PETSC_DM_LIB} 
 
 BEGIN:
 	@echo "building lbm simulation in $(LBM_DIR) with $(COMP)" 
-	@echo "and objects: ${FORTRANOBJS}"
-
+	@echo ""
 
 allclean: 
 	cd $(LBM_SRC_DIR); $(MAKE) allclean
@@ -78,7 +78,7 @@ allclean:
 	rm -f runSimulation runLBMSimulation
 
 source: 
-	cd $(LBM_SRC_DIR); $(MAKE) fortran
+	@cd $(LBM_SRC_DIR); $(MAKE) fortran
 
 include ${PETSC_DIR}/conf/variables
 include ${PETSC_DIR}/conf/rules

@@ -75,65 +75,64 @@ MODULES = lbm_logging.o \
 	lbm_transport.o \
 	lbm.o 
 
-fortran: library BEGINEX $(MAIN)
-
-BEGINEX:
-	@echo "building lbm $(MAIN)"
-	@echo " with compiler family $(COMP)"
+fortran: BEGINLIB library $(MAIN)
 
 library: BEGINLIB utils $(foreach obj, $(MODULES), $(LBM_LIB_DIR)/$(LBM_LIB_NAME)($(obj)))
 BEGINLIB:
 	@echo "building lbm objects and library $(LBM_LIB_NAME) ... "
 	@echo " with compiler family $(COMP)"
-
+	@echo ""
 allclean: 
-	cd $(LBM_UTIL_DIR); $(MAKE) allclean
+	@cd $(LBM_UTIL_DIR); $(MAKE) allclean
 	rm -f ./*.mod
 	rm -f ./*.o
 	rm -f $(LBM_LIB_DIR)/$(LBM_LIB_NAME)
 	rm -f $(LBM_MOD_DIR)/*.mod
 utils:
-	cd $(LBM_UTIL_DIR); $(MAKE) fortran
+	@cd $(LBM_UTIL_DIR); $(MAKE) fortran
 
 tags:
 	rm -f TAGS
 	etags *.F90
 
-lbm_options.o: utils
-lbm_io.o: lbm_options.o
-lbm_info.o: lbm_bag_types.o lbm_options.o
-lbm_grid.o: lbm_info.o lbm_options.o
-lbm_distribution_function_type.o: lbm_bag_types.o lbm_info.o lbm_discretization_type.o 
-lbm_relaxation.o: lbm_bag_types.o lbm_options.o lbm_distribution_function_type.o
-lbm_phase.o: lbm_bag_types.o lbm_options.o lbm_relaxation.o
-lbm_species.o: lbm_bag_types.o lbm_options.o lbm_relaxation.o
-lbm_mineral.o: lbm_bag_types.o lbm_options.o
-lbm_discretization_d3q19.o: lbm_discretization_type.o lbm_distribution_function_type.o \
-	lbm_relaxation.o
-lbm_discretization_d2q9.o: lbm_discretization_type.o lbm_distribution_function_type.o \
-	lbm_relaxation.o
-lbm_discretization.o: lbm_discretization_type.o lbm_distribution_function_type.o \
-	lbm_relaxation.o lbm_discretization_d3q19.o lbm_discretization_d2q9.o
-lbm_distribution_function.o: lbm_info.o lbm_distribution_function_type.o \
-	lbm_discretization_type.o
-lbm_walls.o: lbm_options.o lbm_info.o lbm_grid.o lbm_mineral.o 
-lbm_forcing.o: lbm_distribution_function_type.o lbm_phase.o lbm_distribution_function.o \
-	lbm_walls.o 
-lbm_bc.o: lbm_options.o lbm_info.o lbm_grid.o lbm_distribution_function_type.o \
-	lbm_discretization.o
-lbm_flow.o: lbm_logging.o lbm_io.o lbm_options.o lbm_info.o lbm_grid.o \
-	lbm_distribution_function_type.o lbm_discretization_type.o lbm_relaxation.o \
-	lbm_phase.o lbm_discretization.o lbm_distribution_function.o lbm_walls.o \
-	lbm_forcing.o lbm_bc.o 
-lbm_transport.o: lbm_logging.o lbm_io.o lbm_options.o lbm_info.o lbm_grid.o \
-	lbm_distribution_function_type.o lbm_discretization_type.o lbm_relaxation.o \
-	lbm_phase.o lbm_discretization.o lbm_distribution_function.o lbm_walls.o \
-	lbm_forcing.o lbm_bc.o 
-lbm.o: utils lbm_logging.o lbm_options.o lbm_io.o lbm_info.o lbm_grid.o \
-	lbm_distribution_function_type.o lbm_discretization_type.o lbm_relaxation.o \
-	lbm_phase.o lbm_discretization.o lbm_distribution_function.o lbm_walls.o \
-	lbm_forcing.o lbm_bc.o lbm_flow.o lbm_transport.o
-main.o: lbm_logging.o lbm_options.o lbm_bc.o lbm.o
+# these dependencies should likely be made explicit, but I'm not exactly sure what the
+# best way to do this without forcing the remake of .o files that already exist within 
+# the library (and have therefore been removed).
+# lbm_options.o: utils
+# lbm_io.o: lbm_options.o
+# lbm_info.o: lbm_bag_types.o lbm_options.o
+# lbm_grid.o: lbm_info.o lbm_options.o
+# lbm_distribution_function_type.o: lbm_bag_types.o lbm_info.o lbm_discretization_type.o 
+# lbm_relaxation.o: lbm_bag_types.o lbm_options.o lbm_distribution_function_type.o
+# lbm_phase.o: lbm_bag_types.o lbm_options.o lbm_relaxation.o
+# lbm_species.o: lbm_bag_types.o lbm_options.o lbm_relaxation.o
+# lbm_mineral.o: lbm_bag_types.o lbm_options.o
+# lbm_discretization_d3q19.o: lbm_discretization_type.o lbm_distribution_function_type.o \
+# 	lbm_relaxation.o
+# lbm_discretization_d2q9.o: lbm_discretization_type.o lbm_distribution_function_type.o \
+# 	lbm_relaxation.o
+# lbm_discretization.o: lbm_discretization_type.o lbm_distribution_function_type.o \
+# 	lbm_relaxation.o lbm_discretization_d3q19.o lbm_discretization_d2q9.o
+# lbm_distribution_function.o: lbm_info.o lbm_distribution_function_type.o \
+# 	lbm_discretization_type.o
+# lbm_walls.o: lbm_options.o lbm_info.o lbm_grid.o lbm_mineral.o 
+# lbm_forcing.o: lbm_distribution_function_type.o lbm_phase.o lbm_distribution_function.o \
+# 	lbm_walls.o 
+# lbm_bc.o: lbm_options.o lbm_info.o lbm_grid.o lbm_distribution_function_type.o \
+# 	lbm_discretization.o
+# lbm_flow.o: lbm_logging.o lbm_io.o lbm_options.o lbm_info.o lbm_grid.o \
+# 	lbm_distribution_function_type.o lbm_discretization_type.o lbm_relaxation.o \
+# 	lbm_phase.o lbm_discretization.o lbm_distribution_function.o lbm_walls.o \
+# 	lbm_forcing.o lbm_bc.o 
+# lbm_transport.o: lbm_logging.o lbm_io.o lbm_options.o lbm_info.o lbm_grid.o \
+# 	lbm_distribution_function_type.o lbm_discretization_type.o lbm_relaxation.o \
+# 	lbm_phase.o lbm_discretization.o lbm_distribution_function.o lbm_walls.o \
+# 	lbm_forcing.o lbm_bc.o 
+# lbm.o: utils lbm_logging.o lbm_options.o lbm_io.o lbm_info.o lbm_grid.o \
+# 	lbm_distribution_function_type.o lbm_discretization_type.o lbm_relaxation.o \
+# 	lbm_phase.o lbm_discretization.o lbm_distribution_function.o lbm_walls.o \
+# 	lbm_forcing.o lbm_bc.o lbm_flow.o lbm_transport.o
+# main.o: lbm_logging.o lbm_options.o lbm_bc.o lbm.o
 
 include ${PETSC_DIR}/conf/variables
 include ${PETSC_DIR}/conf/rules

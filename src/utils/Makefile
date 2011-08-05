@@ -56,6 +56,7 @@ library: BEGINLIB $(foreach obj, $(UTILS), $(LBM_LIB_DIR)/$(LBM_LIB_NAME)($(obj)
 BEGINLIB:
 	@echo "building lbm utility objects for library $(LBM_LIB_NAME) ... "
 	@echo " with compiler family $(COMP)"
+	@echo ""
 
 allclean: 
 	rm -f ./*.mod
