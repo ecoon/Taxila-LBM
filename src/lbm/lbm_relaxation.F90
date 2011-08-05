@@ -36,6 +36,8 @@ module LBM_Relaxation_module
      PetscScalar,pointer :: s1  ! MRT relaxation time
      PetscScalar,pointer :: s2  ! MRT relaxation time
      PetscScalar,pointer :: s3  ! MRT relaxation time
+     PetscScalar,pointer :: s4  ! MRT relaxation time (only for 3D)
+     PetscScalar,pointer :: s5  ! MRT relaxation time (only for 3D)
      PetscScalar,pointer,dimension(:) :: tau_mrt ! species of S vector for mrt
 
      ! dependents, set by discretization
@@ -81,6 +83,8 @@ contains
     nullify(relax%s1)
     nullify(relax%s2)
     nullify(relax%s3)
+    nullify(relax%s4)
+    nullify(relax%s5)
     nullify(relax%tau_mrt)
 
     relax%d_k = 0.
@@ -137,7 +141,7 @@ contains
 
     ! create the bag
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
-    sizeofdata = 4*sizeofscalar 
+    sizeofdata = 6*sizeofscalar 
     call PetscBagCreate(relax%comm, sizeofdata, relax%bag, ierr)
     call PetscBagGetData(relax%bag, relax%data, ierr)
 
@@ -156,6 +160,14 @@ contains
     call PetscBagRegisterScalar(relax%bag, relax%data%s3, 1.d0, &
          trim(options%my_prefix)//'s3_'//trim(relax%name), 'MRT relaxation time', ierr)
     relax%s3 => relax%data%s3
+   
+    call PetscBagRegisterScalar(relax%bag, relax%data%s4, 1.d0, &
+         trim(options%my_prefix)//'s4_'//trim(relax%name), 'MRT relaxation time', ierr)
+    relax%s4 => relax%data%s4
+
+    call PetscBagRegisterScalar(relax%bag, relax%data%s5, 1.d0, &
+         trim(options%my_prefix)//'s5_'//trim(relax%name), 'MRT relaxation time', ierr)
+    relax%s5 => relax%data%s5
 
     call PetscBagSetName(relax%bag, TRIM(options%my_prefix)//relax%name, "", ierr)
   end subroutine RelaxationSetFromOptions

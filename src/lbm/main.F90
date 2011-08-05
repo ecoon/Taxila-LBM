@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
-!!!     last modified:   22 June 2011
-!!!       at:            10:51:06 MDT
+!!!     last modified:   25 July 2011
+!!!       at:            13:07:06 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -94,7 +94,7 @@ program MAIN
   end if
   
   call LBMInit(lbm, istep)
-  call LBMRun(lbm, istep, options%ntimes*options%npasses, options%kwrite)
+  call LBMRun(lbm, istep, options%ntimes*options%npasses)
   call PetscLogStagePop(ierr)
   call PetscLogStagePush(logger%stage(DESTROY_STAGE), ierr)
   call LBMDestroy(lbm, ierr)
