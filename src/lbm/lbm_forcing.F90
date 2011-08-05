@@ -1347,7 +1347,7 @@ contains
         if ((tmp(n,i,j,k) > 0.d0).and.(tmp(n,i,j,k) < 998.d0)) then
           do d=1,dist%info%ndims
             forces(:,d,i,j,k) = forces(:,d,i,j,k) &
-                 - rho(:,i,j,k)*walls%minerals(int(tmp(n,i,j,k)))%gw(:)
+                 - 1./6.*rho(:,i,j,k)*walls%minerals(int(tmp(n,i,j,k)))%gw(:)
           end do
         end if
       end do
@@ -1355,7 +1355,7 @@ contains
         if ((tmp(n,i,j,k) > 0.d0).and.(tmp(n,i,j,k) < 998.d0)) then
           do d=1,dist%info%ndims
             forces(:,d,i,j,k) = forces(:,d,i,j,k) &
-                 - 0.5*rho(:,i,j,k)*walls%minerals(int(tmp(n,i,j,k)))%gw(:)
+                 - 1./12.*rho(:,i,j,k)*walls%minerals(int(tmp(n,i,j,k)))%gw(:)
           end do
         end if
       end do

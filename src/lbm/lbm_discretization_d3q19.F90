@@ -169,24 +169,24 @@ contains
     if (relax%mode .eq. RELAXATION_MODE_MRT) then
        !! Not tested yet
        relax%tau_mrt(0) = oneontau
-       relax%tau_mrt(1) = 0.6 !oneontau  !s_e
-       relax%tau_mrt(2) = 1.4 !oneontau  !s_ep
+       relax%tau_mrt(1) = relax%s1 !0.6 !oneontau  !s_e
+       relax%tau_mrt(2) = relax%s2 !1.4 !oneontau  !s_ep
        relax%tau_mrt(3) = oneontau 
-       relax%tau_mrt(4) = 1.99 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_q
+       relax%tau_mrt(4) = relax%s3 !1.99 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_q
        relax%tau_mrt(5) = oneontau 
-       relax%tau_mrt(6) = 1.99 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_q
+       relax%tau_mrt(6) = relax%s3 !1.99 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_q
        relax%tau_mrt(7) = oneontau 
-       relax%tau_mrt(8) = 1.99  !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_q
+       relax%tau_mrt(8) = relax%s3 !1.99  !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_q
        relax%tau_mrt(9) = oneontau  !s_v
-       relax%tau_mrt(10) = 0.1 !oneontau !s_pi
+       relax%tau_mrt(10) = relax%s4 !0.1 !oneontau !s_pi
        relax%tau_mrt(11) = oneontau !s_v
-       relax%tau_mrt(12) = 0.1 !oneontau !s_pi
+       relax%tau_mrt(12) = relax%s4 !0.1 !oneontau !s_pi
        relax%tau_mrt(13) = oneontau !s_v
        relax%tau_mrt(14) = oneontau !s_v
        relax%tau_mrt(15) = oneontau !s_v
-       relax%tau_mrt(16) = 0.3 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_m
-       relax%tau_mrt(17) = 0.3 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_m
-       relax%tau_mrt(18) = 0.3 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_m
+       relax%tau_mrt(16) = relax%s5 !0.3 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_m
+       relax%tau_mrt(17) = relax%s5 ! 0.3 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_m
+       relax%tau_mrt(18) = relax%s5 !0.3 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_m
     end if
   end subroutine DiscretizationSetupRelax_D3Q19
 
