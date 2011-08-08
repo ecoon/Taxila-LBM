@@ -64,21 +64,32 @@ endif
 
 fortran: BEGIN source $(FORTRANOBJS) chkopts
 	@echo ""
-	@echo "Linking executable"
+	@echo "Linking executable."
+	@echo "-------------------"
 	-${FLINKER} -o runSimulation $(FORTRANOBJS) $(MAIN) $(LBM_LIB_DIR)/$(LBM_LIB_NAME) ${PETSC_DM_LIB} 
 
 BEGIN:
-	@echo "building lbm simulation in $(LBM_DIR) with $(COMP)" 
+	@echo "Building lbm simulation in $(LBM_DIR) with $(COMP)" 
 	@echo ""
 
 allclean: 
-	cd $(LBM_SRC_DIR); $(MAKE) allclean
-	cd $(LBM_PROBLEM_DIR); $(MAKE) allclean
+	@cd $(LBM_SRC_DIR); $(MAKE) allclean
+	@cd $(LBM_PROBLEM_DIR); $(MAKE) allclean
 	rm -f ./*.o
-	rm -f runSimulation runLBMSimulation
+	rm -f runSimulation
 
 source: 
 	@cd $(LBM_SRC_DIR); $(MAKE) fortran
+
+test: fortran
+	@echo ""
+	@echo "Running simulation"
+	@echo "------------------"
+	mpiexec -n 8 ./runSimulation input_data 
+	@echo ""
+	@echo "Comparing simulation solution to reference solution"
+	@echo "---------------------------------------------------"
+	python $(LBM_DIR)/src/testing/check_solution.py input_data
 
 include ${PETSC_DIR}/conf/variables
 include ${PETSC_DIR}/conf/rules

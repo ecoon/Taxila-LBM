@@ -17,3 +17,4 @@ runSimulation
 *.log
 *.pdf
 lib/lbm.a
+tests/*/test_solution/*
