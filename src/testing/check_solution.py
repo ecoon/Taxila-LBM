@@ -6,15 +6,15 @@
 ###     version:         
 ###     created:         28 January 2011
 ###       on:            10:57:45 MST
-###     last modified:   09 May 2011
-###       at:            16:30:36 MDT
+###     last modified:   08 August 2011
+###       at:            15:29:50 MDT
 ###     URL:             http://www.ldeo.columbia.edu/~ecoon/
 ###     email:           ecoon _at_ lanl.gov
 ###  
 ### ====================================================================
 
 import sys, os
-import solution_reader
+import solution_reader2 as solution_reader
 import optparse
 import numpy
 
@@ -22,7 +22,7 @@ import numpy
 
 if __name__ == '__main__':
     infile = sys.argv.pop()
-
+    
     # get options
     opts = optparse.OptionParser()
     opts.add_option('-n','--nsteps',
@@ -40,17 +40,15 @@ if __name__ == '__main__':
 
     options, others = opts.parse_args(sys.argv[1:])
 
-    solution_reader.generate_commandline(infile)
     directory = infile.split('/')[:-1]
     if directory:
         if len(directory) > 0:
             directory = os.path.join(*directory)
-            os.chdir(directory)
 
     # set up the readers
-    test = solution_reader.SolutionReader(options.prefix)
-    truth = solution_reader.SolutionReader(options.prefix)
-    truth._file_prefix = truth._file_prefix.replace('test_solution', 'solution')
+    test = solution_reader.SolutionReader(infile, options.prefix)
+    truth = solution_reader.SolutionReader(infile, options.prefix)
+    truth._file_prefix = truth._file_prefix.replace('test_solution', 'reference_solution')
     if options.rotate:
         truth._size = (test._size[1], test._size[2], test._size[0])
         truth._size_r = (test._size[0], test._size[2], test._size[1])
@@ -69,16 +67,16 @@ if __name__ == '__main__':
     print 'Testing:', test._file_prefix
 
     if test._dim == 2:
-        tests = [('prs',1), ('u',2), ('rho',test._s)]
+        tests = [('fi',9*test._s)]
     elif test._dim == 3:
-        tests = [('prs',1), ('u',3), ('rho',test._s)]
+        tests = [('fi',19*test._s)]
     else:
         raise RuntimeError('invalid dims')
         
-    for i in range(int(options.nsteps)+1):
+    for i in range(1,int(options.nsteps)+1):
         for vecname, ndofs in  tests:
-            testdata = test.loadVec(vecname+'%03d.dat'%i, ndofs)
-            truedata = truth.loadVec(vecname+'%03d.dat'%i, ndofs)
+            testdata = test.loadVec(vecname+'%03d.dat'%i)
+            truedata = truth.loadVec(vecname+'%03d.dat'%i)
             if options.rotate:
                 truedata = truedata.transpose((2,0,1,3))
                 if vecname == 'u':
