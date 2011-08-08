@@ -5,8 +5,8 @@
 ###     version:         
 ###     created:         25 January 2011
 ###       on:            10:53:33 MST
-###     last modified:   25 July 2011
-###       at:            11:18:05 MDT
+###     last modified:   08 August 2011
+###       at:            15:29:55 MDT
 ###     URL:             http://www.ldeo.columbia.edu/~ecoon/
 ###     email:           ecoon _at_ lanl.gov
 ###  
@@ -33,7 +33,7 @@ class SolutionReader(object):
 
         # discretization
         if self._options.has_key('discretization'):
-            self._discretization = self._options['discretization']
+            self._discretization = self._options['discretization'].lower()
         else:
             self._discretization = 'd3q19'
 
