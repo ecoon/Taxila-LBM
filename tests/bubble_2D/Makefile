@@ -36,27 +36,27 @@ endif
 MAIN = $(LBM_SRC_DIR)/main.o 
 
 
-ifeq ($(strip $(wildcard initialize_state.o)),)
+ifeq ($(strip $(wildcard initialize_state.F90)),)
   FORTRANOBJS = $(LBM_PROBLEM_DIR)/default_initialize_state.o
 else
   FORTRANOBJS = initialize_state.o
 endif
-ifeq ($(strip $(wildcard initialize_walls.o)),)
+ifeq ($(strip $(wildcard initialize_walls.F90)),)
   FORTRANOBJS += $(LBM_PROBLEM_DIR)/default_initialize_walls.o
 else
   FORTRANOBJS += initialize_walls.o
 endif
-ifeq ($(strip $(wildcard initialize_bcs.o)),)
+ifeq ($(strip $(wildcard initialize_bcs.F90)),)
   FORTRANOBJS += $(LBM_PROBLEM_DIR)/default_initialize_bcs.o
 else
   FORTRANOBJS += initialize_bcs.o
 endif
-ifeq ($(strip $(wildcard initialize_bcs_transport.o)),)
+ifeq ($(strip $(wildcard initialize_bcs_transport.F90)),)
   FORTRANOBJS += $(LBM_PROBLEM_DIR)/default_initialize_bcs_transport.o
 else
   FORTRANOBJS += initialize_bcs_transport.o
 endif
-ifeq ($(strip $(wildcard initialize_state_transport.o)),)
+ifeq ($(strip $(wildcard initialize_state_transport.F90)),)
   FORTRANOBJS += $(LBM_PROBLEM_DIR)/default_initialize_state_transport.o
 else
   FORTRANOBJS += initialize_state_transport.o
