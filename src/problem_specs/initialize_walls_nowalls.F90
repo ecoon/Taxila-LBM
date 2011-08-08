@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            17:26:22 MST
-!!!     last modified:   02 May 2011
-!!!       at:            10:59:11 MDT
+!!!     last modified:   08 August 2011
+!!!       at:            15:41:04 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -24,9 +24,7 @@
 #include "lbm_definitions.h"
 !   input variables
     type(info_type) info
-    PetscScalar,dimension(info%gxs:info%gxe, &
-         info%gys:info%gye, &
-         info%gzs:info%gze):: walls
+    PetscScalar,dimension(info%gxyzl):: walls
     character(len=MAXSTRINGLENGTH) filename
 
     walls=0
