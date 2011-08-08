@@ -5,8 +5,8 @@
     version:             
     created:             12 July 2011
       on:                12:16:19 MDT
-    last modified:   12 July 2011
-      at:            12:25:44 MDT
+    last modified:   08 August 2011
+      at:            15:34:23 MDT
     URL:                 http://www.ldeo.columbia.edu/~ecoon/
     email:               ecoon _at_ lanl.gov
  
@@ -27,4 +27,4 @@ Recommended (quick start) configure line:
 
 3. Build the base executable by running ``make'' in the src/lbm directory.
 
-4. Run a test by by running ``make test'' in the src/lbm directory.
+4. Run a test by by running ``make test'' in one of the test directories in tests

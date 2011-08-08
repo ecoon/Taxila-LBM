@@ -5,8 +5,8 @@
     version:             
     created:             12 July 2011
       on:                12:11:17 MDT
-    last modified:   12 July 2011
-      at:            12:22:53 MDT
+    last modified:   08 August 2011
+      at:            15:34:03 MDT
     URL:                 http://www.ldeo.columbia.edu/~ecoon/
     email:               ecoon _at_ lanl.gov
  
@@ -48,6 +48,10 @@ Getting <NAME>:
 
 Installing <NAME>:
   To install, see INSTALL (or the manual)
+
+Testing installation:
+  $>  cd tests/{test_name}/
+  $>  make test
 
 Using <NAME>: 
   To use, see docs/README on how to make the manual and quickstart guide.
