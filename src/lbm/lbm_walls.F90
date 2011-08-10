@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         21 June 2011
 !!!       on:            10:07:45 MDT
-!!!     last modified:   05 August 2011
-!!!       at:            10:51:05 MDT
+!!!     last modified:   10 August 2011
+!!!       at:            09:17:16 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -102,7 +102,8 @@ contains
     type(options_type) options
     PetscErrorCode ierr
 
-    integer lcv
+    PetscScalar,parameter:: eps=1.e-15 ! slightly larger than machine epsilon
+    integer lcv, lcv2
     PetscBool help
     PetscBool flag
 
@@ -115,6 +116,11 @@ contains
     do lcv=1,walls%nminerals
       call MineralSetID(walls%minerals(lcv), lcv)
       call MineralSetFromOptions(walls%minerals(lcv), options, ierr)
+      do lcv2=1,options%nphases
+        if (ABS(walls%minerals(lcv)%gw(lcv2)) > eps) then
+          options%flow_fluidsolid_forces = PETSC_TRUE
+        end if
+      end do
     end do
 
     if (help) then

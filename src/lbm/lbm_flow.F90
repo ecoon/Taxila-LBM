@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
-!!!     last modified:   22 June 2011
-!!!       at:            10:41:43 MDT
+!!!     last modified:   10 August 2011
+!!!       at:            09:26:06 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -54,11 +54,17 @@ module LBM_Flow_module
      Vec velt_g
      PetscScalar,pointer:: velt_a(:)
      PetscBool io_velt
-     
+
      PetscScalar,pointer,dimension(:,:,:):: vel_eq
      PetscScalar,pointer,dimension(:,:,:):: fi_eq
      PetscScalar,pointer,dimension(:,:,:):: forces
+     PetscScalar,pointer,dimension(:,:):: psi_of_rho
      character(len=MAXWORDLENGTH) name       
+
+     PetscBool :: body_forces
+     PetscBool :: fluidfluid_forces
+     PetscBool :: use_nonideal_eos
+     PetscBool :: fluidsolid_forces
 
      PetscScalar,pointer,dimension(:) :: gvt
      PetscScalar velocity_scale
@@ -111,6 +117,7 @@ contains
     nullify(flow%vel_eq)
     nullify(flow%forces)
     nullify(flow%fi_eq)
+    nullify(flow%psi_of_rho)
 
     flow%io_prs = PETSC_TRUE
     flow%io_rhot = PETSC_FALSE
@@ -118,6 +125,10 @@ contains
     flow%io_fi = PETSC_TRUE
     flow%io_velt = PETSC_TRUE
 
+    flow%body_forces = PETSC_FALSE
+    flow%fluidfluid_forces = PETSC_FALSE
+    flow%use_nonideal_eos = PETSC_FALSE
+    flow%fluidsolid_forces = PETSC_FALSE
     nullify(flow%gvt)
   end function FlowCreate
 
@@ -141,6 +152,7 @@ contains
     if (associated(flow%vel_eq)) deallocate(flow%vel_eq)
     if (associated(flow%forces)) deallocate(flow%forces)
     if (associated(flow%fi_eq)) deallocate(flow%fi_eq)
+    if (associated(flow%psi_of_rho)) deallocate(flow%psi_of_rho)
     if (associated(flow%gvt)) deallocate(flow%gvt)
   end subroutine FlowDestroy
 
@@ -156,11 +168,13 @@ contains
     type(flow_type) flow
     type(options_type) options
     PetscErrorCode ierr
-    integer lcv
+    integer lcv, lcv2
     PetscBool help
     PetscBool flag
     PetscInt nmax
     PetscBool bcvalue
+    PetscScalar gravity(options%ndims)
+    PetscScalar,parameter:: eps=1.e-15 ! slightly larger than machine epsilon
 
     flow%nphases = options%nphases
     flow%ndims = options%ndims
@@ -176,12 +190,31 @@ contains
        call PhaseSetFromOptions(flow%phases(lcv), options, ierr)
     end do
 
-    allocate(flow%gvt(flow%ndims))
-    flow%gvt = 0.d0
+    ! set up control for forcing terms
+    gravity(:) = 0.d0
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
     if (help) call PetscPrintf(options%comm, "-gvt=<0,0,0>: gravity\n", ierr)
     nmax = flow%ndims
-    call PetscOptionsGetRealArray(options%my_prefix, '-gvt', flow%gvt, nmax, flag, ierr)
+    call PetscOptionsGetRealArray(options%my_prefix, '-gvt', gravity, &
+         nmax, flow%body_forces, ierr)
+    if (flag) then
+      allocate(flow%gvt(flow%ndims))
+      flow%gvt = gravity
+    end if
+
+    do lcv=1,flow%nphases
+      do lcv2=1,flow%nphases
+        if (ABS(flow%phases(lcv)%gf(lcv2)) > eps) then
+          flow%fluidfluid_forces = PETSC_TRUE
+        end if
+      end do
+    end do
+
+    if (help) call PetscPrintf(options%comm, "-flow_psi_use_nonideal_eos: uses Shan & Chen '94 psi instead of psi=rho\n",&
+         ierr)
+    call PetscOptionsGetBool(options%my_prefix, '-flow_psi_use_nonideal_eos', &
+         flow%use_nonideal_eos, flag, ierr)
+    flow%fluidsolid_forces = options%flow_fluidsolid_forces
 
     ! set up the vectors for holding boundary data
     ! dimension 
@@ -451,6 +484,7 @@ contains
          1:flow%grid%info%gxyzl))
     allocate(flow%fi_eq(1:flow%nphases, 0:flow%disc%b, &
          1:flow%grid%info%gxyzl))
+    allocate(flow%psi_of_rho(flow%nphases,flow%grid%info%gxyzl))
     flow%vel_eq = 0.d0
     flow%forces = 0.d0
     flow%fi_eq = 0.d0
@@ -660,21 +694,32 @@ contains
     PetscErrorCode ierr
     
     flow%forces = 0.d0
-    if (flow%nphases > 1) then
-       call PetscLogEventBegin(logger%event_forcing_fluidfluid,ierr)
-       call LBMAddFluidFluidForces(flow%distribution, flow%phases, &
-            flow%distribution%rho_a, walls%walls_a, flow%forces)
-       call PetscLogEventEnd(logger%event_forcing_fluidfluid,ierr)
-
-       call PetscLogEventBegin(logger%event_forcing_fluidsolid,ierr)
-       call LBMAddFluidSolidForces(flow%distribution, flow%phases, walls, &
-            flow%distribution%rho_a, flow%forces)
-       call PetscLogEventEnd(logger%event_forcing_fluidsolid,ierr)
+    if (flow%fluidfluid_forces) then
+      call PetscLogEventBegin(logger%event_forcing_fluidfluid,ierr)
+      if (flow%use_nonideal_eos) then
+        call FlowCalcPsiOfRho(flow, flow%distribution%rho_a)
+        call LBMAddFluidFluidForces(flow%distribution, flow%phases, &
+             flow%psi_of_rho, walls%walls_a, flow%forces)
+      else
+        call LBMAddFluidFluidForces(flow%distribution, flow%phases, &
+             flow%distribution%rho_a, walls%walls_a, flow%forces)
+      end if
+      call PetscLogEventEnd(logger%event_forcing_fluidfluid,ierr)
     end if
-    call PetscLogEventBegin(logger%event_forcing_body,ierr)
-    call LBMAddBodyForces(flow%distribution, flow%phases, flow%gvt, &
-         flow%distribution%rho_a, walls%walls_a, flow%forces)
-    call PetscLogEventEnd(logger%event_forcing_body,ierr)
+
+    if (flow%fluidsolid_forces) then
+      call PetscLogEventBegin(logger%event_forcing_fluidsolid,ierr)
+      call LBMAddFluidSolidForces(flow%distribution, flow%phases, walls, &
+           flow%distribution%rho_a, flow%forces)
+      call PetscLogEventEnd(logger%event_forcing_fluidsolid,ierr)
+    end if
+
+    if (flow%body_forces) then
+      call PetscLogEventBegin(logger%event_forcing_body,ierr)
+      call LBMAddBodyForces(flow%distribution, flow%phases, flow%gvt, &
+           flow%distribution%rho_a, walls%walls_a, flow%forces)
+      call PetscLogEventEnd(logger%event_forcing_body,ierr)
+    end if
   end subroutine FlowCalcForces
 
   subroutine FlowStream(flow)
@@ -802,7 +847,19 @@ contains
     PetscScalar,dimension(flow%grid%info%gxyzl):: walls
     call BCApply(flow%bc, walls, flow%distribution)
   end subroutine FlowApplyBCs
+
+  subroutine FlowCalcPsiOfRho(flow, rho)
+    type(flow_type) flow
+    PetscScalar,dimension(flow%distribution%s,flow%grid%info%gxyzl):: rho
     
+    PetscInt m,i
+    do i=1,flow%grid%info%gxyzl
+      do m=1,flow%distribution%s
+        flow%psi_of_rho(m,i) = 1 - EXP(-rho(m,i))
+      end do
+    end do
+  end subroutine FlowCalcPsiOfRho
+
   subroutine print_a_few(fi, u, forces, dist,istep)
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s,0:dist%b, dist%info%gxs:dist%info%gxe, &
