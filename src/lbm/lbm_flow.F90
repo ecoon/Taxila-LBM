@@ -6,7 +6,7 @@
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
 !!!     last modified:   10 August 2011
-!!!       at:            09:26:06 MDT
+!!!       at:            15:32:22 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -631,7 +631,8 @@ contains
             ! However, with the HOD for fluid-fluid the new gf is 1/6 of the old gf, so
             ! I have accounted for it in the new pressure calculation.  This equation
             ! has been verified by Laplace's law for viscosity ratios of 1 and 5. 
-             prs(i,j,k) = prs(i,j,k) + 0.5*rho(m,i,j,k)*sum(flow%phases(m)%gf*rho(:,i,j,k),1)
+             prs(i,j,k) = prs(i,j,k) + flow%disc%c_0/2.d0*rho(m,i,j,k) &
+                  *sum(flow%phases(m)%gf*rho(:,i,j,k),1)
           end do
        end if
     end if
@@ -677,7 +678,8 @@ contains
             ! However, with the hod for fluid-fluid the new gf is 1/3 of the old gf, so
             ! I have accounted for it in the new pressure calculation.  This equation
             ! has been verified by Laplace's law for viscosity ratios of 1 and 5.        
-            prs(i,j) = prs(i,j) + 0.5*rho(m,i,j)*sum(rho(:,i,j)*flow%phases(m)%gf,1)
+            prs(i,j) = prs(i,j) + flow%disc%c_0/2.d0*rho(m,i,j) &
+                  *sum(flow%phases(m)%gf*rho(:,i,j),1)
           end do
        end if
     end if
