@@ -6,7 +6,7 @@
 !!!     created:         09 December 2010
 !!!       on:            14:16:32 MST
 !!!     last modified:   10 August 2011
-!!!       at:            09:17:35 MDT
+!!!       at:            17:00:59 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -33,6 +33,8 @@
        PetscInt current_waypoint
        PetscInt, pointer:: waypoints(:)
 
+       PetscBool ic_from_file
+       character(len=MAXSTRINGLENGTH):: ic_file
        character(len=MAXSTRINGLENGTH):: output_prefix
        PetscBool mpiio
 
@@ -77,6 +79,8 @@
       options%restart_counter = -1
       options%istep = 0
       options%mpiio = PETSC_FALSE
+      options%ic_from_file = PETSC_FALSE
+      options%ic_file = ''
 
       options%current_waypoint = 0
       nullify(options%waypoints)
@@ -141,6 +145,9 @@
 
       if (help) call PetscPrintf(options%comm, "  -restart: start from an old simulation\n", ierr)
       call PetscOptionsGetBool(options%my_prefix, '-restart', options%restart, flag, ierr)
+
+      if (help) call PetscPrintf(options%comm, "  -ic_file: start from a given IC for the fi\n", ierr)
+      call PetscOptionsGetString(options%my_prefix, '-ic_file', options%ic_file, options%ic_from_file, ierr)
 
       if (help) call PetscPrintf(options%comm, "  -istep=<0>: initial timestep\n", ierr)
       call PetscOptionsGetInt(options%my_prefix, '-istep', options%istep, flag, ierr)
