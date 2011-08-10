@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 March 2011
 !!!       on:            16:33:56 MDT
-!!!     last modified:   21 April 2011
-!!!       at:            17:51:09 MDT
+!!!     last modified:   10 August 2011
+!!!       at:            15:28:03 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -47,6 +47,7 @@ contains
     disc%name = NULL_DISCRETIZATION
     disc%ndims = -1
     disc%b = -1
+    disc%c_0 = 0
     nullify(disc%weights)
   end function DiscretizationCreate
 
