@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         09 December 2010
 !!!       on:            14:16:32 MST
-!!!     last modified:   21 June 2011
-!!!       at:            10:53:48 MDT
+!!!     last modified:   10 August 2011
+!!!       at:            09:17:35 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -38,15 +38,20 @@
 
        PetscInt flow_disc
        PetscInt transport_disc
+
        PetscInt ndims
        PetscInt nphases
        PetscInt nspecies
        PetscInt nminerals
+
        PetscInt flow_relaxation_mode
+       PetscBool flow_fluidsolid_forces
+
        PetscBool steadystate
        PetscInt steadystate_rampup_steps
        character(len=MAXSTRINGLENGTH):: steadystate_flow_file
        PetscBool steadystate_hasfile
+
        PetscInt transport_relaxation_mode
        PetscBool transport_reactive_matrix
     end type options_type
@@ -80,15 +85,20 @@
       
       options%flow_disc = NULL_DISCRETIZATION
       options%transport_disc = NULL_DISCRETIZATION
+
       options%ndims = 0
       options%nminerals = 1
       options%nphases = 1
       options%nspecies = 0
+
       options%flow_relaxation_mode = RELAXATION_MODE_SRT
+      options%flow_fluidsolid_forces = PETSC_FALSE
+
       options%steadystate = PETSC_FALSE
       options%steadystate_rampup_steps = 0
       options%steadystate_flow_file = ''
       options%steadystate_hasfile = PETSC_FALSE
+
       options%transport_relaxation_mode = RELAXATION_MODE_SRT
       options%transport_reactive_matrix = PETSC_FALSE
     end function OptionsCreate
