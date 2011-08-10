@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         29 March 2011
 !!!       on:            15:38:36 MDT
-!!!     last modified:   30 March 2011
-!!!       at:            12:40:01 MDT
+!!!     last modified:   10 August 2011
+!!!       at:            17:04:08 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -37,6 +37,7 @@ module LBM_IO_module
        IOSetFromOptions, &
        IOView, &
        IOLoad, &
+       IOLoadFile, &
        IOIncrementCounter
 
 contains
@@ -114,6 +115,23 @@ contains
     call PetscViewerDestroy(viewer,ierr)
     CHKERRQ(ierr)
   end subroutine IOLoad
+
+  subroutine IOLoadFile(io, vec, filename)
+    type(io_type) io
+    Vec vec
+    character(len=MAXSTRINGLENGTH) filename
+    PetscErrorCode ierr
+    PetscViewer viewer
+
+    call PetscViewerCreate(io%comm, viewer, ierr)
+    call PetscViewerSetType(viewer, PETSCVIEWERBINARY, ierr)
+    if (io%mpiio) call PetscViewerBinarySetMPIIO(viewer, ierr)
+    call PetscViewerFileSetMode(viewer, FILE_MODE_READ, ierr)
+    call PetscViewerFileSetName(viewer, filename, ierr)
+    call VecLoad(vec, viewer, ierr)
+    call PetscViewerDestroy(viewer,ierr)
+    CHKERRQ(ierr)
+  end subroutine IOLoadFile
 
   subroutine IOIncrementCounter(io)
     type(io_type) io
