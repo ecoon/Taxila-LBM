@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         08 December 2010
 !!!       on:            11:48:19 MST
-!!!     last modified:   25 July 2011
-!!!       at:            13:07:06 MDT
+!!!     last modified:   10 August 2011
+!!!       at:            17:00:55 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -73,6 +73,9 @@ program MAIN
   if (options%restart) then
      call LBMInitializeStateRestarted(lbm, options%istep, options%kwrite)
      istep = options%istep
+  else if (options%ic_from_file) then
+     call LBMInitializeStateFromFile(lbm)
+     istep = 0
   else
      if (associated(lbm%transport)) then
         call LBMInitializeState(lbm, initialize_state, initialize_state_transport)

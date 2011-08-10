@@ -72,6 +72,7 @@
          LBMOutput, &
          LBMInitializeState, &
          LBMInitializeStateRestarted, &
+         LBMInitializeStateFromFile, &
          LBMLoadSteadyStateFlow, &
          LBMGetCorners
 
@@ -472,6 +473,22 @@
       
       corners = lbm%grid%info%corners
     end subroutine LBMGetCorners
+
+    subroutine LBMInitializeStateFromFile(lbm)
+      use petsc
+      type(lbm_type) lbm
+      PetscErrorCode ierr
+
+      if (lbm%grid%info%rank.eq.0) then
+         write(*,*) 'reading initial condition from file', lbm%options%ic_file
+      endif
+      call IOLoadFile(lbm%io, lbm%flow%distribution%fi_g, lbm%options%ic_file)
+      call DMGlobalToLocalBegin(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi_g, &
+           INSERT_VALUES, lbm%flow%distribution%fi, ierr)
+      call DMGlobalToLocalEnd(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi_g, &
+           INSERT_VALUES, lbm%flow%distribution%fi, ierr)
+      return
+    end subroutine LBMInitializeStateFromFile
 
     subroutine LBMInitializeStateRestarted(lbm, istep, kwrite)
       use petsc
