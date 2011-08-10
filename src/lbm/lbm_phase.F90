@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            13:43:00 MDT
-!!!     last modified:   21 June 2011
-!!!       at:            12:02:39 MDT
+!!!     last modified:   10 August 2011
+!!!       at:            15:16:11 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -180,7 +180,7 @@ contains
          'density [kg/m^3], defaults to ND value', ierr)
     phase%density => phase%data%density
 
-    phase%relax%d_k = 1.d0 - 2.d0/(3.d0*phase%mm)
+    phase%relax%d_k = 1.d0 - 2.d0/(3.d0*phase%mm) ! d_k = 1/3 for mm=1
 
     do lcv=1,phase%s
        write(paramname, '(I1, I1)') phase%id, lcv
