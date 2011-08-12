@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   31 May 2011
-!!!       at:            16:24:41 MDT
+!!!     last modified:   12 August 2011
+!!!       at:            16:15:24 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -109,7 +109,10 @@ contains
     info%nproc_x = PETSC_DECIDE
     info%nproc_y = PETSC_DECIDE
     info%nproc_z = PETSC_DECIDE
-    
+
+    nullify(info%ownership_x)
+    nullify(info%ownership_y)
+    nullify(info%ownership_z)
     nullify(info%periodic)
     nullify(info%gridsize)
     nullify(info%corners)
