@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
-!!!     last modified:   10 August 2011
-!!!       at:            15:32:22 MDT
+!!!     last modified:   12 August 2011
+!!!       at:            16:16:02 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -170,12 +170,13 @@ contains
     PetscErrorCode ierr
     integer lcv, lcv2
     PetscBool help
-    PetscBool flag
     PetscInt nmax
     PetscBool bcvalue
     PetscScalar gravity(options%ndims)
     PetscScalar,parameter:: eps=1.e-15 ! slightly larger than machine epsilon
+    PetscBool flag
 
+    flag = PETSC_FALSE
     flow%nphases = options%nphases
     flow%ndims = options%ndims
     flow%phases => PhaseCreate(flow%comm, flow%nphases)
@@ -197,7 +198,7 @@ contains
     nmax = flow%ndims
     call PetscOptionsGetRealArray(options%my_prefix, '-gvt', gravity, &
          nmax, flow%body_forces, ierr)
-    if (flag) then
+    if (flow%body_forces) then
       allocate(flow%gvt(flow%ndims))
       flow%gvt = gravity
     end if
