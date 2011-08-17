@@ -6,7 +6,7 @@
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
 !!!     last modified:   17 August 2011
-!!!       at:            10:14:48 MDT
+!!!       at:            10:48:39 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -789,6 +789,7 @@ contains
     PetscInt m,i,j,k,d
     PetscScalar,parameter:: eps=1.e-15 ! slightly larger than machine epsilon
     PetscScalar,dimension(1:dist%s) :: mmot, mm
+    PetscErrorCode ierr
 
     call PetscLogEventBegin(logger%event_collision_precalc,ierr)
     do m=1,dist%s
@@ -826,6 +827,7 @@ contains
   end subroutine FlowCollisionD3
 
   subroutine FlowCollisionD2(flow, fi, rho, u, forces, walls, fi_eq, dist)
+    use LBM_Logging_module
     type(flow_type) flow
     type(distribution_type) dist ! just for convenience
     PetscScalar,dimension(flow%nphases, 0:flow%disc%b,dist%info%gxs:dist%info%gxe, &
@@ -845,6 +847,7 @@ contains
     PetscInt m,i,j,d
     PetscScalar,parameter:: eps=1.e-15 ! slightly larger than machine epsilon
     PetscScalar,dimension(1:dist%s) :: mmot, mm
+    PetscErrorCode ierr
 
     call PetscLogEventBegin(logger%event_collision_precalc,ierr)
     do m=1,dist%s
