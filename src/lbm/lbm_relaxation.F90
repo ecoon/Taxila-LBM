@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            15:15:25 MDT
-!!!     last modified:   18 May 2011
-!!!       at:            10:51:16 MDT
+!!!     last modified:   17 August 2011
+!!!       at:            15:37:29 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -216,7 +216,7 @@ contains
     type(relaxation_type) relax
 
     ! local variables
-    integer i,j,k,m                  ! loop variables
+    PetscInt i,j,k,m                  ! loop variables
 
     do k=dist%info%zs,dist%info%ze
     do j=dist%info%ys,dist%info%ye
@@ -242,7 +242,7 @@ contains
     type(relaxation_type) relax
 
     ! local variables
-    integer i,j,k,m                  ! loop variables
+    PetscInt i,j,k,m                  ! loop variables
 
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
@@ -266,8 +266,8 @@ contains
     type(relaxation_type) relax
 
     ! local variables
-    integer i,j,k,m,n                  ! loop variables
-    PetscScalar,dimension(0:dist%b):: mdiff
+    PetscInt i,j,k,m,n                  ! loop variables
+    PetscScalar :: mdiff
     PetscScalar,dimension(0:dist%b):: rhs
     
     do k=dist%info%zs,dist%info%ze
@@ -275,13 +275,9 @@ contains
     do i=dist%info%xs,dist%info%xe
        if(walls(i,j,k).eq.0) then
           do n=0,dist%b
-             mdiff(n) = dot_product(dist%disc%mt_mrt(:,n), fi(:,i,j,k)-fi_eq(:,i,j,k))
-          end do
-          rhs(:)=0.d0
-          do n=0,dist%b
-             rhs(:) = rhs(:) - (relax%tau_mrt(n)*(mdiff(n)))/dist%disc%mmt_mrt(n)*dist%disc%mt_mrt(:,n)
+             mdiff = dot_product(dist%disc%mt_mrt(:,n), fi(:,i,j,k)-fi_eq(:,i,j,k))
+             fi(:,i,j,k) = fi(:,i,j,k) - (relax%tau_mrt(n)*(mdiff))/dist%disc%mmt_mrt(n)*dist%disc%mt_mrt(:,n)
           enddo
-          fi(:,i,j,k)=fi(:,i,j,k) + rhs(:)
        endif
     enddo
     enddo
@@ -300,21 +296,16 @@ contains
     type(relaxation_type) relax
 
     ! local variables
-    integer i,j,m,n                  ! loop variables
-    PetscScalar,dimension(0:dist%b):: mdiff
-    PetscScalar,dimension(0:dist%b):: rhs
+    PetscInt i,j,m,n                  ! loop variables
+    PetscScalar :: mdiff
     
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
        if(walls(i,j).eq.0) then
           do n=0,dist%b
-             mdiff(n) = dot_product(dist%disc%mt_mrt(:,n), fi(:,i,j)-fi_eq(:,i,j))
-          end do
-          rhs(:)=0.d0
-          do n=0,dist%b
-             rhs(:) = rhs(:) - (relax%tau_mrt(n)*(mdiff(n)))/dist%disc%mmt_mrt(n)*dist%disc%mt_mrt(:,n)
+             mdiff = dot_product(dist%disc%mt_mrt(:,n), fi(:,i,j)-fi_eq(:,i,j))
+             fi(:,i,j) = fi(:,i,j) - relax%tau_mrt(n)*mdiff/dist%disc%mmt_mrt(n)*dist%disc%mt_mrt(:,n)
           enddo
-          fi(:,i,j)=fi(:,i,j) + rhs(:)
        endif
     enddo
     enddo
