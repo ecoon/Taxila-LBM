@@ -352,9 +352,7 @@
          call PetscLogStagePush(logger%stage(COLLISION_STAGE), ierr)
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
-            call PetscLogEventBegin(logger%event_collision_flow,ierr)
             call FlowCollision(lbm%flow, lbm%walls%walls_a)
-            call PetscLogEventEnd(logger%event_collision_flow,ierr)
          end if
 
          if (associated(lbm%transport)) then

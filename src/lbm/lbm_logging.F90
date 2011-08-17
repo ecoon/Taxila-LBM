@@ -6,7 +6,7 @@
 !!!     created:         22 June 2011
 !!!       on:            09:37:52 MDT
 !!!     last modified:   17 August 2011
-!!!       at:            10:12:12 MDT
+!!!       at:            11:52:37 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -141,6 +141,12 @@ contains
       
       call PetscLogEventRegister('Collision Flow', logger%class_lbm, &
            logger%event_collision_flow, ierr)
+      call PetscLogEventRegister('Collision PreCalc', logger%class_lbm, &
+           logger%event_collision_precalc, ierr)
+      call PetscLogEventRegister('Collision Feq', logger%class_lbm, &
+           logger%event_collision_feq, ierr)
+      call PetscLogEventRegister('Collision Relax', logger%class_lbm, &
+           logger%event_collision_relax, ierr)
       call PetscLogEventRegister('Collision Transport', logger%class_lbm, &
            logger%event_collision_tran, ierr)
       
