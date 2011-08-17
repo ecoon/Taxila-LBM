@@ -6,7 +6,7 @@
 !!!     created:         28 March 2011
 !!!       on:            15:15:25 MDT
 !!!     last modified:   17 August 2011
-!!!       at:            17:09:39 MDT
+!!!       at:            17:51:34 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -272,13 +272,15 @@ contains
     ! local variables
     PetscInt i,j,k,n                  ! loop variables
     PetscScalar :: mdiff
+    PetscScalar :: d_fi(dist%b)
     
     do k=dist%info%zs,dist%info%ze
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
        if(walls(i,j,k).eq.0) then
+          d_fi = fi(m,:,i,j,k)-fi_eq(m,:,i,j,k)
           do n=0,dist%b
-             mdiff = dot_product(dist%disc%mt_mrt(:,n), fi(m,:,i,j,k)-fi_eq(m,:,i,j,k))
+             mdiff = sum(dist%disc%mt_mrt(:,n)*d_fi,1)
              fi(m,:,i,j,k) = fi(m,:,i,j,k) - &
                 (relax%tau_mrt(n)*(mdiff))/dist%disc%mmt_mrt(n)*dist%disc%mt_mrt(:,n)
           enddo
@@ -303,12 +305,14 @@ contains
     ! local variables
     PetscInt i,j,n                  ! loop variables
     PetscScalar :: mdiff
-    
+    PetscScalar :: d_fi(dist%b)
+   
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
        if(walls(i,j).eq.0) then
+          d_fi = fi(m,:,i,j)-fi_eq(m,:,i,j)
           do n=0,dist%b
-             mdiff = dot_product(dist%disc%mt_mrt(:,n), fi(m,:,i,j)-fi_eq(m,:,i,j))
+             mdiff = sum(dist%disc%mt_mrt(:,n)*d_fi,1)
              fi(m,:,i,j) = fi(m,:,i,j) - &
                   relax%tau_mrt(n)*mdiff/dist%disc%mmt_mrt(n)*dist%disc%mt_mrt(:,n)
           enddo
