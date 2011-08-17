@@ -6,7 +6,7 @@
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
 !!!     last modified:   17 August 2011
-!!!       at:            10:48:39 MDT
+!!!       at:            17:13:54 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -815,13 +815,13 @@ contains
 
     do m=1,dist%s
       call PetscLogEventBegin(logger%event_collision_feq,ierr)
-      call DiscretizationEquilf(flow%disc, rho(m,:,:,:), ue(m,:,:,:,:), &
-           walls, fi_eq(m,:,:,:,:), flow%phases(m)%relax, dist)
+      call DiscretizationEquilf(flow%disc, rho, ue, &
+           walls, fi_eq, m, flow%phases(m)%relax, dist)
       call PetscLogEventEnd(logger%event_collision_feq,ierr)
 
       call PetscLogEventBegin(logger%event_collision_relax,ierr)
-      call RelaxationCollide(flow%phases(m)%relax, fi(m,:,:,:,:), &
-           fi_eq(m,:,:,:,:), walls, dist)
+      call RelaxationCollide(flow%phases(m)%relax, fi, fi_eq, &
+           walls, m, dist)
       call PetscLogEventEnd(logger%event_collision_relax,ierr)
     end do
   end subroutine FlowCollisionD3
@@ -871,13 +871,13 @@ contains
 
     do m=1,dist%s
       call PetscLogEventBegin(logger%event_collision_feq,ierr)
-      call DiscretizationEquilf(flow%disc, rho(m,:,:), ue(m,:,:,:), walls, &
-           fi_eq(m,:,:,:), flow%phases(m)%relax, dist)
+      call DiscretizationEquilf(flow%disc, rho, ue, walls, &
+           fi_eq, m, flow%phases(m)%relax, dist)
       call PetscLogEventEnd(logger%event_collision_feq,ierr)
 
       call PetscLogEventBegin(logger%event_collision_relax,ierr)
-      call RelaxationCollide(flow%phases(m)%relax, fi(m,:,:,:), &
-           fi_eq(m,:,:,:), walls, dist)
+      call RelaxationCollide(flow%phases(m)%relax, fi, fi_eq, &
+           walls, m, dist)
       call PetscLogEventEnd(logger%event_collision_relax,ierr)
     end do
   end subroutine FlowCollisionD2

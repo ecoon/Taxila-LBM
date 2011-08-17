@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         04 April 2011
 !!!       on:            14:35:39 MDT
-!!!     last modified:   03 June 2011
-!!!       at:            10:08:13 MDT
+!!!     last modified:   17 August 2011
+!!!       at:            17:13:46 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -433,10 +433,10 @@ contains
 
     ue(:,dist%info%xs:dist%info%xe,dist%info%ys:dist%info%ye,dist%info%zs:dist%info%ze) = u
     do m=1,dist%s
-       call DiscretizationEquilf(transport%disc, rho(m,:,:,:), ue, walls, &
-            fi_eq(m,:,:,:,:), transport%species(m)%relax, dist)
-       call RelaxationCollide(transport%species(m)%relax, fi(m,:,:,:,:), &
-            fi_eq(m,:,:,:,:), walls, dist)
+       call DiscretizationEquilf(transport%disc, rho, ue, walls, &
+            fi_eq, m, transport%species(m)%relax, dist)
+       call RelaxationCollide(transport%species(m)%relax, fi, &
+            fi_eq, walls, m, dist)
     end do
   end subroutine TransportCollisionD3
 
@@ -459,10 +459,10 @@ contains
 
     ue(:,dist%info%xs:dist%info%xe,dist%info%ys:dist%info%ye) = u
     do m=1,dist%s
-       call DiscretizationEquilf(transport%disc, rho(m,:,:), ue, walls, &
-            fi_eq(m,:,:,:), transport%species(m)%relax, dist)
-       call RelaxationCollide(transport%species(m)%relax, fi(m,:,:,:), fi_eq(m,:,:,:), &
-            walls, dist)
+       call DiscretizationEquilf(transport%disc, rho, ue, walls, &
+            fi_eq, m, transport%species(m)%relax, dist)
+       call RelaxationCollide(transport%species(m)%relax, fi, fi_eq, &
+            walls, m, dist)
     end do
   end subroutine TransportCollisionD2
 
