@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            14:06:07 MDT
-!!!     last modified:   03 June 2011
-!!!       at:            10:07:56 MDT
+!!!     last modified:   17 August 2011
+!!!       at:            09:50:54 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -367,72 +367,60 @@ contains
   ! --- stream the fi
   subroutine DistributionStream(dist)
     type(distribution_type) dist
-    call DistributionStream_(dist%fi_a, dist)
-  end subroutine DistributionStream
-
-  subroutine DistributionStream_(fi, dist)
-    type(distribution_type) dist
-    PetscScalar,dimension(1:dist%s, 0:dist%b, 1:dist%info%gxyzl):: fi
-    PetscErrorCode ierr
-    PetscInt m
 
     select case(dist%info%ndims)
     case(3)
-       do m=1,dist%s
-          call DistributionStreamComponentD3(fi(m,:,:),dist)
-       end do
+      call DistributionStreamD3(dist%fi_a, dist)
     case(2)
-       do m=1,dist%s
-          call DistributionStreamComponentD2(fi(m,:,:),dist)
-       end do
+      call DistributionStreamD2(dist%fi_a, dist)
     case DEFAULT
        SETERRQ(1, 1, 'invalid discretization in LBM', ierr)
     end select
   end subroutine DistributionStream_
 
   ! --- stream each specie individually
-  subroutine DistributionStreamComponentD3(fi, dist)
+  subroutine DistributionStreamD3(fi, dist)
     ! input variables
     type(distribution_type) dist
-    PetscScalar,dimension(0:dist%b, dist%info%gxs:dist%info%gxe, &
+    PetscScalar,dimension(dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
 
     ! local
-    PetscScalar,dimension(0:dist%b, dist%info%gxs:dist%info%gxe, &
+    PetscScalar,dimension(dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: tmp
     PetscInt n
     type(info_type),pointer:: info
     info => dist%info
 
     do n=0,dist%b
-       tmp(n,info%xs:info%xe,info%ys:info%ye,info%zs:info%ze) = fi(n, &
+       tmp(:,n,info%xs:info%xe,info%ys:info%ye,info%zs:info%ze) = fi(:,n, &
             info%xs-dist%disc%ci(n,X_DIRECTION):info%xe-dist%disc%ci(n,X_DIRECTION), &
             info%ys-dist%disc%ci(n,Y_DIRECTION):info%ye-dist%disc%ci(n,Y_DIRECTION), &
             info%zs-dist%disc%ci(n,Z_DIRECTION):info%ze-dist%disc%ci(n,Z_DIRECTION))
     end do
     fi = tmp
-  end subroutine DistributionStreamComponentD3
+  end subroutine DistributionStreamD3
 
-  subroutine DistributionStreamComponentD2(fi, dist)
+  subroutine DistributionStreamD2(fi, dist)
     ! input variables
     type(distribution_type) dist
-    PetscScalar,dimension(0:dist%b, dist%info%gxs:dist%info%gxe, &
+    PetscScalar,dimension(dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: fi
 
     ! local
-    PetscScalar,dimension(0:dist%b, dist%info%gxs:dist%info%gxe, &
+    PetscScalar,dimension(dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: tmp
     PetscInt n
     type(info_type),pointer:: info
     info => dist%info
 
     do n=0,dist%b
-       tmp(n,info%xs:info%xe,info%ys:info%ye) = fi(n, &
+       tmp(:,n,info%xs:info%xe,info%ys:info%ye) = fi(:,n, &
             info%xs-dist%disc%ci(n,X_DIRECTION):info%xe-dist%disc%ci(n,X_DIRECTION), &
             info%ys-dist%disc%ci(n,Y_DIRECTION):info%ye-dist%disc%ci(n,Y_DIRECTION))
     end do
     fi = tmp
-  end subroutine DistributionStreamComponentD2
+  end subroutine DistributionStreamD2
 
   subroutine DistributionBounceback(dist, walls)
     type(distribution_type) dist
