@@ -10,6 +10,7 @@ endif
 
 LBM_SRC_DIR= $(LBM_DIR)/src/lbm
 LBM_UTIL_DIR= $(LBM_DIR)/src/utils
+LBM_PROBLEM_DIR= $(LBM_DIR)/src/problem_specs
 LBM_INCLUDE_DIR= $(LBM_DIR)/include
 LBM_LIB_DIR= $(LBM_DIR)/lib
 LBM_MOD_DIR= $(LBM_LIB_DIR)/modules
@@ -84,6 +85,7 @@ BEGINLIB:
 	@echo ""
 allclean: 
 	@cd $(LBM_UTIL_DIR); $(MAKE) allclean
+	@cd $(LBM_PROBLEM_DIR); $(MAKE) allclean
 	rm -f ./*.mod
 	rm -f ./*.o
 	rm -f $(LBM_LIB_DIR)/$(LBM_LIB_NAME)

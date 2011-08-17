@@ -192,37 +192,38 @@ contains
     end if
   end subroutine DiscretizationSetupRelax_D3Q19
 
-  subroutine DiscretizationEquilf_D3Q19(disc, rho, u, walls, feq, relax, dist)
+  subroutine DiscretizationEquilf_D3Q19(disc, rho, u, walls, feq, m, relax, dist)
     use LBM_Relaxation_module
     type(discretization_type) disc
     type(distribution_type) dist
     type(relaxation_type) relax
 
-    PetscScalar,dimension(0:disc%b, dist%info%gxs:dist%info%gxe, &
+    PetscScalar,dimension(dist%s, 0:disc%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: feq
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+    PetscScalar,dimension(dist%s, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: rho
-    PetscScalar,dimension(1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+    PetscScalar,dimension(dist%s, 1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: u
     PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
+    PetscInt m
 
-    PetscInt i,j,k,d,n,m
+    PetscInt i,j,k,d,n
 
     PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: usqr
     PetscScalar udote
 
-    usqr = sum(u*u,1)
+    usqr = sum(u(m,:,:,:,:)*u(m,:,:,:,:),1)
 
     do k=dist%info%zs,dist%info%ze
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
     if (walls(i,j,k).eq.0) then
-       feq(0,i,j,k) = rho(i,j,k)*(relax%d_k - usqr(i,j,k)/2.d0)
+       feq(m,0,i,j,k) = rho(m,i,j,k)*(relax%d_k - usqr(i,j,k)/2.d0)
        do n=1,disc%b
-          udote = sum(disc%ci(n,:)*u(:,i,j,k), 1)
-          feq(n,i,j,k)= disc%weights(n)*rho(i,j,k)* &
+          udote = sum(disc%ci(n,:)*u(m,:,i,j,k), 1)
+          feq(m,n,i,j,k)= disc%weights(n)*rho(m,i,j,k)* &
                (1.5d0*(1.d0-relax%d_k) + udote/relax%c_s2 &
                + udote*udote/(2.d0*relax%c_s2*relax%c_s2) &
                - usqr(i,j,k)/(2.d0*relax%c_s2))

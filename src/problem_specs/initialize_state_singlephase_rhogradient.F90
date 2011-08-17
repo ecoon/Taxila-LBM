@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
-!!!     last modified:   20 April 2011
-!!!       at:            13:45:19 MDT
+!!!     last modified:   17 August 2011
+!!!       at:            17:17:00 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -77,6 +77,6 @@
     
     ! set state at equilibrium       
     nowalls = 0.d0
-    call DiscretizationEquilf(dist%disc, rho, u, nowalls, fi, phases(1)%relax, dist)    
+    call DiscretizationEquilf(dist%disc, rho, u, nowalls, fi, 1, phases(1)%relax, dist)    
     return
   end subroutine initialize_state
