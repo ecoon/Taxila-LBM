@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
-!!!     last modified:   12 August 2011
-!!!       at:            16:16:02 MDT
+!!!     last modified:   17 August 2011
+!!!       at:            10:14:48 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -574,13 +574,32 @@ contains
     call DMDAVecGetArrayF90(flow%grid%da(NFLOWDOF),flow%velt_g,flow%velt_a,ierr)
     call DMDAVecGetArrayF90(flow%grid%da(ONEDOF), flow%rhot_g, flow%rhot_a,ierr)
     call DMDAVecGetArrayF90(flow%grid%da(ONEDOF), flow%prs_g, flow%prs_a, ierr)
+
+    if (flow%use_nonideal_eos) then
+      call FlowCalcPsiOfRho(flow, flow%distribution%rho_a)
+    end if
+
     select case(flow%ndims)
     case(2)
-       call FlowUpdateDiagnosticsD2(flow, flow%distribution%rho_a, flow%distribution%flux, &
-            flow%forces, walls, flow%rhot_a, flow%prs_a, flow%velt_a)
+      if (flow%use_nonideal_eos) then
+        call FlowUpdateDiagnosticsD2(flow, flow%distribution%rho_a, flow%psi_of_rho, &
+             flow%distribution%flux, flow%forces, walls, flow%rhot_a, &
+             flow%prs_a, flow%velt_a)
+      else
+        call FlowUpdateDiagnosticsD2(flow, flow%distribution%rho_a, flow%distribution%rho_a, &
+             flow%distribution%flux, flow%forces, walls, flow%rhot_a, &
+             flow%prs_a, flow%velt_a)
+      end if
     case(3)
-       call FlowUpdateDiagnosticsD3(flow, flow%distribution%rho_a, flow%distribution%flux, &
-            flow%forces, walls, flow%rhot_a, flow%prs_a, flow%velt_a)
+      if (flow%use_nonideal_eos) then
+        call FlowUpdateDiagnosticsD3(flow, flow%distribution%rho_a, flow%psi_of_rho, &
+             flow%distribution%flux, flow%forces, walls, flow%rhot_a, &
+             flow%prs_a, flow%velt_a)
+      else
+        call FlowUpdateDiagnosticsD3(flow, flow%distribution%rho_a, flow%distribution%rho_a, &
+             flow%distribution%flux, flow%forces, walls, flow%rhot_a, &
+             flow%prs_a, flow%velt_a)
+      end if
     end select
     call DMDAVecRestoreArrayF90(flow%grid%da(NFLOWDOF),flow%velt_g,flow%velt_a,ierr)
     call DMDAVecRestoreArrayF90(flow%grid%da(ONEDOF), flow%rhot_g, flow%rhot_a, ierr)
@@ -588,7 +607,7 @@ contains
 
   end subroutine FlowUpdateDiagnostics
 
-  subroutine FlowUpdateDiagnosticsD3(flow, rho, vel, forces, walls, rhot, prs, velt)
+  subroutine FlowUpdateDiagnosticsD3(flow, rho, psi, vel, forces, walls, rhot, prs, velt)
     type(flow_type) flow
     PetscScalar,dimension(flow%grid%info%gxs:flow%grid%info%gxe, &
          flow%grid%info%gys:flow%grid%info%gye, &
@@ -596,7 +615,7 @@ contains
     PetscScalar,dimension(flow%nphases, &
          flow%grid%info%gxs:flow%grid%info%gxe, &
          flow%grid%info%gys:flow%grid%info%gye, &
-         flow%grid%info%gzs:flow%grid%info%gze):: rho
+         flow%grid%info%gzs:flow%grid%info%gze):: rho, psi
     PetscScalar,dimension(flow%nphases, flow%ndims, &
          flow%grid%info%gxs:flow%grid%info%gxe, &
          flow%grid%info%gys:flow%grid%info%gye, &
@@ -632,8 +651,8 @@ contains
             ! However, with the HOD for fluid-fluid the new gf is 1/6 of the old gf, so
             ! I have accounted for it in the new pressure calculation.  This equation
             ! has been verified by Laplace's law for viscosity ratios of 1 and 5. 
-             prs(i,j,k) = prs(i,j,k) + flow%disc%c_0/2.d0*rho(m,i,j,k) &
-                  *sum(flow%phases(m)%gf*rho(:,i,j,k),1)
+             prs(i,j,k) = prs(i,j,k) + flow%disc%c_0/2.d0*psi(m,i,j,k) &
+                  *sum(flow%phases(m)%gf*psi(:,i,j,k),1)
           end do
        end if
     end if
@@ -642,13 +661,13 @@ contains
     end do
   end subroutine FlowUpdateDiagnosticsD3
 
-  subroutine FlowUpdateDiagnosticsD2(flow, rho, vel, forces, walls, rhot, prs, velt)
+  subroutine FlowUpdateDiagnosticsD2(flow, rho, psi, vel, forces, walls, rhot, prs, velt)
     type(flow_type) flow
     PetscScalar,dimension(flow%grid%info%gxs:flow%grid%info%gxe, &
          flow%grid%info%gys:flow%grid%info%gye):: walls
     PetscScalar,dimension(flow%nphases, &
          flow%grid%info%gxs:flow%grid%info%gxe, &
-         flow%grid%info%gys:flow%grid%info%gye):: rho
+         flow%grid%info%gys:flow%grid%info%gye):: rho, psi
     PetscScalar,dimension(flow%nphases, flow%ndims, &
          flow%grid%info%gxs:flow%grid%info%gxe, &
          flow%grid%info%gys:flow%grid%info%gye):: vel,forces
@@ -679,8 +698,8 @@ contains
             ! However, with the hod for fluid-fluid the new gf is 1/3 of the old gf, so
             ! I have accounted for it in the new pressure calculation.  This equation
             ! has been verified by Laplace's law for viscosity ratios of 1 and 5.        
-            prs(i,j) = prs(i,j) + flow%disc%c_0/2.d0*rho(m,i,j) &
-                  *sum(flow%phases(m)%gf*rho(:,i,j),1)
+            prs(i,j) = prs(i,j) + flow%disc%c_0/2.d0*psi(m,i,j) &
+                  *sum(flow%phases(m)%gf*psi(:,i,j),1)
           end do
        end if
     end if
@@ -750,6 +769,7 @@ contains
   end subroutine FlowCollision
 
   subroutine FlowCollisionD3(flow, fi, rho, u, forces, walls, fi_eq, dist)
+    use LBM_Logging_module
     type(flow_type) flow
     type(distribution_type) dist ! just for convenience
     PetscScalar,dimension(flow%nphases, 0:flow%disc%b,dist%info%gxs:dist%info%gxe, &
@@ -770,6 +790,7 @@ contains
     PetscScalar,parameter:: eps=1.e-15 ! slightly larger than machine epsilon
     PetscScalar,dimension(1:dist%s) :: mmot, mm
 
+    call PetscLogEventBegin(logger%event_collision_precalc,ierr)
     do m=1,dist%s
        mmot(m) = flow%phases(m)%mm/flow%phases(m)%relax%tau
        mm(m) = flow%phases(m)%mm
@@ -789,12 +810,18 @@ contains
     end do
     end do
     end do
+    call PetscLogEventEnd(logger%event_collision_precalc,ierr)
 
     do m=1,dist%s
-       call DiscretizationEquilf(flow%disc, rho(m,:,:,:), ue(m,:,:,:,:), walls, &
-            fi_eq(m,:,:,:,:), flow%phases(m)%relax, dist)
-       call RelaxationCollide(flow%phases(m)%relax, fi(m,:,:,:,:), fi_eq(m,:,:,:,:), &
-            walls, dist)
+      call PetscLogEventBegin(logger%event_collision_feq,ierr)
+      call DiscretizationEquilf(flow%disc, rho(m,:,:,:), ue(m,:,:,:,:), &
+           walls, fi_eq(m,:,:,:,:), flow%phases(m)%relax, dist)
+      call PetscLogEventEnd(logger%event_collision_feq,ierr)
+
+      call PetscLogEventBegin(logger%event_collision_relax,ierr)
+      call RelaxationCollide(flow%phases(m)%relax, fi(m,:,:,:,:), &
+           fi_eq(m,:,:,:,:), walls, dist)
+      call PetscLogEventEnd(logger%event_collision_relax,ierr)
     end do
   end subroutine FlowCollisionD3
 
@@ -819,6 +846,7 @@ contains
     PetscScalar,parameter:: eps=1.e-15 ! slightly larger than machine epsilon
     PetscScalar,dimension(1:dist%s) :: mmot, mm
 
+    call PetscLogEventBegin(logger%event_collision_precalc,ierr)
     do m=1,dist%s
        mmot(m) = flow%phases(m)%mm/flow%phases(m)%relax%tau
        mm(m) = flow%phases(m)%mm
@@ -836,12 +864,18 @@ contains
     end if
     end do
     end do
+    call PetscLogEventEnd(logger%event_collision_precalc,ierr)
 
     do m=1,dist%s
-       call DiscretizationEquilf(flow%disc, rho(m,:,:), ue(m,:,:,:), walls, &
-            fi_eq(m,:,:,:), flow%phases(m)%relax, dist)
-       call RelaxationCollide(flow%phases(m)%relax, fi(m,:,:,:), fi_eq(m,:,:,:), &
-            walls, dist)
+      call PetscLogEventBegin(logger%event_collision_feq,ierr)
+      call DiscretizationEquilf(flow%disc, rho(m,:,:), ue(m,:,:,:), walls, &
+           fi_eq(m,:,:,:), flow%phases(m)%relax, dist)
+      call PetscLogEventEnd(logger%event_collision_feq,ierr)
+
+      call PetscLogEventBegin(logger%event_collision_relax,ierr)
+      call RelaxationCollide(flow%phases(m)%relax, fi(m,:,:,:), &
+           fi_eq(m,:,:,:), walls, dist)
+      call PetscLogEventEnd(logger%event_collision_relax,ierr)
     end do
   end subroutine FlowCollisionD2
 
