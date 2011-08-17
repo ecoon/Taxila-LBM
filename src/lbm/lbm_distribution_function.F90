@@ -6,7 +6,7 @@
 !!!     created:         28 March 2011
 !!!       on:            14:06:07 MDT
 !!!     last modified:   17 August 2011
-!!!       at:            09:50:54 MDT
+!!!       at:            10:47:26 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -367,6 +367,7 @@ contains
   ! --- stream the fi
   subroutine DistributionStream(dist)
     type(distribution_type) dist
+    PetscErrorCode ierr
 
     select case(dist%info%ndims)
     case(3)
@@ -376,7 +377,7 @@ contains
     case DEFAULT
        SETERRQ(1, 1, 'invalid discretization in LBM', ierr)
     end select
-  end subroutine DistributionStream_
+  end subroutine DistributionStream
 
   ! --- stream each specie individually
   subroutine DistributionStreamD3(fi, dist)
