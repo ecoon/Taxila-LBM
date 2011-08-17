@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         22 June 2011
 !!!       on:            09:37:52 MDT
-!!!     last modified:   22 June 2011
-!!!       at:            11:53:45 MDT
+!!!     last modified:   17 August 2011
+!!!       at:            10:12:12 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -58,6 +58,9 @@ module LBM_Logging_module
     PetscLogEvent :: event_forcing_body
 
     PetscLogEvent :: event_collision_flow
+    PetscLogEvent :: event_collision_precalc
+    PetscLogEvent :: event_collision_feq
+    PetscLogEvent :: event_collision_relax
     PetscLogEvent :: event_collision_tran
 
     PetscLogEvent :: event_communicate_fi
