@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 March 2011
 !!!       on:            16:33:56 MDT
-!!!     last modified:   10 August 2011
-!!!       at:            15:28:03 MDT
+!!!     last modified:   17 August 2011
+!!!       at:            16:59:13 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -105,25 +105,26 @@ contains
     end select
   end subroutine DiscretizationSetUpRelax
 
-  subroutine DiscretizationEquilf(disc, rho, u, walls, feq, relax, dist)
+  subroutine DiscretizationEquilf(disc, rho, u, walls, feq, m, relax, dist)
     use LBM_Distribution_Function_type_module
     use LBM_Relaxation_module
     type(discretization_type) disc
     type(distribution_type) dist
     type(relaxation_type) relax
 
-    PetscScalar,dimension(0:dist%b,dist%info%gxyzl):: feq
-    PetscScalar,dimension(dist%info%gxyzl):: rho
-    PetscScalar,dimension(dist%info%ndims,dist%info%gxyzl):: u
+    PetscScalar,dimension(dist%s,0:dist%b,dist%info%gxyzl):: feq
+    PetscScalar,dimension(dist%s,dist%info%gxyzl):: rho
+    PetscScalar,dimension(dist%s,dist%info%ndims,dist%info%gxyzl):: u
     PetscScalar,dimension(dist%info%gxyzl):: walls
+    PetscInt m
 
     PetscErrorCode ierr
 
     select case(disc%name)
     case(D3Q19_DISCRETIZATION)
-       call DiscretizationEquilf_D3Q19(disc, rho, u, walls, feq, relax, dist)
+       call DiscretizationEquilf_D3Q19(disc, rho, u, walls, feq, m, relax, dist)
     case(D2Q9_DISCRETIZATION)
-       call DiscretizationEquilf_D2Q9(disc, rho, u, walls, feq, relax, dist)
+       call DiscretizationEquilf_D2Q9(disc, rho, u, walls, feq, m, relax, dist)
     case DEFAULT 
        SETERRQ(1,1,'invalid discretization in LBM',ierr)
     end select

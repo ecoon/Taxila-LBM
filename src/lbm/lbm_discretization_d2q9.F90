@@ -141,35 +141,36 @@ contains
 
   end subroutine DiscretizationSetUpRelax_D2Q9
 
-  subroutine DiscretizationEquilf_D2Q9(disc, rho, u, walls, feq, relax, dist)
+  subroutine DiscretizationEquilf_D2Q9(disc, rho, u, walls, feq, m, relax, dist)
     use LBM_Relaxation_module
     type(discretization_type) disc
     type(distribution_type) dist
     type(relaxation_type) relax
 
-    PetscScalar,dimension(0:dist%b, dist%info%gxs:dist%info%gxe, &
+    PetscScalar,dimension(dist%s,0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: feq
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+    PetscScalar,dimension(dist%s,dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: rho
-    PetscScalar,dimension(1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+    PetscScalar,dimension(dist%s,1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: u
     PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: walls
+    PetscInt m
 
     PetscInt i,j,d,n
     PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: usqr
     PetscScalar udote
 
-    usqr = sum(u*u,1)
+    usqr = sum(u(m,:,:,:)*u(m,:,:,:),1)
 
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
     if (walls(i,j).eq.0) then
-       feq(0,i,j) = rho(i,j)*((1.d0 + relax%d_k*5.d0)/6.d0 - 2.d0*usqr(i,j)/3.d0)
+       feq(m,0,i,j) = rho(m,i,j)*((1.d0 + relax%d_k*5.d0)/6.d0 - 2.d0*usqr(i,j)/3.d0)
        do n=1,dist%b
-          udote = sum(disc%ci(n,:)*u(:,i,j), 1)
-          feq(n,i,j)= disc%weights(n)*rho(i,j)* &
+          udote = sum(disc%ci(n,:)*u(m,:,i,j), 1)
+          feq(m,n,i,j)= disc%weights(n)*rho(m,i,j)* &
                (1.5d0*(1.d0-relax%d_k) + udote/relax%c_s2 &
                + udote*udote/(2.d0*relax%c_s2*relax%c_s2) &
                - usqr(i,j)/(2.d0*relax%c_s2))
