@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   12 August 2011
-!!!       at:            16:15:24 MDT
+!!!     last modified:   17 August 2011
+!!!       at:            18:13:55 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -32,18 +32,19 @@ module LBM_Info_module
      PetscInt,pointer:: NX,NY,NZ
      PetscBool,pointer,dimension(:) :: periodic
      PetscScalar,pointer,dimension(:,:) :: corners
+     PetscInt,pointer:: stencil_size_rho
      PetscInt,pointer:: stencil_size
      PetscInt,pointer:: stencil_type
 
      ! dependent parameters
-     PetscInt xs,xe,xl,gxs,gxe,gxl
-     PetscInt ys,ye,yl,gys,gye,gyl
-     PetscInt zs,ze,zl,gzs,gze,gzl
-     PetscInt xyzl, gxyzl
-     PetscInt nproc_x, nproc_y, nproc_z, nprocs
+     PetscInt xs,xe,xl,gxs,gxe,gxl,rgxs,rgxe,rgxl
+     PetscInt ys,ye,yl,gys,gye,gyl,rgys,rgye,rgyl
+     PetscInt zs,ze,zl,gzs,gze,gzl,rgzs,rgze,rgzl
+     PetscInt xyzl,gxyzl,rgxyzl
+     PetscInt nproc_x,nproc_y,nproc_z,nprocs
      PetscInt rank
      PetscReal,pointer,dimension(:) :: gridsize
-     PetscInt,pointer,dimension(:):: ownership_x, ownership_y, ownership_z
+     PetscInt,pointer,dimension(:):: ownership_x,ownership_y,ownership_z
 
      ! bag
      character(len=MAXWORDLENGTH):: name
@@ -77,6 +78,7 @@ contains
     nullify(info%NX)
     nullify(info%NY)
     nullify(info%NZ)
+    nullify(info%stencil_size_rho)
     nullify(info%stencil_size)
     nullify(info%stencil_type)
     info%ndims = -1
@@ -103,6 +105,16 @@ contains
     info%gzs = -1
     info%gze = -1
     info%gzl = -1
+
+    info%rgxs = -1
+    info%rgxe = -1
+    info%rgxl = -1
+    info%rgys = -1
+    info%rgye = -1
+    info%rgyl = -1
+    info%rgzs = -1
+    info%rgze = -1
+    info%rgzl = -1
 
     info%rank = -1
     info%nprocs = -1
@@ -138,7 +150,7 @@ contains
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
     call PetscDataTypeGetSize(PETSC_BOOL, sizeofbool, ierr)
     call PetscDataTypeGetSize(PETSC_INT, sizeofint, ierr)
-    sizeofdata = 3*2*sizeofscalar + 3*sizeofbool + 5*sizeofint
+    sizeofdata = 3*2*sizeofscalar + 3*sizeofbool + 6*sizeofint
     call PetscBagCreate(info%comm, sizeofdata, info%bag, ierr)
     call PetscBagSetName(info%bag, TRIM(options%my_prefix)//info%name, "", ierr)
 
@@ -164,6 +176,10 @@ contains
          trim(options%my_prefix)//'stencil_size', &
          'number of grid points in the stencil', ierr)
     info%stencil_size => info%data%stencil_size
+    call PetscBagRegisterInt(info%bag, info%data%stencil_size_rho, 1, &
+         trim(options%my_prefix)//'stencil_size_rho', &
+         'number of grid points in the stencil for rho -- sets higher order terms', ierr)
+    info%stencil_size_rho => info%data%stencil_size_rho
     call PetscBagRegisterInt(info%bag, info%data%stencil_type, DMDA_STENCIL_BOX, &
          trim(options%my_prefix)//'stencil_type', 'stencil type: 0=STAR, 1=BOX', ierr)
     info%stencil_type => info%data%stencil_type

@@ -6,7 +6,7 @@
 !!!     created:         28 March 2011
 !!!       on:            15:15:25 MDT
 !!!     last modified:   17 August 2011
-!!!       at:            17:51:34 MDT
+!!!       at:            18:12:14 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -272,7 +272,7 @@ contains
     ! local variables
     PetscInt i,j,k,n                  ! loop variables
     PetscScalar :: mdiff
-    PetscScalar :: d_fi(dist%b)
+    PetscScalar :: d_fi(0:dist%b)
     
     do k=dist%info%zs,dist%info%ze
     do j=dist%info%ys,dist%info%ye
@@ -305,7 +305,7 @@ contains
     ! local variables
     PetscInt i,j,n                  ! loop variables
     PetscScalar :: mdiff
-    PetscScalar :: d_fi(dist%b)
+    PetscScalar :: d_fi(0:dist%b)
    
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe

@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            16:59:38 MDT
-!!!     last modified:   21 June 2011
-!!!       at:            11:50:24 MDT
+!!!     last modified:   17 August 2011
+!!!       at:            10:18:31 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -54,6 +54,7 @@ module LBM_Info_Bag_Data_type_module
   type, public :: info_bag_data_type
      PetscInt NX,NY,NZ
      PetscInt stencil_size
+     PetscInt stencil_size_rho
      PetscInt stencil_type
      PetscBool,dimension(3) :: periodic
      PetscScalar,dimension(3,2) :: corners

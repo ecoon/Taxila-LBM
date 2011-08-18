@@ -36,7 +36,7 @@ contains
     !     NONLOCAL IN RHO
     type(distribution_type) dist
     type(phase_type) phases(dist%s)
-    PetscScalar,dimension(1:dist%s, 1:dist%info%gxyzl):: rho
+    PetscScalar,dimension(1:dist%s, 1:dist%info%rgxyzl):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims, 1:dist%info%gxyzl):: forces
     PetscScalar,dimension(1:dist%info%gxyzl):: walls
 
@@ -51,8 +51,8 @@ contains
   subroutine LBMAddFluidFluidForcesD3(dist, phases, rho, walls, forces)
     type(distribution_type) dist
     type(phase_type) phases(dist%s)
-    PetscScalar,dimension(dist%s, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: rho
+    PetscScalar,dimension(dist%s, dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: forces
     PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
@@ -62,8 +62,8 @@ contains
     PetscInt i,j,k,m,n,d
     PetscScalar,dimension(dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: tmp
-    PetscScalar,dimension(dist%s, dist%info%ndims, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: gradrho
+    PetscScalar,dimension(dist%s, dist%info%ndims, dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: gradrho
     PetscScalar,dimension(dist%info%ndims):: weightsum
     PetscErrorCode ierr
 
@@ -962,8 +962,8 @@ contains
     ! input
     type(distribution_type) dist
     type(phase_type) phases(dist%s)
-    PetscScalar,dimension(dist%s, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: rho
+    PetscScalar,dimension(dist%s, dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: forces
     PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
@@ -971,8 +971,8 @@ contains
 
     ! local
     PetscInt i,j,m,n,d
-    PetscScalar,dimension(dist%s, dist%info%ndims, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: gradrho
+    PetscScalar,dimension(dist%s, dist%info%ndims, dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: gradrho
     PetscScalar,dimension(dist%info%ndims):: weightsum
     PetscErrorCode ierr
 
@@ -1309,7 +1309,7 @@ contains
     type(distribution_type) dist
     type(phase_type) phases(dist%s)
     type(walls_type) walls
-    PetscScalar,dimension(1:dist%s, 1:dist%info%gxyzl):: rho
+    PetscScalar,dimension(1:dist%s, 1:dist%info%rgxyzl):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims, 1:dist%info%gxyzl):: forces
 
     select case(dist%info%ndims)
@@ -1324,8 +1324,8 @@ contains
     type(distribution_type) dist
     type(phase_type) phases(dist%s)
     type(walls_type) walls
-    PetscScalar,dimension(dist%s, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: rho
+    PetscScalar,dimension(dist%s, dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: forces
     PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
@@ -1369,8 +1369,8 @@ contains
     type(distribution_type) dist
     type(phase_type) phases(dist%s)
     type(walls_type) walls
-    PetscScalar,dimension(dist%s, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: rho
+    PetscScalar,dimension(dist%s, dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: forces
     PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
@@ -1417,7 +1417,7 @@ contains
   subroutine LBMAddBodyForces(dist, phases, gvt, rho, walls, forces)
     type(distribution_type) dist
     type(phase_type) phases(1:dist%s)
-    PetscScalar,dimension(dist%s, dist%info%gxyzl):: rho
+    PetscScalar,dimension(dist%s, dist%info%rgxyzl):: rho
     PetscScalar,dimension(dist%s, dist%info%ndims, 1:dist%info%gxyzl):: forces
     PetscScalar,dimension(dist%info%gxyzl):: walls
     PetscScalar,dimension(dist%info%ndims) :: gvt
@@ -1433,8 +1433,8 @@ contains
   subroutine LBMAddBodyForcesD3(dist, phases, gvt, rho, walls, forces)
     type(distribution_type) dist
     type(phase_type) phases(dist%s)
-    PetscScalar,dimension(dist%s, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: rho
+    PetscScalar,dimension(dist%s, dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: forces
     PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
@@ -1463,8 +1463,8 @@ contains
   subroutine LBMAddBodyForcesD2(dist, phases, gvt, rho, walls, forces)
     type(distribution_type) dist
     type(phase_type) phases(dist%s)
-    PetscScalar,dimension(dist%s, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: rho
+    PetscScalar,dimension(dist%s, dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: forces
     PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
