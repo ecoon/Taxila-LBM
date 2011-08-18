@@ -420,8 +420,8 @@ contains
     PetscScalar,dimension(transport%nspecies, &
          0:transport%disc%b,dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze)::fi,fi_eq
-    PetscScalar,dimension(1:dist%s,dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: rho
+    PetscScalar,dimension(1:dist%s,dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: rho
     PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
     PetscScalar,dimension(1:dist%info%ndims, dist%info%xs:dist%info%xe, &
@@ -446,8 +446,8 @@ contains
     type(distribution_type) dist ! just for convenience
     PetscScalar,dimension(transport%nspecies, 0:transport%disc%b, &
          dist%info%gxs:dist%info%gxe, dist%info%gys:dist%info%gye)::fi,fi_eq
-    PetscScalar,dimension(1:dist%s,dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: rho
+    PetscScalar,dimension(1:dist%s,dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: rho
     PetscScalar,dimension(dist%info%gxs:dist%info%gxe,&
          dist%info%gys:dist%info%gye):: walls
     PetscScalar,dimension(1:dist%info%ndims, &

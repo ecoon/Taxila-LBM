@@ -6,7 +6,7 @@
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
 !!!     last modified:   17 August 2011
-!!!       at:            17:16:12 MDT
+!!!       at:            18:09:03 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -28,14 +28,39 @@
     type(distribution_type) dist
     type(phase_type) phases(dist%s)
     type(options_type) options
+    PetscScalar,dimension(dist%s,0:dist%b,dist%info%gxyzl) :: fi
+    PetscScalar,dimension(dist%s,dist%info%rgxyzl) :: rho
+    PetscScalar,dimension(dist%s, 1:dist%info%ndims, dist%info%gxyzl):: u
+    PetscScalar,dimension(dist%info%gxyzl) :: walls
+
+    select case(dist%info%ndims)
+    case (2) 
+      call initialize_state_d2(fi, rho, u, walls, dist, phases, options)
+    case (3) 
+      call initialize_state_d3(fi, rho, u, walls, dist, phases, options)
+    end select
+  end subroutine initialize_state
+
+  subroutine initialize_state_d3(fi, rho, u, walls, dist, phases, options)
+    use petsc
+    use LBM_Distribution_Function_type_module
+    use LBM_Phase_module
+    use LBM_Options_module
+    use LBM_Discretization_module
+    implicit none
+
+    ! input variables
+    type(distribution_type) dist
+    type(phase_type) phases(dist%s)
+    type(options_type) options
     PetscScalar,dimension(dist%s,0:dist%b, &
          dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, &
          dist%info%gzs:dist%info%gze):: fi
     PetscScalar,dimension(dist%s, &
-         dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, &
-         dist%info%gzs:dist%info%gze):: rho
+         dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, &
+         dist%info%rgzs:dist%info%rgze):: rho
     PetscScalar,dimension(dist%s, 1:dist%info%ndims, &
          dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, &
@@ -132,4 +157,102 @@
             nowalls, fi, m, phases(m)%relax, dist)    
     end do
     return
-  end subroutine initialize_state
+  end subroutine initialize_state_d3
+
+
+  subroutine initialize_state_d2(fi, rho, u, walls, dist, phases, options)
+    use petsc
+    use LBM_Distribution_Function_type_module
+    use LBM_Phase_module
+    use LBM_Options_module
+    use LBM_Discretization_module
+    implicit none
+
+    ! input variables
+    type(distribution_type) dist
+    type(phase_type) phases(dist%s)
+    type(options_type) options
+    PetscScalar,dimension(dist%s,0:dist%b, &
+         dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: fi
+    PetscScalar,dimension(dist%s, &
+         dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: rho
+    PetscScalar,dimension(dist%s, 1:dist%info%ndims, &
+         dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: u
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: walls
+
+    ! local variables
+    PetscErrorCode ierr
+    PetscBool flag
+    logical,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: bound
+    PetscScalar,dimension(dist%s):: rho1, rho2         ! left and right fluid densities?
+    PetscInt nmax
+    PetscBool flushx, flushy
+    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: nowalls
+
+    PetscInt i,j,m ! local values
+    PetscBool help
+
+    ! input data
+    call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
+
+    rho1 = 0.d0
+    if (help) call PetscPrintf(options%comm, "-rho_invading=<0,0>: ???", ierr)
+    nmax = dist%s
+    call PetscOptionsGetRealArray(options%my_prefix, '-rho_invading', rho1, nmax, flag, ierr)
+
+    rho2 = 0.d0
+    if (help) call PetscPrintf(options%comm, "-rho_defending=<0,0>: ???", ierr)
+    nmax = dist%s
+    call PetscOptionsGetRealArray(options%my_prefix, '-rho_defending', rho2, nmax, flag, ierr)
+    
+    flushy = .TRUE.
+    flushx = .FALSE.
+    if (help) call PetscPrintf(options%comm, "-flush_direction_{xy}: set the direction"// &
+         " of flushing", ierr)
+    call PetscOptionsGetBool(options%my_prefix, '-flush_direction_x', flushx, flag, ierr)
+    call PetscOptionsGetBool(options%my_prefix, '-flush_direction_y', flushy, flag, ierr)
+    
+    ! initialize state
+    fi=0.d0
+    u=0.d0
+
+    ! flushing experiement 
+    if (flushx) then
+       bound=.false.
+       do i=dist%info%xs,dist%info%xe
+          do j=dist%info%ys,dist%info%ye
+             if(i.le.10) bound(i,j)=.true.
+          enddo
+       enddo
+    else if (flushy) then
+       bound=.false.
+       do i=dist%info%xs,dist%info%xe
+          do j=dist%info%ys,dist%info%ye
+             if(j.le.10) bound(i,j)=.true.
+          enddo
+       enddo
+    end if
+
+    ! set density
+    where(bound)
+       rho(1,:,:)=rho1(1)
+       rho(2,:,:)=rho1(2)
+    else where
+       rho(1,:,:)=rho2(1)
+       rho(2,:,:)=rho2(2)
+    end where
+    
+    ! set state at equilibrium       
+    nowalls = 0.d0
+    do m=1,dist%s
+       call DiscretizationEquilf(dist%disc, rho, u, &
+            nowalls, fi, m, phases(m)%relax, dist)    
+    end do
+    return
+  end subroutine initialize_state_d2

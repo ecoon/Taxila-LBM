@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            09:24:24 MDT
-!!!     last modified:   21 June 2011
-!!!       at:            13:42:39 MDT
+!!!     last modified:   17 August 2011
+!!!       at:            10:54:21 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -119,9 +119,9 @@ contains
 
     PetscErrorCode ierr
     PetscInt,dimension(3):: btype
-    PetscInt xs,gxs
-    PetscInt ys,gys
-    PetscInt zs,gzs
+    PetscInt xs,gxs,rgxs
+    PetscInt ys,gys,rgys
+    PetscInt zs,gzs,rgzs
 
     integer lcv
 
@@ -134,6 +134,7 @@ contains
        btype(Z_DIRECTION) = PETSC_NULL_INTEGER
     end if
 
+    ! create the 1-dof DA, and set up ghost/local info
     if (associated(grid%info%ownership_x)) then
        ! most of this is pre-calculated or provided in options
        call DMDACreate3d(grid%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
@@ -189,7 +190,33 @@ contains
     grid%info%xyzl = grid%info%xl*grid%info%yl*grid%info%zl
     grid%info%gxyzl = grid%info%gxl*grid%info%gyl*grid%info%gzl
 
-    do lcv=2,grid%nda
+    ! create the rho DA seperately, since the stencil size (and therefore
+    ! the ghost start/end/length) are potentially different
+    call DMDACreate3d(grid%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
+         btype(Z_DIRECTION), grid%info%stencil_type, &
+         grid%info%NX, grid%info%NY, grid%info%NZ, &
+         grid%info%nproc_x, grid%info%nproc_y, grid%info%nproc_z, &
+         grid%da_sizes(NPHASEDOF), grid%info%stencil_size_rho, &
+         grid%info%ownership_x, grid%info%ownership_y, grid%info%ownership_z, &
+         grid%da(NPHASEDOF), ierr)
+
+    call DMDAGetGhostCorners(grid%da(ONEDOF), rgxs, rgys, rgzs, &
+         grid%info%rgxl, grid%info%rgyl, grid%info%rgzl, ierr)
+    grid%info%rgxs = rgxs+1
+    grid%info%rgxe = grid%info%rgxs+grid%info%rgxl-1
+
+    grid%info%rgys = rgys+1
+    grid%info%rgye = grid%info%rgys+grid%info%rgyl-1
+
+    if (grid%info%ndims > 2) then
+      grid%info%rgzs = rgzs+1
+      grid%info%rgze = grid%info%rgzs+grid%info%rgzl-1
+    end if
+
+    grid%info%rgxyzl = grid%info%rgxl*grid%info%rgyl*grid%info%rgzl
+
+    ! create all other DAs
+    do lcv=3,grid%nda
        call DMDACreate3d(grid%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
             btype(Z_DIRECTION), grid%info%stencil_type, &
             grid%info%NX, grid%info%NY, grid%info%NZ, &

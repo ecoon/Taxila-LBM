@@ -7,7 +7,7 @@
 # numerical params
 -flow_relaxation_mode 1 # MRT
 -discretization d2q9
--stencil_size 1
+-stencil_size_rho 1
 
 # phase parameters
 -nphases 2

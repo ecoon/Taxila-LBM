@@ -149,8 +149,8 @@ contains
 
     PetscScalar,dimension(dist%s,0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: feq
-    PetscScalar,dimension(dist%s,dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: rho
+    PetscScalar,dimension(dist%s,dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: rho
     PetscScalar,dimension(dist%s,1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: u
     PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
