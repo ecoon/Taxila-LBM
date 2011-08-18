@@ -213,8 +213,8 @@ contains
     PetscScalar,dimension(distribution%info%gxs:distribution%info%gxe, &
          distribution%info%gys:distribution%info%gye):: walls
     PetscScalar,dimension(distribution%s, &
-         distribution%info%gxs:distribution%info%gxe, &
-         distribution%info%gys:distribution%info%gye):: rho
+         distribution%info%rgxs:distribution%info%rgxe, &
+         distribution%info%rgys:distribution%info%rgye):: rho
     
     PetscInt i,j,m
     do j=distribution%info%ys,distribution%info%ye
@@ -241,9 +241,9 @@ contains
          distribution%info%gys:distribution%info%gye, &
          distribution%info%gzs:distribution%info%gze):: walls
     PetscScalar,dimension(distribution%s, &
-         distribution%info%gxs:distribution%info%gxe, &
-         distribution%info%gys:distribution%info%gye, &
-         distribution%info%gzs:distribution%info%gze):: rho
+         distribution%info%rgxs:distribution%info%rgxe, &
+         distribution%info%rgys:distribution%info%rgye, &
+         distribution%info%rgzs:distribution%info%rgze):: rho
     
     PetscInt i,j,k,m
     do k=distribution%info%zs,distribution%info%ze

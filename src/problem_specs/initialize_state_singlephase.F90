@@ -29,7 +29,7 @@
     type(phase_type) phases(dist%s)
     type(options_type) options
     PetscScalar,dimension(dist%s,0:dist%b,dist%info%gxyzl) :: fi
-    PetscScalar,dimension(dist%s,dist%info%gxyzl) :: rho
+    PetscScalar,dimension(dist%s,dist%info%rgxyzl) :: rho
     PetscScalar,dimension(dist%s, 1:dist%info%ndims, dist%info%gxyzl):: u
     PetscScalar,dimension(dist%info%gxyzl) :: walls
 
@@ -58,9 +58,9 @@
          dist%info%gys:dist%info%gye, &
          dist%info%gzs:dist%info%gze):: fi
     PetscScalar,dimension(dist%s, &
-         dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, &
-         dist%info%gzs:dist%info%gze):: rho
+         dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, &
+         dist%info%rgzs:dist%info%rgze):: rho
     PetscScalar,dimension(dist%s, 1:dist%info%ndims, &
          dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, &
@@ -103,8 +103,8 @@
          dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: fi
     PetscScalar,dimension(dist%s, &
-         dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: rho
+         dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: rho
     PetscScalar,dimension(dist%s, 1:dist%info%ndims, &
          dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: u

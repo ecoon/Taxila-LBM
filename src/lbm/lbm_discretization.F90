@@ -6,7 +6,7 @@
 !!!     created:         14 March 2011
 !!!       on:            16:33:56 MDT
 !!!     last modified:   17 August 2011
-!!!       at:            16:59:13 MDT
+!!!       at:            18:04:38 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -113,7 +113,7 @@ contains
     type(relaxation_type) relax
 
     PetscScalar,dimension(dist%s,0:dist%b,dist%info%gxyzl):: feq
-    PetscScalar,dimension(dist%s,dist%info%gxyzl):: rho
+    PetscScalar,dimension(dist%s,dist%info%rgxyzl):: rho
     PetscScalar,dimension(dist%s,dist%info%ndims,dist%info%gxyzl):: u
     PetscScalar,dimension(dist%info%gxyzl):: walls
     PetscInt m

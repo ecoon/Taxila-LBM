@@ -485,7 +485,7 @@ contains
          1:flow%grid%info%gxyzl))
     allocate(flow%fi_eq(1:flow%nphases, 0:flow%disc%b, &
          1:flow%grid%info%gxyzl))
-    allocate(flow%psi_of_rho(flow%nphases,flow%grid%info%gxyzl))
+    allocate(flow%psi_of_rho(flow%nphases,flow%grid%info%rgxyzl))
     flow%vel_eq = 0.d0
     flow%forces = 0.d0
     flow%fi_eq = 0.d0
@@ -613,9 +613,9 @@ contains
          flow%grid%info%gys:flow%grid%info%gye, &
          flow%grid%info%gzs:flow%grid%info%gze):: walls
     PetscScalar,dimension(flow%nphases, &
-         flow%grid%info%gxs:flow%grid%info%gxe, &
-         flow%grid%info%gys:flow%grid%info%gye, &
-         flow%grid%info%gzs:flow%grid%info%gze):: rho, psi
+         flow%grid%info%rgxs:flow%grid%info%rgxe, &
+         flow%grid%info%rgys:flow%grid%info%rgye, &
+         flow%grid%info%rgzs:flow%grid%info%rgze):: rho, psi
     PetscScalar,dimension(flow%nphases, flow%ndims, &
          flow%grid%info%gxs:flow%grid%info%gxe, &
          flow%grid%info%gys:flow%grid%info%gye, &
@@ -666,8 +666,8 @@ contains
     PetscScalar,dimension(flow%grid%info%gxs:flow%grid%info%gxe, &
          flow%grid%info%gys:flow%grid%info%gye):: walls
     PetscScalar,dimension(flow%nphases, &
-         flow%grid%info%gxs:flow%grid%info%gxe, &
-         flow%grid%info%gys:flow%grid%info%gye):: rho, psi
+         flow%grid%info%rgxs:flow%grid%info%rgxe, &
+         flow%grid%info%rgys:flow%grid%info%rgye):: rho, psi
     PetscScalar,dimension(flow%nphases, flow%ndims, &
          flow%grid%info%gxs:flow%grid%info%gxe, &
          flow%grid%info%gys:flow%grid%info%gye):: vel,forces
@@ -774,8 +774,8 @@ contains
     type(distribution_type) dist ! just for convenience
     PetscScalar,dimension(flow%nphases, 0:flow%disc%b,dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze)::fi,fi_eq
-    PetscScalar,dimension(1:dist%s,dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: rho
+    PetscScalar,dimension(1:dist%s,dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: rho
     PetscScalar,dimension(1:dist%s,1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: u,forces
     PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
@@ -832,8 +832,8 @@ contains
     type(distribution_type) dist ! just for convenience
     PetscScalar,dimension(flow%nphases, 0:flow%disc%b,dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye)::fi,fi_eq
-    PetscScalar,dimension(1:dist%s,dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: rho
+    PetscScalar,dimension(1:dist%s,dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: rho
     PetscScalar,dimension(1:dist%s,1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: u,forces
     PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
@@ -890,7 +890,7 @@ contains
 
   subroutine FlowCalcPsiOfRho(flow, rho)
     type(flow_type) flow
-    PetscScalar,dimension(flow%distribution%s,flow%grid%info%gxyzl):: rho
+    PetscScalar,dimension(flow%distribution%s,flow%grid%info%rgxyzl):: rho
     
     PetscInt m,i
     do i=1,flow%grid%info%gxyzl
