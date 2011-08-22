@@ -5,8 +5,8 @@
 ###     version:         
 ###     created:         25 January 2011
 ###       on:            10:53:33 MST
-###     last modified:   08 August 2011
-###       at:            15:29:55 MDT
+###     last modified:   22 August 2011
+###       at:            11:52:20 MDT
 ###     URL:             http://www.ldeo.columbia.edu/~ecoon/
 ###     email:           ecoon _at_ lanl.gov
 ###  
@@ -16,7 +16,7 @@ import os
 import numpy as np
 
 class SolutionReader(object):
-    def __init__( self, infile, prefix ):
+    def __init__( self, infile, prefix='' ):
         self._input_filename = infile
         self._prefix = prefix
         self._options = dict()
