@@ -62,7 +62,7 @@ MODULES = lbm_logging.o \
 	lbm_discretization_type.o \
 	lbm_distribution_function_type.o \
 	lbm_relaxation.o \
-	lbm_phase.o \
+	lbm_component.o \
 	lbm_species.o \
 	lbm_mineral.o \
 	lbm_discretization_d3q19.o \
@@ -106,7 +106,7 @@ tags:
 # lbm_grid.o: lbm_info.o lbm_options.o
 # lbm_distribution_function_type.o: lbm_bag_types.o lbm_info.o lbm_discretization_type.o 
 # lbm_relaxation.o: lbm_bag_types.o lbm_options.o lbm_distribution_function_type.o
-# lbm_phase.o: lbm_bag_types.o lbm_options.o lbm_relaxation.o
+# lbm_component.o: lbm_bag_types.o lbm_options.o lbm_relaxation.o
 # lbm_species.o: lbm_bag_types.o lbm_options.o lbm_relaxation.o
 # lbm_mineral.o: lbm_bag_types.o lbm_options.o
 # lbm_discretization_d3q19.o: lbm_discretization_type.o lbm_distribution_function_type.o \
@@ -118,21 +118,21 @@ tags:
 # lbm_distribution_function.o: lbm_info.o lbm_distribution_function_type.o \
 # 	lbm_discretization_type.o
 # lbm_walls.o: lbm_options.o lbm_info.o lbm_grid.o lbm_mineral.o 
-# lbm_forcing.o: lbm_distribution_function_type.o lbm_phase.o lbm_distribution_function.o \
+# lbm_forcing.o: lbm_distribution_function_type.o lbm_component.o lbm_distribution_function.o \
 # 	lbm_walls.o 
 # lbm_bc.o: lbm_options.o lbm_info.o lbm_grid.o lbm_distribution_function_type.o \
 # 	lbm_discretization.o
 # lbm_flow.o: lbm_logging.o lbm_io.o lbm_options.o lbm_info.o lbm_grid.o \
 # 	lbm_distribution_function_type.o lbm_discretization_type.o lbm_relaxation.o \
-# 	lbm_phase.o lbm_discretization.o lbm_distribution_function.o lbm_walls.o \
+# 	lbm_component.o lbm_discretization.o lbm_distribution_function.o lbm_walls.o \
 # 	lbm_forcing.o lbm_bc.o 
 # lbm_transport.o: lbm_logging.o lbm_io.o lbm_options.o lbm_info.o lbm_grid.o \
 # 	lbm_distribution_function_type.o lbm_discretization_type.o lbm_relaxation.o \
-# 	lbm_phase.o lbm_discretization.o lbm_distribution_function.o lbm_walls.o \
+# 	lbm_component.o lbm_discretization.o lbm_distribution_function.o lbm_walls.o \
 # 	lbm_forcing.o lbm_bc.o 
 # lbm.o: utils lbm_logging.o lbm_options.o lbm_io.o lbm_info.o lbm_grid.o \
 # 	lbm_distribution_function_type.o lbm_discretization_type.o lbm_relaxation.o \
-# 	lbm_phase.o lbm_discretization.o lbm_distribution_function.o lbm_walls.o \
+# 	lbm_component.o lbm_discretization.o lbm_distribution_function.o lbm_walls.o \
 # 	lbm_forcing.o lbm_bc.o lbm_flow.o lbm_transport.o
 # main.o: lbm_logging.o lbm_options.o lbm_bc.o lbm.o
 
