@@ -47,9 +47,9 @@ class SolutionReader(object):
             self._dim = 3
             print 'got d3q19'
 
-        # nphases
-        if self._options.has_key('nphases'):
-            self._s = int(self._options['nphases'])
+        # ncomponents
+        if self._options.has_key('ncomponents'):
+            self._s = int(self._options['ncomponents'])
         else:
             self._s = 1
 
