@@ -31,7 +31,7 @@ module LBM_Specie_module
      PetscInt id
 
      ! bagged parameters
-     PetscInt,pointer:: phase
+     PetscInt,pointer:: component
 
      ! dependent parameters
      type(relaxation_type),pointer:: relax
@@ -157,10 +157,10 @@ contains
     call PetscBagGetData(specie%bag, specie%data, ierr)
 
     ! register data
-    call PetscBagRegisterInt(specie%bag, specie%data%phase, 1, &
-         trim(options%my_prefix)//'phase_'//trim(specie%name), &
-         'Phase of which specie is a component', ierr)
-    specie%phase => specie%data%phase
+    call PetscBagRegisterInt(specie%bag, specie%data%component, 1, &
+         trim(options%my_prefix)//'component_'//trim(specie%name), &
+         'Component of which specie is a component', ierr)
+    specie%component => specie%data%component
 
     call RelaxationSetMode(specie%relax, options%transport_relaxation_mode)
     call RelaxationSetFromOptions(specie%relax, options, ierr)

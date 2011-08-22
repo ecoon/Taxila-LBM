@@ -17,7 +17,7 @@
 module LBM_Forcing_module
   use LBM_Distribution_Function_type_module
   use LBM_Distribution_Function_module
-  use LBM_Phase_module
+  use LBM_Component_module
   use LBM_Walls_module
   use petsc
   implicit none
@@ -32,25 +32,25 @@ module LBM_Forcing_module
 contains
   ! --- Fluid-fluid interaction forces, from
   ! ---  (Kang 2002 Eq. 6)
-  subroutine LBMAddFluidFluidForces(dist, phases, rho, walls, forces)
+  subroutine LBMAddFluidFluidForces(dist, components, rho, walls, forces)
     !     NONLOCAL IN RHO
     type(distribution_type) dist
-    type(phase_type) phases(dist%s)
+    type(component_type) components(dist%s)
     PetscScalar,dimension(1:dist%s, 1:dist%info%rgxyzl):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims, 1:dist%info%gxyzl):: forces
     PetscScalar,dimension(1:dist%info%gxyzl):: walls
 
     select case(dist%info%ndims)
     case(2)
-       call LBMAddFluidFluidForcesD2(dist, phases, rho, walls, forces)
+       call LBMAddFluidFluidForcesD2(dist, components, rho, walls, forces)
     case(3)
-       call LBMAddFluidFluidForcesD3(dist, phases, rho, walls, forces)
+       call LBMAddFluidFluidForcesD3(dist, components, rho, walls, forces)
     end select
   end subroutine LBMAddFluidFluidForces
 
-  subroutine LBMAddFluidFluidForcesD3(dist, phases, rho, walls, forces)
+  subroutine LBMAddFluidFluidForcesD3(dist, components, rho, walls, forces)
     type(distribution_type) dist
-    type(phase_type) phases(dist%s)
+    type(component_type) components(dist%s)
     PetscScalar,dimension(dist%s, dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
@@ -945,7 +945,7 @@ contains
           do m=1,dist%s
           do d=1,dist%info%ndims
              forces(m,d,i,j,k) = -dist%disc%c_0*rho(m,i,j,k)* &
-                  sum(phases(m)%gf*(gradrho(:,d,i,j,k)/weightsum(d)),1)
+                  sum(components(m)%gf*(gradrho(:,d,i,j,k)/weightsum(d)),1)
           end do
           end do
        end if
@@ -956,12 +956,12 @@ contains
     
   end subroutine LBMAddFluidFluidForcesD3
 
-  subroutine LBMAddFluidFluidForcesD2(dist, phases, rho, walls, forces)
+  subroutine LBMAddFluidFluidForcesD2(dist, components, rho, walls, forces)
     !     NONLOCAL IN RHO
 
     ! input
     type(distribution_type) dist
-    type(phase_type) phases(dist%s)
+    type(component_type) components(dist%s)
     PetscScalar,dimension(dist%s, dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
@@ -1286,7 +1286,7 @@ contains
           do m=1,dist%s
           do d=1,dist%info%ndims
              forces(m,d,i,j) = -dist%disc%c_0*rho(m,i,j)* &
-                  sum(phases(m)%gf*(gradrho(:,d,i,j)/weightsum(d)),1)
+                  sum(components(m)%gf*(gradrho(:,d,i,j)/weightsum(d)),1)
           end do
           end do
        end if
@@ -1304,25 +1304,25 @@ contains
   ! New code added by MLP.  This accounts for fluid-solid forces on the 
   ! diagonals, which is not accounted for in the other version.
  
-  subroutine LBMAddFluidSolidForces(dist, phases, walls, rho, forces)
+  subroutine LBMAddFluidSolidForces(dist, components, walls, rho, forces)
     !     NONLOCAL IN WALLS
     type(distribution_type) dist
-    type(phase_type) phases(dist%s)
+    type(component_type) components(dist%s)
     type(walls_type) walls
     PetscScalar,dimension(1:dist%s, 1:dist%info%rgxyzl):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims, 1:dist%info%gxyzl):: forces
 
     select case(dist%info%ndims)
     case(2)
-       call LBMAddFluidSolidForcesD2(dist, phases, walls, rho, walls%walls_a, forces)
+       call LBMAddFluidSolidForcesD2(dist, components, walls, rho, walls%walls_a, forces)
     case(3)
-       call LBMAddFluidSolidForcesD3(dist, phases, walls, rho, walls%walls_a, forces)
+       call LBMAddFluidSolidForcesD3(dist, components, walls, rho, walls%walls_a, forces)
     end select
   end subroutine LBMAddFluidSolidForces
     
-  subroutine LBMAddFluidSolidForcesD3(dist, phases, walls, rho, walldata, forces)
+  subroutine LBMAddFluidSolidForcesD3(dist, components, walls, rho, walldata, forces)
     type(distribution_type) dist
-    type(phase_type) phases(dist%s)
+    type(component_type) components(dist%s)
     type(walls_type) walls
     PetscScalar,dimension(dist%s, dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: rho
@@ -1365,9 +1365,9 @@ contains
     end do
   end subroutine LBMAddFluidSolidForcesD3
 
-  subroutine LBMAddFluidSolidForcesD2(dist, phases, walls, rho, walldata, forces)
+  subroutine LBMAddFluidSolidForcesD2(dist, components, walls, rho, walldata, forces)
     type(distribution_type) dist
-    type(phase_type) phases(dist%s)
+    type(component_type) components(dist%s)
     type(walls_type) walls
     PetscScalar,dimension(dist%s, dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye):: rho
@@ -1414,9 +1414,9 @@ contains
   end subroutine LBMAddFluidSolidForcesD2
 
   ! --- body forces on fluid
-  subroutine LBMAddBodyForces(dist, phases, gvt, rho, walls, forces)
+  subroutine LBMAddBodyForces(dist, components, gvt, rho, walls, forces)
     type(distribution_type) dist
-    type(phase_type) phases(1:dist%s)
+    type(component_type) components(1:dist%s)
     PetscScalar,dimension(dist%s, dist%info%rgxyzl):: rho
     PetscScalar,dimension(dist%s, dist%info%ndims, 1:dist%info%gxyzl):: forces
     PetscScalar,dimension(dist%info%gxyzl):: walls
@@ -1424,15 +1424,15 @@ contains
 
     select case(dist%info%ndims)
     case(2)
-       call LBMAddBodyForcesD2(dist, phases, gvt, rho, walls, forces)
+       call LBMAddBodyForcesD2(dist, components, gvt, rho, walls, forces)
     case(3)
-       call LBMAddBodyForcesD3(dist, phases, gvt, rho, walls, forces)
+       call LBMAddBodyForcesD3(dist, components, gvt, rho, walls, forces)
     end select
   end subroutine LBMAddBodyForces
     
-  subroutine LBMAddBodyForcesD3(dist, phases, gvt, rho, walls, forces)
+  subroutine LBMAddBodyForcesD3(dist, components, gvt, rho, walls, forces)
     type(distribution_type) dist
-    type(phase_type) phases(dist%s)
+    type(component_type) components(dist%s)
     PetscScalar,dimension(dist%s, dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
@@ -1451,7 +1451,7 @@ contains
        if (walls(i,j,k).eq.0) then
           do m=1,dist%s
              forces(m,:,i,j,k) = forces(m,:,i,j,k) &
-                  + gvt*phases(m)%mm*rho(m,i,j,k)
+                  + gvt*components(m)%mm*rho(m,i,j,k)
           end do
        end if
     end do
@@ -1460,9 +1460,9 @@ contains
     return
   end subroutine LBMAddBodyForcesD3
 
-  subroutine LBMAddBodyForcesD2(dist, phases, gvt, rho, walls, forces)
+  subroutine LBMAddBodyForcesD2(dist, components, gvt, rho, walls, forces)
     type(distribution_type) dist
-    type(phase_type) phases(dist%s)
+    type(component_type) components(dist%s)
     PetscScalar,dimension(dist%s, dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
@@ -1480,7 +1480,7 @@ contains
        if (walls(i,j).eq.0) then
           do m=1,dist%s
              forces(m,:,i,j) = forces(m,:,i,j) &
-                  + gvt*phases(m)%mm*rho(m,i,j)
+                  + gvt*components(m)%mm*rho(m,i,j)
           end do
        end if
     end do

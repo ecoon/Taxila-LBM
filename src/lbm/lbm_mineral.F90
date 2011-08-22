@@ -29,7 +29,7 @@ module LBM_Mineral_module
     character(len=MAXWORDLENGTH):: name
 
     ! bagged parameters
-    PetscScalar,pointer,dimension(:) :: gw ! phase-mineral force coefs
+    PetscScalar,pointer,dimension(:) :: gw ! component-mineral force coefs
 
     type(mineral_bag_data_type),pointer:: data
     PetscBag bag
@@ -118,7 +118,7 @@ contains
 
     PetscSizeT sizeofscalar, sizeofdata
     PetscInt lcv
-    character(len=MAXWORDLENGTH):: paramname,phasename
+    character(len=MAXWORDLENGTH):: paramname,componentname
     PetscBool help, flag
     write(paramname, '(I1)') mineral%id
     
@@ -137,15 +137,15 @@ contains
     call PetscBagGetData(mineral%bag, mineral%data, ierr)
 
     ! register data
-    do lcv=1,options%nphases
+    do lcv=1,options%ncomponents
       write(paramname, '(I1)') lcv
-      call PetscOptionsGetString(options%my_prefix, "-phase"//trim(paramname)//"_name", &
-           phasename, flag, ierr)
-      paramname = 'gw_'//trim(mineral%name)//'_'//trim(phasename)
+      call PetscOptionsGetString(options%my_prefix, "-component"//trim(paramname)//"_name", &
+           componentname, flag, ierr)
+      paramname = 'gw_'//trim(mineral%name)//'_'//trim(componentname)
       call PetscBagRegisterScalar(mineral%bag, mineral%data%gw(lcv), 0.d0, &
            trim(options%my_prefix)//trim(paramname), &
-           'mineral-phase interaction potential coefficient', ierr)
+           'mineral-component interaction potential coefficient', ierr)
     end do
-    mineral%gw => mineral%data%gw(1:options%nphases)
+    mineral%gw => mineral%data%gw(1:options%ncomponents)
   end subroutine MineralSetFromOptions
 end module LBM_Mineral_module

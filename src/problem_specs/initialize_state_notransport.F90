@@ -16,6 +16,6 @@
 #include "finclude/petscvecdef.h"
 #include "finclude/petscdmdef.h"
 
-  subroutine initialize_state_transport(fi, rho, u, walls, dist, phases, options)
+  subroutine initialize_state_transport(fi, rho, u, walls, dist, components, options)
     ! do nothing
   end subroutine initialize_state_transport
