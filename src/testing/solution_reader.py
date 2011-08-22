@@ -44,7 +44,7 @@ class SolutionReader(object):
                           self._opts.getInt('NZ'))
             self._dim = 3
             print 'got d3q19'
-        self._s = self._opts.getInt('nphases',default=2)
+        self._s = self._opts.getInt('ncomponents',default=2)
         lsize = list(self._size)
         lsize.reverse()
         self._size_r = tuple(lsize)
