@@ -67,3 +67,8 @@
 
   ! cruft for use with pflotran
   PetscInt, parameter :: LBM_MODE = 8
+
+  ! EOS types, see Yuan and Schaeffer '06
+  PetscInt, parameter :: EOS_DENSITY = 0        ! psi = rho
+  PetscInt, parameter :: EOS_SC = 1             ! psi = 1-exp(-rho), Shan & Chen '94
+  PetscInt, parameter :: EOS_PR = 2             ! psi = cubic law from Peng & Robinson '??, 
