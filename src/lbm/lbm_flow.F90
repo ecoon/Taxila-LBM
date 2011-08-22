@@ -6,7 +6,7 @@
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
 !!!     last modified:   22 August 2011
-!!!       at:            12:12:27 MDT
+!!!       at:            15:32:20 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -216,7 +216,7 @@ contains
       end do
     end do
 
-    if (help) call PetscPrintf(options%comm, "-flow_use_nonideal_eos <eos-type>",
+    if (help) call PetscPrintf(options%comm, "-flow_use_nonideal_eos <eos-type>", &
          ierr)
     call PetscOptionsGetString(options%my_prefix, '-flow_use_nonideal_eos', &
          eos_name, flag, ierr)
@@ -924,6 +924,7 @@ contains
     case(EOS_PR)
       do i=1,flow%grid%info%gxyzl
         do m=1,flow%distribution%s
+
         end do
       end do
       
