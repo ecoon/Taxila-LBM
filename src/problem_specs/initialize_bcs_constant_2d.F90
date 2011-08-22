@@ -91,12 +91,12 @@
     yp3_ave_f = 0.d0
     ym3_ave_f = 0.d0
 
-    if (help) call PetscPrintf(options%comm, "-bc_pressure_{xy}{mp}_phase*: "// &
-         "density of phase * for a Dirichlet BC\n", ierr)
+    if (help) call PetscPrintf(options%comm, "-bc_pressure_{xy}{mp}_component*: "// &
+         "density of component * for a Dirichlet BC\n", ierr)
     if (help) call PetscPrintf(options%comm, "-bc_velocity_{xy}{mp}_avg: "// &
          "mean velocity for constant velocity, or max velocity for Poiseuille flow\n", ierr)
-    if (help) call PetscPrintf(options%comm, "-bc_flux_{xy}{mp}_phase*: "// &
-         "normal volumetric flux of phase *\n", ierr)
+    if (help) call PetscPrintf(options%comm, "-bc_flux_{xy}{mp}_component*: "// &
+         "normal volumetric flux of component *\n", ierr)
 
     ! get average values on minus edge
     if (bc_flags(BOUNDARY_XM).eq.BC_VELOCITY) then
@@ -112,7 +112,7 @@
        ! check if poiseuille velocity
        flux_xm = .TRUE.
        do m=1,dist%s
-          call PetscOptionsGetReal(options%my_prefix,'-bc_flux_xm_phase'//char(m+48),&
+          call PetscOptionsGetReal(options%my_prefix,'-bc_flux_xm_component'//char(m+48),&
                xm3_ave_f(m,X_DIRECTION), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) then
              call PetscOptionsGetReal(options%my_prefix,&
@@ -124,7 +124,7 @@
     else if (bc_flags(BOUNDARY_XM).eq.BC_DIRICHLET) then
        pressure_xm = .TRUE.
        do m=1,dist%s
-          call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_xm_phase'//char(m+48),&
+          call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_xm_component'//char(m+48),&
                xm3_ave_p(m), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
                '-bc_pressure_xm', xm3_ave_p(1), flag, ierr)
@@ -146,7 +146,7 @@
        ! check if poiseuille velocity
        flux_xp = .TRUE.
        do m=1,dist%s
-          call PetscOptionsGetReal(options%my_prefix,'-bc_flux_xp_phase'//char(m+48),&
+          call PetscOptionsGetReal(options%my_prefix,'-bc_flux_xp_component'//char(m+48),&
                xp3_ave_f(m,X_DIRECTION), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) then
              call PetscOptionsGetReal(options%my_prefix,&
@@ -158,7 +158,7 @@
     else if (bc_flags(BOUNDARY_XP).eq.BC_DIRICHLET) then
        pressure_xp = .TRUE.
        do m=1,dist%s
-          call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_xp_phase'//char(m+48),&
+          call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_xp_component'//char(m+48),&
                xp3_ave_p(m), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
                '-bc_pressure_xp', xp3_ave_p(1), flag, ierr)
@@ -180,7 +180,7 @@
        ! check if poiseuille velocity
        flux_ym = .TRUE.
        do m=1,dist%s
-          call PetscOptionsGetReal(options%my_prefix,'-bc_flux_ym_phase'//char(m+48),&
+          call PetscOptionsGetReal(options%my_prefix,'-bc_flux_ym_component'//char(m+48),&
                ym3_ave_f(m,Y_DIRECTION), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) then
              call PetscOptionsGetReal(options%my_prefix,&
@@ -191,7 +191,7 @@
     else if (bc_flags(BOUNDARY_YM).eq.BC_DIRICHLET) then
        pressure_ym = .TRUE.
        do m=1,dist%s
-          call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_ym_phase'//char(m+48),&
+          call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_ym_component'//char(m+48),&
                ym3_ave_p(m), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
                '-bc_pressure_ym', ym3_ave_p(1), flag, ierr)
@@ -213,7 +213,7 @@
        ! check if poiseuille velocity
        flux_yp = .TRUE.
        do m=1,dist%s
-          call PetscOptionsGetReal(options%my_prefix,'-bc_flux_yp_phase'//char(m+48),&
+          call PetscOptionsGetReal(options%my_prefix,'-bc_flux_yp_component'//char(m+48),&
                yp3_ave_f(m,Y_DIRECTION), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) then
              call PetscOptionsGetReal(options%my_prefix,&
@@ -224,7 +224,7 @@
     else if (bc_flags(BOUNDARY_YP).eq.BC_DIRICHLET) then
        pressure_yp = .TRUE.
        do m=1,dist%s
-          call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_yp_phase'//char(m+48),&
+          call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_yp_component'//char(m+48),&
                yp3_ave_p(m), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
                '-bc_pressure_yp', yp3_ave_p(1), flag, ierr)

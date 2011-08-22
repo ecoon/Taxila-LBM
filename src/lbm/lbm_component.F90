@@ -1,7 +1,7 @@
 !!! ====================================================================
 !!!  Fortran-90-file
 !!!     author:          Ethan T. Coon
-!!!     filename:        lbm_phase.F90
+!!!     filename:        lbm_component.F90
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            13:43:00 MDT
@@ -15,16 +15,16 @@
 #include "finclude/petscsysdef.h"
 #include "finclude/petscbagdef.h"
 
-module LBM_Phase_module
+module LBM_Component_module
   use petsc
-  use LBM_Phase_Bag_Data_type_module
+  use LBM_Component_Bag_Data_type_module
   use LBM_Relaxation_module
   implicit none
 
   private
 #include "lbm_definitions.h"
 
-  type, public :: phase_type
+  type, public :: component_type
      MPI_Comm comm
      ! sizes and identifiers (set pre-bag)
      PetscInt s
@@ -35,111 +35,111 @@ module LBM_Phase_module
      PetscScalar,pointer :: mm ! molecular mass
      PetscScalar,pointer :: viscosity ! kinematic viscoscity, in m^2/s
      PetscScalar,pointer :: density ! reference density, in kg/m^3
-     PetscScalar,pointer,dimension(:) :: gf ! phase-phase force coefs
+     PetscScalar,pointer,dimension(:) :: gf ! component-component force coefs
 
      ! dependent parameters, for equilf and collision
      type(relaxation_type),pointer:: relax
 
      ! bag 
      character(len=MAXWORDLENGTH):: name
-     type(phase_bag_data_type),pointer:: data
+     type(component_bag_data_type),pointer:: data
      PetscBag bag
-  end type phase_type
+  end type component_type
 
   interface PetscBagGetData
      subroutine PetscBagGetData(bag, data, ierr)
-       use LBM_Phase_Bag_Data_type_module
+       use LBM_Component_Bag_Data_type_module
        PetscBag bag
-       type(phase_bag_data_type),pointer :: data
+       type(component_bag_data_type),pointer :: data
        PetscErrorCode ierr
      end subroutine PetscBagGetData
   end interface
 
-  interface PhaseCreate
-     module procedure PhaseCreateOne
-     module procedure PhaseCreateN
+  interface ComponentCreate
+     module procedure ComponentCreateOne
+     module procedure ComponentCreateN
   end interface
 
-  public :: PhaseCreate, &
-       PhaseDestroy, &
-       PhaseSetSizes, &
-       PhaseSetName, &
-       PhaseSetID, &
-       PhaseSetFromOptions
+  public :: ComponentCreate, &
+       ComponentDestroy, &
+       ComponentSetSizes, &
+       ComponentSetName, &
+       ComponentSetID, &
+       ComponentSetFromOptions
 
 contains
-  function PhaseCreateOne(comm) result(phase)
+  function ComponentCreateOne(comm) result(component)
     MPI_Comm comm
-    type(phase_type),pointer :: phase
+    type(component_type),pointer :: component
     character(len=MAXWORDLENGTH):: name
-    allocate(phase)
-    phase%comm = comm
-    call PhaseInitialize(phase)
-    phase%relax => RelaxationCreate(comm)
-    name = 'phase1'
-    call PhaseSetName(phase, name)
-  end function PhaseCreateOne
+    allocate(component)
+    component%comm = comm
+    call ComponentInitialize(component)
+    component%relax => RelaxationCreate(comm)
+    name = 'component1'
+    call ComponentSetName(component, name)
+  end function ComponentCreateOne
 
-  function PhaseCreateN(comm, n) result(phases)
+  function ComponentCreateN(comm, n) result(components)
     MPI_Comm comm
     PetscInt n
-    type(phase_type),pointer,dimension(:):: phases
-    type(phase_type),pointer:: aphase
+    type(component_type),pointer,dimension(:):: components
+    type(component_type),pointer:: acomponent
     character(len=MAXWORDLENGTH):: name
     PetscInt lcv
-    allocate(phases(1:n))
+    allocate(components(1:n))
     name = ''
 
     do lcv=1,n
-       aphase => phases(lcv)
-       aphase%comm = comm
-       call PhaseInitialize(aphase)
-       aphase%relax => RelaxationCreate(comm)
-       call PhaseSetID(aphase, lcv)
-       name = 'phase'//char(lcv+48)
-       call PhaseSetName(aphase, name)
+       acomponent => components(lcv)
+       acomponent%comm = comm
+       call ComponentInitialize(acomponent)
+       acomponent%relax => RelaxationCreate(comm)
+       call ComponentSetID(acomponent, lcv)
+       name = 'component'//char(lcv+48)
+       call ComponentSetName(acomponent, name)
     end do
-  end function PhaseCreateN
+  end function ComponentCreateN
 
-  subroutine PhaseInitialize(phase)
-    type(phase_type) phase
-    phase%s = -1
-    phase%id = 0
-    phase%time_scale = 0
+  subroutine ComponentInitialize(component)
+    type(component_type) component
+    component%s = -1
+    component%id = 0
+    component%time_scale = 0
 
-    nullify(phase%mm)
-    nullify(phase%gf)
-    nullify(phase%relax)
+    nullify(component%mm)
+    nullify(component%gf)
+    nullify(component%relax)
 
-    phase%name = ''
-    nullify(phase%data)
-    phase%bag = 0
-  end subroutine PhaseInitialize
+    component%name = ''
+    nullify(component%data)
+    component%bag = 0
+  end subroutine ComponentInitialize
   
-  subroutine PhaseSetSizes(phase, s, b)
-    type(phase_type) :: phase
+  subroutine ComponentSetSizes(component, s, b)
+    type(component_type) :: component
     PetscInt s,b
-    phase%s = s
-    call RelaxationSetSizes(phase%relax, s, b)
-  end subroutine PhaseSetSizes
+    component%s = s
+    call RelaxationSetSizes(component%relax, s, b)
+  end subroutine ComponentSetSizes
 
-  subroutine PhaseSetName(phase, name)
-    type(phase_type) phase
+  subroutine ComponentSetName(component, name)
+    type(component_type) component
     character(len=MAXWORDLENGTH):: name
-    phase%name = name
-    call RelaxationSetName(phase%relax, name)
-  end subroutine PhaseSetName
+    component%name = name
+    call RelaxationSetName(component%relax, name)
+  end subroutine ComponentSetName
 
-  subroutine PhaseSetID(phase, id)
-    type(phase_type) phase
+  subroutine ComponentSetID(component, id)
+    type(component_type) component
     PetscInt id
-    phase%id = id
-    call RelaxationSetID(phase%relax, id)
-  end subroutine PhaseSetID
+    component%id = id
+    call RelaxationSetID(component%relax, id)
+  end subroutine ComponentSetID
 
-  subroutine PhaseSetFromOptions(phase, options, ierr)
+  subroutine ComponentSetFromOptions(component, options, ierr)
     use LBM_Options_module
-    type(phase_type) phase
+    type(component_type) component
     type(options_type) options
     PetscErrorCode ierr
 
@@ -147,53 +147,53 @@ contains
     PetscInt lcv
     character(len=MAXWORDLENGTH):: paramname
     PetscBool help, flag
-    write(paramname, '(I1)') phase%id
+    write(paramname, '(I1)') component%id
     
-    ! set the phase name from options
+    ! set the component name from options
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
-    if (help) call PetscPrintf(options%comm, "-phase"//trim(paramname)//"_name=<phase"// &
-         trim(paramname)//">: name the phase -- for use with parameter options\n", ierr)
-    call PetscOptionsGetString(options%my_prefix, "-phase"//trim(paramname)//"_name", &
-         phase%name, flag, ierr)
-    call RelaxationSetName(phase%relax, phase%name)
-    call RelaxationSetMode(phase%relax, options%flow_relaxation_mode)
-    call RelaxationSetFromOptions(phase%relax, options, ierr)
+    if (help) call PetscPrintf(options%comm, "-component"//trim(paramname)//"_name=<component"// &
+         trim(paramname)//">: name the component -- for use with parameter options\n", ierr)
+    call PetscOptionsGetString(options%my_prefix, "-component"//trim(paramname)//"_name", &
+         component%name, flag, ierr)
+    call RelaxationSetName(component%relax, component%name)
+    call RelaxationSetMode(component%relax, options%flow_relaxation_mode)
+    call RelaxationSetFromOptions(component%relax, options, ierr)
 
     ! create the bag
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
     sizeofdata = (4+NMAX_PHASES)*sizeofscalar
-    call PetscBagCreate(phase%comm, sizeofdata, phase%bag, ierr)
-    call PetscBagSetName(phase%bag, TRIM(options%my_prefix)//phase%name, "", ierr)
-    call PetscBagGetData(phase%bag, phase%data, ierr)
+    call PetscBagCreate(component%comm, sizeofdata, component%bag, ierr)
+    call PetscBagSetName(component%bag, TRIM(options%my_prefix)//component%name, "", ierr)
+    call PetscBagGetData(component%bag, component%data, ierr)
 
-    call PetscBagRegisterScalar(phase%bag, phase%data%mm, 1.d0, &
-         trim(options%my_prefix)//'mm_'//trim(phase%name), 'molecular mass', ierr)
-    phase%mm => phase%data%mm
+    call PetscBagRegisterScalar(component%bag, component%data%mm, 1.d0, &
+         trim(options%my_prefix)//'mm_'//trim(component%name), 'molecular mass', ierr)
+    component%mm => component%data%mm
 
-    call PetscBagRegisterScalar(phase%bag, phase%data%viscosity, -999.d0, &
-         trim(options%my_prefix)//'viscosity_'//trim(phase%name), 'kinematic viscosity [m^2/s], defaults to ND value', &
+    call PetscBagRegisterScalar(component%bag, component%data%viscosity, -999.d0, &
+         trim(options%my_prefix)//'viscosity_'//trim(component%name), 'kinematic viscosity [m^2/s], defaults to ND value', &
          ierr)
-    phase%viscosity => phase%data%viscosity
+    component%viscosity => component%data%viscosity
 
-    call PetscBagRegisterScalar(phase%bag, phase%data%density, -999.d0, &
-         trim(options%my_prefix)//'density_'//trim(phase%name), &
+    call PetscBagRegisterScalar(component%bag, component%data%density, -999.d0, &
+         trim(options%my_prefix)//'density_'//trim(component%name), &
          'density [kg/m^3], defaults to ND value', ierr)
-    phase%density => phase%data%density
+    component%density => component%data%density
 
-    phase%relax%d_k = 1.d0 - 2.d0/(3.d0*phase%mm) ! d_k = 1/3 for mm=1
+    component%relax%d_k = 1.d0 - 2.d0/(3.d0*component%mm) ! d_k = 1/3 for mm=1
 
-    do lcv=1,phase%s
-       write(paramname, '(I1, I1)') phase%id, lcv
-       call PetscBagRegisterScalar(phase%bag, phase%data%gf(lcv), 0.d0, &
-            trim(options%my_prefix)//'g_'//trim(paramname), 'phase-phase interaction potential coefficient', ierr)
+    do lcv=1,component%s
+       write(paramname, '(I1, I1)') component%id, lcv
+       call PetscBagRegisterScalar(component%bag, component%data%gf(lcv), 0.d0, &
+            trim(options%my_prefix)//'g_'//trim(paramname), 'component-component interaction potential coefficient', ierr)
     end do
-    phase%gf => phase%data%gf(1:options%nphases)
+    component%gf => component%data%gf(1:options%ncomponents)
 
-  end subroutine PhaseSetFromOptions
+  end subroutine ComponentSetFromOptions
 
-  subroutine PhaseDestroy(phase, ierr)
-    type(phase_type) phase
+  subroutine ComponentDestroy(component, ierr)
+    type(component_type) component
     PetscErrorCode ierr
-    if (phase%bag /= 0) call PetscBagDestroy(phase%bag, ierr)
-  end subroutine PhaseDestroy
-end module LBM_Phase_module
+    if (component%bag /= 0) call PetscBagDestroy(component%bag, ierr)
+  end subroutine ComponentDestroy
+end module LBM_Component_module

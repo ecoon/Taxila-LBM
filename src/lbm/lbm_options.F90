@@ -42,7 +42,7 @@
        PetscInt transport_disc
 
        PetscInt ndims
-       PetscInt nphases
+       PetscInt ncomponents
        PetscInt nspecies
        PetscInt nminerals
 
@@ -92,7 +92,7 @@
 
       options%ndims = 0
       options%nminerals = 1
-      options%nphases = 1
+      options%ncomponents = 1
       options%nspecies = 0
 
       options%flow_relaxation_mode = RELAXATION_MODE_SRT
@@ -174,8 +174,8 @@
 
       ! set the flow discretization
       if (help) call PetscPrintf(options%comm, &
-           "  -nphases <1>: number of phases\n", ierr)
-      call PetscOptionsGetInt(options%my_prefix,'-nphases', options%nphases,flag,ierr)
+           "  -ncomponents <1>: number of components\n", ierr)
+      call PetscOptionsGetInt(options%my_prefix,'-ncomponents', options%ncomponents,flag,ierr)
 
       if (help) call PetscPrintf(options%comm, &
            "  -flow_discretization <d3q19>: discretization type\n", ierr)

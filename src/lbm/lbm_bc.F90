@@ -373,9 +373,9 @@ contains
     PetscScalar,dimension(dist%info%gxyzl):: walls
     PetscErrorCode ierr
 
-    ! first, check to make sure number of phases = 2
+    ! first, check to make sure number of components = 2
     if (dist%s /= 2) then
-       SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic only makes sense for two-phase', ierr)
+       SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic only makes sense for two-component', ierr)
        return
     end if
 

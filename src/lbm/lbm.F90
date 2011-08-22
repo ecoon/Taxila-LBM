@@ -145,8 +145,8 @@
 
       ! set up the DA sizes
       lbm%grid%da_sizes(ONEDOF) = 1
-      lbm%grid%da_sizes(NPHASEDOF) = lbm%flow%nphases
-      lbm%grid%da_sizes(NPHASEXBDOF) = lbm%flow%nphases*(lbm%flow%disc%b+1)
+      lbm%grid%da_sizes(NPHASEDOF) = lbm%flow%ncomponents
+      lbm%grid%da_sizes(NPHASEXBDOF) = lbm%flow%ncomponents*(lbm%flow%disc%b+1)
       lbm%grid%da_sizes(NFLOWDOF) = lbm%flow%ndims
       if (associated(lbm%transport)) then
          lbm%grid%da_sizes(NSPECIEDOF) = lbm%transport%nspecies
@@ -439,7 +439,7 @@
       call FlowGetArrays(lbm%flow, ierr)
       call init_subroutine(lbm%flow%distribution%fi_a, lbm%flow%distribution%rho_a, &
            lbm%flow%distribution%flux, lbm%walls%walls_a, lbm%flow%distribution, &
-           lbm%flow%phases, lbm%options)
+           lbm%flow%components, lbm%options)
       call FlowRestoreArrays(lbm%flow, ierr)
       return
     end subroutine LBMInitializeState_Flow
@@ -453,7 +453,7 @@
       call FlowGetArrays(lbm%flow, ierr)
       call flow_subroutine(lbm%flow%distribution%fi_a, lbm%flow%distribution%rho_a, &
            lbm%flow%distribution%flux, lbm%walls%walls_a, lbm%flow%distribution, &
-           lbm%flow%phases, lbm%options)
+           lbm%flow%components, lbm%options)
       call FlowRestoreArrays(lbm%flow, ierr)
 
       ! transport init

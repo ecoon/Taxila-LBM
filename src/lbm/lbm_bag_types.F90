@@ -16,18 +16,18 @@
 
 ! collection of all the stupid bag types that need to get defined ahead of time
 ! due to fortran stupidity
-module LBM_Phase_Bag_Data_type_module
+module LBM_Component_Bag_Data_type_module
   implicit none
   private
 #include "lbm_definitions.h"
-  ! physical parameters for a phase
-  type, public :: phase_bag_data_type
+  ! physical parameters for a component
+  type, public :: component_bag_data_type
      PetscScalar mm ! molecular mass
      PetscScalar viscosity
      PetscScalar density
-     PetscScalar,dimension(NMAX_PHASES) :: gf ! phase-phase force coefs
-  end type phase_bag_data_type
-end module LBM_Phase_Bag_Data_type_module
+     PetscScalar,dimension(NMAX_PHASES) :: gf ! component-component force coefs
+  end type component_bag_data_type
+end module LBM_Component_Bag_Data_type_module
 
 module LBM_Mineral_Bag_Data_type_module
   implicit none
@@ -44,7 +44,7 @@ module LBM_Specie_Bag_Data_type_module
 
   ! physical parameters for a chemical specie
   type, public :: specie_bag_data_type
-     PetscInt phase 
+     PetscInt component 
   end type specie_bag_data_type
 end module LBM_Specie_Bag_Data_type_module
 
