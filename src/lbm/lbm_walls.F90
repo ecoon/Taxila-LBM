@@ -116,7 +116,7 @@ contains
     do lcv=1,walls%nminerals
       call MineralSetID(walls%minerals(lcv), lcv)
       call MineralSetFromOptions(walls%minerals(lcv), options, ierr)
-      do lcv2=1,options%nphases
+      do lcv2=1,options%ncomponents
         if (ABS(walls%minerals(lcv)%gw(lcv2)) > eps) then
           options%flow_fluidsolid_forces = PETSC_TRUE
         end if

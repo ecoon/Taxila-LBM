@@ -16,17 +16,17 @@
 #include "finclude/petscvecdef.h"
 #include "finclude/petscdmdef.h"
 
-  subroutine initialize_state(fi, rho, u, walls, dist, phases, options)
+  subroutine initialize_state(fi, rho, u, walls, dist, components, options)
     use petsc
     use LBM_Distribution_Function_type_module
-    use LBM_Phase_module
+    use LBM_Component_module
     use LBM_Options_module
     use LBM_Discretization_module
     implicit none
 
     ! input variables
     type(distribution_type) dist
-    type(phase_type) phases(dist%s)
+    type(component_type) components(dist%s)
     type(options_type) options
     PetscScalar,dimension(dist%s,0:dist%b,dist%info%gxyzl) :: fi
     PetscScalar,dimension(dist%s,dist%info%rgxyzl) :: rho
@@ -35,23 +35,23 @@
 
     select case(dist%info%ndims)
     case (2) 
-      call initialize_state_d2(fi, rho, u, walls, dist, phases, options)
+      call initialize_state_d2(fi, rho, u, walls, dist, components, options)
     case (3) 
-      call initialize_state_d3(fi, rho, u, walls, dist, phases, options)
+      call initialize_state_d3(fi, rho, u, walls, dist, components, options)
     end select
   end subroutine initialize_state
 
-  subroutine initialize_state_d3(fi, rho, u, walls, dist, phases, options)
+  subroutine initialize_state_d3(fi, rho, u, walls, dist, components, options)
     use petsc
     use LBM_Distribution_Function_type_module
-    use LBM_Phase_module
+    use LBM_Component_module
     use LBM_Options_module
     use LBM_Discretization_module
     implicit none
 
     ! input variables
     type(distribution_type) dist
-    type(phase_type) phases(dist%s)
+    type(component_type) components(dist%s)
     type(options_type) options
     PetscScalar,dimension(dist%s,0:dist%b, &
          dist%info%gxs:dist%info%gxe, &
@@ -89,12 +89,12 @@
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
 
     rho1 = 0.d0
-    if (help) call PetscPrintf(options%comm, "-rho_invading=<0,0>: phase density of the invading fluid", ierr)
+    if (help) call PetscPrintf(options%comm, "-rho_invading=<0,0>: component density of the invading fluid", ierr)
     nmax = dist%s
     call PetscOptionsGetRealArray(options%my_prefix, '-rho_invading', rho1, nmax, flag, ierr)
 
     rho2 = 0.d0
-    if (help) call PetscPrintf(options%comm, "-rho_defending=<0,0>: phase density of the defending fluid", ierr)
+    if (help) call PetscPrintf(options%comm, "-rho_defending=<0,0>: component density of the defending fluid", ierr)
     nmax = dist%s
     call PetscOptionsGetRealArray(options%my_prefix, '-rho_defending', rho2, nmax, flag, ierr)
     
@@ -154,23 +154,23 @@
     nowalls = 0.d0
     do m=1,dist%s
        call DiscretizationEquilf(dist%disc, rho, u, &
-            nowalls, fi, m, phases(m)%relax, dist)    
+            nowalls, fi, m, components(m)%relax, dist)    
     end do
     return
   end subroutine initialize_state_d3
 
 
-  subroutine initialize_state_d2(fi, rho, u, walls, dist, phases, options)
+  subroutine initialize_state_d2(fi, rho, u, walls, dist, components, options)
     use petsc
     use LBM_Distribution_Function_type_module
-    use LBM_Phase_module
+    use LBM_Component_module
     use LBM_Options_module
     use LBM_Discretization_module
     implicit none
 
     ! input variables
     type(distribution_type) dist
-    type(phase_type) phases(dist%s)
+    type(component_type) components(dist%s)
     type(options_type) options
     PetscScalar,dimension(dist%s,0:dist%b, &
          dist%info%gxs:dist%info%gxe, &
@@ -252,7 +252,7 @@
     nowalls = 0.d0
     do m=1,dist%s
        call DiscretizationEquilf(dist%disc, rho, u, &
-            nowalls, fi, m, phases(m)%relax, dist)    
+            nowalls, fi, m, components(m)%relax, dist)    
     end do
     return
   end subroutine initialize_state_d2

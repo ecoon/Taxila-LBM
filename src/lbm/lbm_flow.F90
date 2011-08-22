@@ -18,7 +18,7 @@
 module LBM_Flow_module
   use petsc
   use LBM_Relaxation_module
-  use LBM_Phase_module
+  use LBM_Component_module
   use LBM_Info_module
   use LBM_Discretization_Type_module
   use LBM_Discretization_module
@@ -34,9 +34,9 @@ module LBM_Flow_module
   type, public:: flow_type
      MPI_Comm comm
      PetscInt ndims
-     PetscInt nphases
+     PetscInt ncomponents
      type(discretization_type),pointer :: disc
-     type(phase_type),pointer,dimension(:):: phases
+     type(component_type),pointer,dimension(:):: components
      type(grid_type),pointer:: grid
      type(distribution_type),pointer:: distribution
      type(bc_type),pointer:: bc
@@ -99,9 +99,9 @@ contains
 
     allocate(flow)
     flow%comm = comm
-    flow%nphases = -1
+    flow%ncomponents = -1
     flow%ndims = -1
-    nullify(flow%phases)
+    nullify(flow%components)
     nullify(flow%grid)
     flow%disc => DiscretizationCreate(flow%comm)
     flow%distribution => DistributionCreate(flow%comm)
@@ -140,9 +140,9 @@ contains
     integer lcv
 
     if (associated(flow%disc)) call DiscretizationDestroy(flow%disc, ierr)
-    if (associated(flow%phases)) then
-       do lcv=1,flow%nphases
-          call PhaseDestroy(flow%phases(lcv),ierr)
+    if (associated(flow%components)) then
+       do lcv=1,flow%ncomponents
+          call ComponentDestroy(flow%components(lcv),ierr)
        end do
     end if
     if (associated(flow%distribution)) call DistributionDestroy(flow%distribution, ierr)
@@ -182,18 +182,18 @@ contains
     character(len=MAXWORDLENGTH) test_eos_name
 
     flag = PETSC_FALSE
-    flow%nphases = options%nphases
+    flow%ncomponents = options%ncomponents
     flow%ndims = options%ndims
-    flow%phases => PhaseCreate(flow%comm, flow%nphases)
+    flow%components => ComponentCreate(flow%comm, flow%ncomponents)
 
     call DiscretizationSetType(flow%disc, options%flow_disc)
     call DiscretizationSetSizes(flow%disc, flow%grid%info%stencil_size)
     call DiscretizationSetUp(flow%disc)
     
-    do lcv=1,flow%nphases
-       call PhaseSetSizes(flow%phases(lcv), flow%nphases, flow%disc%b)
-       call PhaseSetID(flow%phases(lcv), lcv)
-       call PhaseSetFromOptions(flow%phases(lcv), options, ierr)
+    do lcv=1,flow%ncomponents
+       call ComponentSetSizes(flow%components(lcv), flow%ncomponents, flow%disc%b)
+       call ComponentSetID(flow%components(lcv), lcv)
+       call ComponentSetFromOptions(flow%components(lcv), options, ierr)
     end do
 
     ! set up control for forcing terms
@@ -208,9 +208,9 @@ contains
       flow%gvt = gravity
     end if
 
-    do lcv=1,flow%nphases
-      do lcv2=1,flow%nphases
-        if (ABS(flow%phases(lcv)%gf(lcv2)) > eps) then
+    do lcv=1,flow%ncomponents
+      do lcv2=1,flow%ncomponents
+        if (ABS(flow%components(lcv)%gf(lcv2)) > eps) then
           flow%fluidfluid_forces = PETSC_TRUE
         end if
       end do
@@ -238,7 +238,7 @@ contains
     
     ! set up the vectors for holding boundary data
     ! dimension 
-    call BCSetSizes(flow%bc, options%ndims*options%nphases)
+    call BCSetSizes(flow%bc, options%ndims*options%ncomponents)
     call BCSetFromOptions(flow%bc, options, ierr)
 
     ! parse all flow boundary conditions
@@ -398,70 +398,70 @@ contains
     PetscScalar,parameter:: eps=1.e-8
     PetscInt lcv
 
-    ! deal with consistency.  Assume phase 1's tau, mm are correct
+    ! deal with consistency.  Assume component 1's tau, mm are correct
     ! viscosity/time scale
-    if (flow%phases(1)%viscosity < -990.) then
+    if (flow%components(1)%viscosity < -990.) then
        ! tau is correct, viscosity is not given
-       flow%phases(1)%time_scale = 1.d0
-       flow%phases(1)%viscosity = flow%grid%length_scale * &
-         flow%grid%length_scale * (flow%phases(1)%relax%tau - 0.5d0)/3.d0
+       flow%components(1)%time_scale = 1.d0
+       flow%components(1)%viscosity = flow%grid%length_scale * &
+         flow%grid%length_scale * (flow%components(1)%relax%tau - 0.5d0)/3.d0
     else        
-       flow%phases(1)%time_scale = flow%grid%length_scale * &
-            flow%grid%length_scale * (flow%phases(1)%relax%tau - 0.5d0)/ &
-            (flow%phases(1)%viscosity*3.d0)
+       flow%components(1)%time_scale = flow%grid%length_scale * &
+            flow%grid%length_scale * (flow%components(1)%relax%tau - 0.5d0)/ &
+            (flow%components(1)%viscosity*3.d0)
     end if
-    flow%time_scale = flow%phases(1)%time_scale
+    flow%time_scale = flow%components(1)%time_scale
     flow%velocity_scale = flow%grid%length_scale/flow%time_scale
 
     ! density
-    if (flow%phases(1)%density < -990.) then
-       flow%phases(1)%density = 1.d0
+    if (flow%components(1)%density < -990.) then
+       flow%components(1)%density = 1.d0
     end if
-    flow%mass_scale = flow%phases(1)%mm*flow%phases(1)%density*(flow%grid%length_scale**3)
+    flow%mass_scale = flow%components(1)%mm*flow%components(1)%density*(flow%grid%length_scale**3)
 
-    if (flow%nphases > 1) then
-      do lcv=2,flow%nphases
+    if (flow%ncomponents > 1) then
+      do lcv=2,flow%ncomponents
         ! Assert correct viscosity ratios
-        if (flow%phases(lcv)%viscosity < -990.d0) then
-           flow%phases(lcv)%viscosity = flow%grid%length_scale * &
+        if (flow%components(lcv)%viscosity < -990.d0) then
+           flow%components(lcv)%viscosity = flow%grid%length_scale * &
                 flow%grid%length_scale * &
-                (flow%phases(1)%relax%tau - 0.5d0)/(3.d0*flow%time_scale)
+                (flow%components(1)%relax%tau - 0.5d0)/(3.d0*flow%time_scale)
         else 
-          consistent_tau = (3.d0*flow%time_scale*flow%phases(lcv)%viscosity) &
+          consistent_tau = (3.d0*flow%time_scale*flow%components(lcv)%viscosity) &
                 /(flow%grid%length_scale* &
                 flow%grid%length_scale) + 0.5d0
-          if (abs(flow%phases(lcv)%relax%tau - 1.d0) < eps) then
+          if (abs(flow%components(lcv)%relax%tau - 1.d0) < eps) then
              ! tau not specified, so set it
-             flow%phases(lcv)%relax%tau = consistent_tau
+             flow%components(lcv)%relax%tau = consistent_tau
              if (flow%grid%info%rank .eq. 0) then
-                print*, '  Setting phase', TRIM(flow%phases(lcv)%name), 'tau = ', &
+                print*, '  Setting component', TRIM(flow%components(lcv)%name), 'tau = ', &
                      consistent_tau
              end if
-          else if (abs(flow%phases(lcv)%relax%tau - consistent_tau) > eps) then
+          else if (abs(flow%components(lcv)%relax%tau - consistent_tau) > eps) then
              SETERRQ(PETSC_COMM_WORLD, 1, 'Viscosities and relaxation times specified '// &
-                  'for phases are not consistent.', ierr)
+                  'for components are not consistent.', ierr)
           else
              ! all ok
           end if
         end if
 
         ! Assert correct density ratios
-        if (flow%phases(lcv)%density < -990.d0) then
-          flow%phases(lcv)%density = flow%mass_scale/flow%phases(1)%mm / &
+        if (flow%components(lcv)%density < -990.d0) then
+          flow%components(lcv)%density = flow%mass_scale/flow%components(1)%mm / &
                (flow%grid%length_scale**3)
         else
-          consistent_mm = flow%mass_scale / flow%phases(1)%density / &
+          consistent_mm = flow%mass_scale / flow%components(1)%density / &
                (flow%grid%length_scale**3)
-          if (abs(flow%phases(lcv)%mm - 1.d0) < eps) then
+          if (abs(flow%components(lcv)%mm - 1.d0) < eps) then
              ! mm not specified, so set it
-             flow%phases(lcv)%mm = consistent_mm
+             flow%components(lcv)%mm = consistent_mm
              if (flow%grid%info%rank .eq. 0) then
-                print*, '  Setting molecular mass', TRIM(flow%phases(lcv)%name), 'mm = ', &
+                print*, '  Setting molecular mass', TRIM(flow%components(lcv)%name), 'mm = ', &
                      consistent_mm
              end if
-          else if (abs(flow%phases(lcv)%mm - consistent_mm) > eps) then
+          else if (abs(flow%components(lcv)%mm - consistent_mm) > eps) then
              SETERRQ(PETSC_COMM_WORLD, 1, 'Densities and molecular masses specified '// &
-                  'for phases are not consistent.', ierr)
+                  'for components are not consistent.', ierr)
           else
              ! all ok
           end if
@@ -486,25 +486,25 @@ contains
     PetscScalar zero
     zero = 0.d0
 
-    do lcv=1,flow%nphases
-       call DiscretizationSetUpRelax(flow%disc, flow%phases(lcv)%relax)
+    do lcv=1,flow%ncomponents
+       call DiscretizationSetUpRelax(flow%disc, flow%components(lcv)%relax)
     end do
     call DistributionSetInfo(flow%distribution, flow%grid%info)
     call DistributionSetDiscretization(flow%distribution, flow%disc)
-    call DistributionSetSizes(flow%distribution, flow%nphases)
+    call DistributionSetSizes(flow%distribution, flow%ncomponents)
     call DistributionSetDAs(flow%distribution, flow%grid%da(NPHASEXBDOF), &
          flow%grid%da(NPHASEDOF))
     call DistributionSetUp(flow%distribution)
     call BCSetUp(flow%bc)
 
     ! allocate, initialize workspace
-    allocate(flow%vel_eq(1:flow%nphases, 1:flow%ndims, &
+    allocate(flow%vel_eq(1:flow%ncomponents, 1:flow%ndims, &
          1:flow%grid%info%gxyzl))
-    allocate(flow%forces(1:flow%nphases, 1:flow%ndims, &
+    allocate(flow%forces(1:flow%ncomponents, 1:flow%ndims, &
          1:flow%grid%info%gxyzl))
-    allocate(flow%fi_eq(1:flow%nphases, 0:flow%disc%b, &
+    allocate(flow%fi_eq(1:flow%ncomponents, 0:flow%disc%b, &
          1:flow%grid%info%gxyzl))
-    allocate(flow%psi_of_rho(flow%nphases,flow%grid%info%rgxyzl))
+    allocate(flow%psi_of_rho(flow%ncomponents,flow%grid%info%rgxyzl))
     flow%vel_eq = 0.d0
     flow%forces = 0.d0
     flow%fi_eq = 0.d0
@@ -631,11 +631,11 @@ contains
     PetscScalar,dimension(flow%grid%info%gxs:flow%grid%info%gxe, &
          flow%grid%info%gys:flow%grid%info%gye, &
          flow%grid%info%gzs:flow%grid%info%gze):: walls
-    PetscScalar,dimension(flow%nphases, &
+    PetscScalar,dimension(flow%ncomponents, &
          flow%grid%info%rgxs:flow%grid%info%rgxe, &
          flow%grid%info%rgys:flow%grid%info%rgye, &
          flow%grid%info%rgzs:flow%grid%info%rgze):: rho, psi
-    PetscScalar,dimension(flow%nphases, flow%ndims, &
+    PetscScalar,dimension(flow%ncomponents, flow%ndims, &
          flow%grid%info%gxs:flow%grid%info%gxe, &
          flow%grid%info%gys:flow%grid%info%gye, &
          flow%grid%info%gzs:flow%grid%info%gze):: vel,forces
@@ -648,10 +648,10 @@ contains
          flow%grid%info%zs:flow%grid%info%ze):: velt
 
     PetscInt i,j,k,m,d
-    PetscScalar mm(1:flow%nphases)
+    PetscScalar mm(1:flow%ncomponents)
     
-    do m=1,flow%nphases
-       mm(m) = flow%phases(m)%mm
+    do m=1,flow%ncomponents
+       mm(m) = flow%components(m)%mm
     end do
 
     do k=flow%grid%info%zs,flow%grid%info%ze
@@ -663,15 +663,15 @@ contains
           velt(d,i,j,k) = (sum(vel(:,d,i,j,k)*mm,1) + 0.5*sum(forces(:,d,i,j,k),1))/rhot(i,j,k)
        end do
        prs(i,j,k) = rhot(i,j,k)/3.d0
-       if (flow%nphases > 1) then
-          do m=1,flow%nphases
+       if (flow%ncomponents > 1) then
+          do m=1,flow%ncomponents
             ! In Qinjun's original code the pressure was calculated as:
-            ! prs(i,j) = prs(i,j) + 3*rho(m,i,j)*sum(rho(:,i,j)*flow%phases(m)%gf,1)
+            ! prs(i,j) = prs(i,j) + 3*rho(m,i,j)*sum(rho(:,i,j)*flow%components(m)%gf,1)
             ! However, with the HOD for fluid-fluid the new gf is 1/6 of the old gf, so
             ! I have accounted for it in the new pressure calculation.  This equation
             ! has been verified by Laplace's law for viscosity ratios of 1 and 5. 
              prs(i,j,k) = prs(i,j,k) + flow%disc%c_0/2.d0*psi(m,i,j,k) &
-                  *sum(flow%phases(m)%gf*psi(:,i,j,k),1)
+                  *sum(flow%components(m)%gf*psi(:,i,j,k),1)
           end do
        end if
     end if
@@ -684,10 +684,10 @@ contains
     type(flow_type) flow
     PetscScalar,dimension(flow%grid%info%gxs:flow%grid%info%gxe, &
          flow%grid%info%gys:flow%grid%info%gye):: walls
-    PetscScalar,dimension(flow%nphases, &
+    PetscScalar,dimension(flow%ncomponents, &
          flow%grid%info%rgxs:flow%grid%info%rgxe, &
          flow%grid%info%rgys:flow%grid%info%rgye):: rho, psi
-    PetscScalar,dimension(flow%nphases, flow%ndims, &
+    PetscScalar,dimension(flow%ncomponents, flow%ndims, &
          flow%grid%info%gxs:flow%grid%info%gxe, &
          flow%grid%info%gys:flow%grid%info%gye):: vel,forces
     PetscScalar,dimension(flow%grid%info%xs:flow%grid%info%xe, &
@@ -697,10 +697,10 @@ contains
          flow%grid%info%ys:flow%grid%info%ye):: velt
 
     PetscInt i,j,m,d
-    PetscScalar mm(1:flow%nphases)
+    PetscScalar mm(1:flow%ncomponents)
     
-    do m=1,flow%nphases
-       mm(m) = flow%phases(m)%mm
+    do m=1,flow%ncomponents
+       mm(m) = flow%components(m)%mm
     end do
     do j=flow%grid%info%ys,flow%grid%info%ye
     do i=flow%grid%info%xs,flow%grid%info%xe
@@ -710,15 +710,15 @@ contains
           velt(d,i,j) = (sum(vel(:,d,i,j)*mm,1) + 0.5*sum(forces(:,d,i,j),1))/rhot(i,j)
        end do
        prs(i,j) = rhot(i,j)/3.d0
-       if (flow%nphases > 1) then
-          do m=1,flow%nphases
+       if (flow%ncomponents > 1) then
+          do m=1,flow%ncomponents
             ! In Qinjun's original code the pressure was calculated as:
-            ! prs(i,j) = prs(i,j) + 1.5*rho(m,i,j)*sum(rho(:,i,j)*flow%phases(m)%gf,1)
+            ! prs(i,j) = prs(i,j) + 1.5*rho(m,i,j)*sum(rho(:,i,j)*flow%components(m)%gf,1)
             ! However, with the hod for fluid-fluid the new gf is 1/3 of the old gf, so
             ! I have accounted for it in the new pressure calculation.  This equation
             ! has been verified by Laplace's law for viscosity ratios of 1 and 5.        
             prs(i,j) = prs(i,j) + flow%disc%c_0/2.d0*psi(m,i,j) &
-                  *sum(flow%phases(m)%gf*psi(:,i,j),1)
+                  *sum(flow%components(m)%gf*psi(:,i,j),1)
           end do
        end if
     end if
@@ -739,10 +739,10 @@ contains
       call PetscLogEventBegin(logger%event_forcing_fluidfluid,ierr)
       if (flow%use_nonideal_eos) then
         call FlowCalcPsiOfRho(flow, flow%distribution%rho_a)
-        call LBMAddFluidFluidForces(flow%distribution, flow%phases, &
+        call LBMAddFluidFluidForces(flow%distribution, flow%components, &
              flow%psi_of_rho, walls%walls_a, flow%forces)
       else
-        call LBMAddFluidFluidForces(flow%distribution, flow%phases, &
+        call LBMAddFluidFluidForces(flow%distribution, flow%components, &
              flow%distribution%rho_a, walls%walls_a, flow%forces)
       end if
       call PetscLogEventEnd(logger%event_forcing_fluidfluid,ierr)
@@ -750,14 +750,14 @@ contains
 
     if (flow%fluidsolid_forces) then
       call PetscLogEventBegin(logger%event_forcing_fluidsolid,ierr)
-      call LBMAddFluidSolidForces(flow%distribution, flow%phases, walls, &
+      call LBMAddFluidSolidForces(flow%distribution, flow%components, walls, &
            flow%distribution%rho_a, flow%forces)
       call PetscLogEventEnd(logger%event_forcing_fluidsolid,ierr)
     end if
 
     if (flow%body_forces) then
       call PetscLogEventBegin(logger%event_forcing_body,ierr)
-      call LBMAddBodyForces(flow%distribution, flow%phases, flow%gvt, &
+      call LBMAddBodyForces(flow%distribution, flow%components, flow%gvt, &
            flow%distribution%rho_a, walls%walls_a, flow%forces)
       call PetscLogEventEnd(logger%event_forcing_body,ierr)
     end if
@@ -791,7 +791,7 @@ contains
     use LBM_Logging_module
     type(flow_type) flow
     type(distribution_type) dist ! just for convenience
-    PetscScalar,dimension(flow%nphases, 0:flow%disc%b,dist%info%gxs:dist%info%gxe, &
+    PetscScalar,dimension(flow%ncomponents, 0:flow%disc%b,dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze)::fi,fi_eq
     PetscScalar,dimension(1:dist%s,dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: rho
@@ -812,8 +812,8 @@ contains
 
     call PetscLogEventBegin(logger%event_collision_precalc,ierr)
     do m=1,dist%s
-       mmot(m) = flow%phases(m)%mm/flow%phases(m)%relax%tau
-       mm(m) = flow%phases(m)%mm
+       mmot(m) = flow%components(m)%mm/flow%components(m)%relax%tau
+       mm(m) = flow%components(m)%mm
     end do
 
     do k=dist%info%zs,dist%info%ze
@@ -835,11 +835,11 @@ contains
     do m=1,dist%s
       call PetscLogEventBegin(logger%event_collision_feq,ierr)
       call DiscretizationEquilf(flow%disc, rho, ue, &
-           walls, fi_eq, m, flow%phases(m)%relax, dist)
+           walls, fi_eq, m, flow%components(m)%relax, dist)
       call PetscLogEventEnd(logger%event_collision_feq,ierr)
 
       call PetscLogEventBegin(logger%event_collision_relax,ierr)
-      call RelaxationCollide(flow%phases(m)%relax, fi, fi_eq, &
+      call RelaxationCollide(flow%components(m)%relax, fi, fi_eq, &
            walls, m, dist)
       call PetscLogEventEnd(logger%event_collision_relax,ierr)
     end do
@@ -849,7 +849,7 @@ contains
     use LBM_Logging_module
     type(flow_type) flow
     type(distribution_type) dist ! just for convenience
-    PetscScalar,dimension(flow%nphases, 0:flow%disc%b,dist%info%gxs:dist%info%gxe, &
+    PetscScalar,dimension(flow%ncomponents, 0:flow%disc%b,dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye)::fi,fi_eq
     PetscScalar,dimension(1:dist%s,dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye):: rho
@@ -870,8 +870,8 @@ contains
 
     call PetscLogEventBegin(logger%event_collision_precalc,ierr)
     do m=1,dist%s
-       mmot(m) = flow%phases(m)%mm/flow%phases(m)%relax%tau
-       mm(m) = flow%phases(m)%mm
+       mmot(m) = flow%components(m)%mm/flow%components(m)%relax%tau
+       mm(m) = flow%components(m)%mm
     end do
 
     do j=dist%info%ys,dist%info%ye
@@ -891,11 +891,11 @@ contains
     do m=1,dist%s
       call PetscLogEventBegin(logger%event_collision_feq,ierr)
       call DiscretizationEquilf(flow%disc, rho, ue, walls, &
-           fi_eq, m, flow%phases(m)%relax, dist)
+           fi_eq, m, flow%components(m)%relax, dist)
       call PetscLogEventEnd(logger%event_collision_feq,ierr)
 
       call PetscLogEventBegin(logger%event_collision_relax,ierr)
-      call RelaxationCollide(flow%phases(m)%relax, fi, fi_eq, &
+      call RelaxationCollide(flow%components(m)%relax, fi, fi_eq, &
            walls, m, dist)
       call PetscLogEventEnd(logger%event_collision_relax,ierr)
     end do
