@@ -69,6 +69,8 @@
   PetscInt, parameter :: LBM_MODE = 8
 
   ! EOS types, see Yuan and Schaeffer '06
-  PetscInt, parameter :: EOS_DENSITY = 0        ! psi = rho
-  PetscInt, parameter :: EOS_SC = 1             ! psi = 1-exp(-rho), Shan & Chen '94
-  PetscInt, parameter :: EOS_PR = 2             ! psi = cubic law from Peng & Robinson '??, 
+  PetscInt, parameter :: EOS_NULL = 0
+  PetscInt, parameter :: EOS_DENSITY = 1    ! psi = rho
+  PetscInt, parameter :: EOS_SC = 2         ! psi = rho0*(1-exp(-rho)), Shan & Chen '93/'94
+  PetscInt, parameter :: EOS_PR = 3         ! psi = cubic law from Peng & Robinson '??, 
+  PetscInt, parameter :: EOS_THERMO = 4     ! psi = psi0*exp(-rho0/rho), see Shan & Chen '94

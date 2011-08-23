@@ -61,6 +61,7 @@ MODULES = lbm_logging.o \
 	lbm_grid.o \
 	lbm_discretization_type.o \
 	lbm_distribution_function_type.o \
+	lbm_eos.o \
 	lbm_relaxation.o \
 	lbm_component.o \
 	lbm_species.o \
