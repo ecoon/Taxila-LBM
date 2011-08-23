@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            13:43:00 MDT
-!!!     last modified:   10 August 2011
-!!!       at:            15:16:11 MDT
+!!!     last modified:   23 August 2011
+!!!       at:            16:39:11 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -19,6 +19,7 @@ module LBM_Component_module
   use petsc
   use LBM_Component_Bag_Data_type_module
   use LBM_Relaxation_module
+  use LBM_EOS_module
   implicit none
 
   private
@@ -39,6 +40,7 @@ module LBM_Component_module
 
      ! dependent parameters, for equilf and collision
      type(relaxation_type),pointer:: relax
+     type(eos_type),pointer :: eos
 
      ! bag 
      character(len=MAXWORDLENGTH):: name
@@ -110,6 +112,7 @@ contains
     nullify(component%mm)
     nullify(component%gf)
     nullify(component%relax)
+    nullify(component%eos)
 
     component%name = ''
     nullify(component%data)
@@ -128,6 +131,9 @@ contains
     character(len=MAXWORDLENGTH):: name
     component%name = name
     call RelaxationSetName(component%relax, name)
+    if (associated(component%eos)) then
+      call EOSSetName(component%eos, name)
+    end if
   end subroutine ComponentSetName
 
   subroutine ComponentSetID(component, id)
@@ -135,6 +141,9 @@ contains
     PetscInt id
     component%id = id
     call RelaxationSetID(component%relax, id)
+    if (associated(component%eos)) then
+      call EOSSetID(component%eos, id)
+    end if
   end subroutine ComponentSetID
 
   subroutine ComponentSetFromOptions(component, options, ierr)
@@ -143,6 +152,7 @@ contains
     type(options_type) options
     PetscErrorCode ierr
 
+    character(len=MAXWORDLENGTH):: name
     PetscSizeT sizeofint, sizeofscalar, sizeofbool, sizeofdata
     PetscInt lcv
     character(len=MAXWORDLENGTH):: paramname
@@ -150,14 +160,22 @@ contains
     write(paramname, '(I1)') component%id
     
     ! set the component name from options
+    name = ''
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
-    if (help) call PetscPrintf(options%comm, "-component"//trim(paramname)//"_name=<component"// &
-         trim(paramname)//">: name the component -- for use with parameter options\n", ierr)
+    if (help) call PetscPrintf(options%comm, "-component"//trim(paramname)// &
+         "_name=<component"//trim(paramname)// &
+         ">: name the component -- for use with parameter options\n", ierr)
     call PetscOptionsGetString(options%my_prefix, "-component"//trim(paramname)//"_name", &
-         component%name, flag, ierr)
-    call RelaxationSetName(component%relax, component%name)
+         name, flag, ierr)
+    if (flag) then
+      call ComponentSetName(component, name)
+    end if
+
     call RelaxationSetMode(component%relax, options%flow_relaxation_mode)
     call RelaxationSetFromOptions(component%relax, options, ierr)
+    if (associated(component%eos)) then
+      call EOSSetFromOptions(component%eos, options, ierr)
+    end if
 
     ! create the bag
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
@@ -194,6 +212,8 @@ contains
   subroutine ComponentDestroy(component, ierr)
     type(component_type) component
     PetscErrorCode ierr
+    if (associated(component%relax)) call RelaxationDestroy(component%relax, ierr)
+    if (associated(component%eos)) call EOSDestroy(component%eos, ierr)
     if (component%bag /= 0) call PetscBagDestroy(component%bag, ierr)
   end subroutine ComponentDestroy
 end module LBM_Component_module

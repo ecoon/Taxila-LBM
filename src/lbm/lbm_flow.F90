@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
-!!!     last modified:   22 August 2011
-!!!       at:            15:32:20 MDT
+!!!     last modified:   23 August 2011
+!!!       at:            16:41:20 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -18,6 +18,7 @@
 module LBM_Flow_module
   use petsc
   use LBM_Relaxation_module
+  use LBM_EOS_module
   use LBM_Component_module
   use LBM_Info_module
   use LBM_Discretization_Type_module
@@ -64,7 +65,6 @@ module LBM_Flow_module
      PetscBool :: body_forces
      PetscBool :: fluidfluid_forces
      PetscBool :: use_nonideal_eos
-     PetscInt :: use_nonideal_eos_eqn
      PetscBool :: fluidsolid_forces
 
      PetscScalar,pointer,dimension(:) :: gvt
@@ -129,7 +129,6 @@ contains
     flow%body_forces = PETSC_FALSE
     flow%fluidfluid_forces = PETSC_FALSE
     flow%use_nonideal_eos = PETSC_FALSE
-    flow%use_nonideal_eos_eqn = EOS_DENSITY
     flow%fluidsolid_forces = PETSC_FALSE
     nullify(flow%gvt)
   end function FlowCreate
@@ -166,7 +165,6 @@ contains
   end subroutine FlowSetName
     
   subroutine FlowSetFromOptions(flow, options, ierr)
-    use String_module
     use LBM_Options_module
     type(flow_type) flow
     type(options_type) options
@@ -178,8 +176,6 @@ contains
     PetscScalar gravity(options%ndims)
     PetscScalar,parameter:: eps=1.e-15 ! slightly larger than machine epsilon
     PetscBool flag
-    character(len=MAXWORDLENGTH) eos_name
-    character(len=MAXWORDLENGTH) test_eos_name
 
     flag = PETSC_FALSE
     flow%ncomponents = options%ncomponents
@@ -190,8 +186,12 @@ contains
     call DiscretizationSetSizes(flow%disc, flow%grid%info%stencil_size)
     call DiscretizationSetUp(flow%disc)
     
+    flow%use_nonideal_eos = options%flow_use_nonideal_eos
     do lcv=1,flow%ncomponents
        call ComponentSetSizes(flow%components(lcv), flow%ncomponents, flow%disc%b)
+       if (flow%use_nonideal_eos) then
+         flow%components(lcv)%eos => EOSCreate(flow%comm)
+       end if
        call ComponentSetID(flow%components(lcv), lcv)
        call ComponentSetFromOptions(flow%components(lcv), options, ierr)
     end do
@@ -215,24 +215,6 @@ contains
         end if
       end do
     end do
-
-    if (help) call PetscPrintf(options%comm, "-flow_use_nonideal_eos <eos-type>", &
-         ierr)
-    call PetscOptionsGetString(options%my_prefix, '-flow_use_nonideal_eos', &
-         eos_name, flag, ierr)
-    if (flag) then
-      flow%use_nonideal_eos = PETSC_TRUE
-
-      test_eos_name = 'sc'
-      if (StringCompareIgnoreCase(test_eos_name, eos_name, 2)) then
-         flow%use_nonideal_eos_eqn = EOS_SC
-      end if
-
-      test_eos_name = 'pr'
-      if (StringCompareIgnoreCase(test_eos_name, eos_name, 2)) then
-         flow%use_nonideal_eos_eqn = EOS_PR
-      end if
-    end if
 
     flow%fluidsolid_forces = options%flow_fluidsolid_forces
     
@@ -589,13 +571,18 @@ contains
     type(flow_type) flow
     PetscScalar,dimension(1:flow%grid%info%gxyzl):: walls
     PetscErrorCode ierr
+    
+    PetscInt m
 
     call DMDAVecGetArrayF90(flow%grid%da(NFLOWDOF),flow%velt_g,flow%velt_a,ierr)
     call DMDAVecGetArrayF90(flow%grid%da(ONEDOF), flow%rhot_g, flow%rhot_a,ierr)
     call DMDAVecGetArrayF90(flow%grid%da(ONEDOF), flow%prs_g, flow%prs_a, ierr)
 
     if (flow%use_nonideal_eos) then
-      call FlowCalcPsiOfRho(flow, flow%distribution%rho_a)
+      do m=1,flow%distribution%s
+        call EOSApply(flow%components(m)%eos, flow%distribution%rho_a, &
+             flow%psi_of_rho, m, flow%distribution)
+      end do
     end if
 
     select case(flow%ndims)
@@ -732,13 +719,18 @@ contains
     use LBM_Logging_module
     type(flow_type) flow
     type(walls_type) walls
+
     PetscErrorCode ierr
-    
+    PetscInt m
+
     flow%forces = 0.d0
     if (flow%fluidfluid_forces) then
       call PetscLogEventBegin(logger%event_forcing_fluidfluid,ierr)
       if (flow%use_nonideal_eos) then
-        call FlowCalcPsiOfRho(flow, flow%distribution%rho_a)
+        do m=1,flow%distribution%s
+          call EOSApply(flow%components(m)%eos, flow%distribution%rho_a, &
+               flow%psi_of_rho, m, flow%distribution)
+        end do
         call LBMAddFluidFluidForces(flow%distribution, flow%components, &
              flow%psi_of_rho, walls%walls_a, flow%forces)
       else
@@ -906,34 +898,6 @@ contains
     PetscScalar,dimension(flow%grid%info%gxyzl):: walls
     call BCApply(flow%bc, walls, flow%distribution)
   end subroutine FlowApplyBCs
-
-  subroutine FlowCalcPsiOfRho(flow, rho)
-    type(flow_type) flow
-    PetscScalar,dimension(flow%distribution%s,flow%grid%info%rgxyzl):: rho
-    PetscErrorCode ierr
-    PetscInt m,i
-
-    select case(flow%use_nonideal_eos_eqn)
-    case(EOS_SC)
-      do i=1,flow%grid%info%gxyzl
-        do m=1,flow%distribution%s
-          flow%psi_of_rho(m,i) = 1 - EXP(-rho(m,i))
-        end do
-      end do
-
-    case(EOS_PR)
-      do i=1,flow%grid%info%gxyzl
-        do m=1,flow%distribution%s
-
-        end do
-      end do
-      
-    case DEFAULT
-      SETERRQ(1, 1, 'invalid equation of state', ierr)
-    end select
-
-
-  end subroutine FlowCalcPsiOfRho
 
   subroutine print_a_few(fi, u, forces, dist,istep)
     type(distribution_type) dist

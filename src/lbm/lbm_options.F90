@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         09 December 2010
 !!!       on:            14:16:32 MST
-!!!     last modified:   10 August 2011
-!!!       at:            17:00:59 MDT
+!!!     last modified:   23 August 2011
+!!!       at:            16:35:36 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -48,6 +48,7 @@
 
        PetscInt flow_relaxation_mode
        PetscBool flow_fluidsolid_forces
+       PetscBool flow_use_nonideal_eos
 
        PetscBool steadystate
        PetscInt steadystate_rampup_steps
@@ -97,6 +98,7 @@
 
       options%flow_relaxation_mode = RELAXATION_MODE_SRT
       options%flow_fluidsolid_forces = PETSC_FALSE
+      options%flow_use_nonideal_eos = PETSC_FALSE
 
       options%steadystate = PETSC_FALSE
       options%steadystate_rampup_steps = 0
@@ -166,6 +168,11 @@
            "  -flow_relaxation_mode <0>: flow relaxation as SRT=0, MRT=1\n", ierr)
       call PetscOptionsGetInt(options%my_prefix, '-flow_relaxation_mode', &
            options%flow_relaxation_mode, flag, ierr)
+
+      if (help) call PetscPrintf(options%comm, &
+           "  -flow_use_nonideal_eos: use a nonideal eos equation, set by phase\n", ierr)
+      call PetscOptionsGetBool(options%my_prefix, '-flow_use_nonideal_eos', &
+           options%flow_use_nonideal_eos, flag, ierr)
 
       ! walls 
       if (help) call PetscPrintf(options%comm, &
