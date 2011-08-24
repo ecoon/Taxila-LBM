@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
-!!!     last modified:   23 August 2011
-!!!       at:            16:41:20 MDT
+!!!     last modified:   24 August 2011
+!!!       at:            11:31:12 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -581,7 +581,7 @@ contains
     if (flow%use_nonideal_eos) then
       do m=1,flow%distribution%s
         call EOSApply(flow%components(m)%eos, flow%distribution%rho_a, &
-             flow%psi_of_rho, m, flow%distribution)
+             flow%psi_of_rho, flow%components(m)%gf(m), m, flow%distribution)
       end do
     end if
 
@@ -729,7 +729,7 @@ contains
       if (flow%use_nonideal_eos) then
         do m=1,flow%distribution%s
           call EOSApply(flow%components(m)%eos, flow%distribution%rho_a, &
-               flow%psi_of_rho, m, flow%distribution)
+               flow%psi_of_rho, flow%components(m)%gf(m), m, flow%distribution)
         end do
         call LBMAddFluidFluidForces(flow%distribution, flow%components, &
              flow%psi_of_rho, walls%walls_a, flow%forces)
