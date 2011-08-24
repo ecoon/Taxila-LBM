@@ -304,10 +304,11 @@ contains
          eos%omega, flag, ierr)
   end subroutine EOSSetFromOptions_PR
 
-  subroutine EOSApply_PR(eos, rho, psi, m, dist)
+  subroutine EOSApply_PR(eos, rho, psi, gmm, m, dist)
     type(eos_type) eos
     type(distribution_type) dist
     PetscScalar,dimension(dist%s,dist%info%rgxyzl) :: rho, psi
+    PetsScalar gmm
     PetscInt m
 
     PetscInt i

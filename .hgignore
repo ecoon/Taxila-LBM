@@ -18,3 +18,4 @@ runSimulation
 *.pdf
 lib/lbm.a
 tests/*/test_solution/*
+push_to_*
