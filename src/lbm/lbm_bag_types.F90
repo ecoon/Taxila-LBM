@@ -25,7 +25,7 @@ module LBM_Component_Bag_Data_type_module
      PetscScalar mm ! molecular mass
      PetscScalar viscosity
      PetscScalar density
-     PetscScalar,dimension(NMAX_PHASES) :: gf ! component-component force coefs
+     PetscScalar,dimension(NMAX_COMPONENTS) :: gf ! component-component force coefs
   end type component_bag_data_type
 end module LBM_Component_Bag_Data_type_module
 
@@ -35,7 +35,7 @@ module LBM_Mineral_Bag_Data_type_module
 #include "lbm_definitions.h"
   ! physical parameters for a mineral
   type, public :: mineral_bag_data_type
-     PetscScalar,dimension(NMAX_PHASES) :: gw ! mineral-mineral force coefs
+     PetscScalar,dimension(NMAX_COMPONENTS) :: gw ! mineral-mineral force coefs
   end type mineral_bag_data_type
 end module LBM_Mineral_Bag_Data_type_module
 
