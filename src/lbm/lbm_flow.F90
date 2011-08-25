@@ -474,8 +474,8 @@ contains
     call DistributionSetInfo(flow%distribution, flow%grid%info)
     call DistributionSetDiscretization(flow%distribution, flow%disc)
     call DistributionSetSizes(flow%distribution, flow%ncomponents)
-    call DistributionSetDAs(flow%distribution, flow%grid%da(NPHASEXBDOF), &
-         flow%grid%da(NPHASEDOF))
+    call DistributionSetDAs(flow%distribution, flow%grid%da(NCOMPONENTXBDOF), &
+         flow%grid%da(NCOMPONENTDOF))
     call DistributionSetUp(flow%distribution)
     call BCSetUp(flow%bc)
 
@@ -533,26 +533,26 @@ contains
     PetscErrorCode ierr
 
     if (flow%io_fi) then
-       call DMDAVecRestoreArrayF90(flow%grid%da(NPHASEXBDOF),flow%distribution%fi, &
+       call DMDAVecRestoreArrayF90(flow%grid%da(NCOMPONENTXBDOF),flow%distribution%fi, &
             flow%distribution%fi_a, ierr)
-       call DMLocalToGlobalBegin(flow%grid%da(NPHASEXBDOF),flow%distribution%fi, &
+       call DMLocalToGlobalBegin(flow%grid%da(NCOMPONENTXBDOF),flow%distribution%fi, &
             INSERT_VALUES, flow%distribution%fi_g, ierr)
-       call DMLocalToGlobalEnd(flow%grid%da(NPHASEXBDOF),flow%distribution%fi, &
+       call DMLocalToGlobalEnd(flow%grid%da(NCOMPONENTXBDOF),flow%distribution%fi, &
             INSERT_VALUES, flow%distribution%fi_g, ierr)
-       call DMDAVecGetArrayF90(flow%grid%da(NPHASEXBDOF),flow%distribution%fi, &
+       call DMDAVecGetArrayF90(flow%grid%da(NCOMPONENTXBDOF),flow%distribution%fi, &
             flow%distribution%fi_a, ierr)
        call IOView(io, flow%distribution%fi_g, 'fi')
     end if
     if (flow%io_rho) then
-       call DMDAVecRestoreArrayF90(flow%grid%da(NPHASEDOF),flow%distribution%rho, &
+       call DMDAVecRestoreArrayF90(flow%grid%da(NCOMPONENTDOF),flow%distribution%rho, &
             flow%distribution%rho_a, ierr)
-       call DMLocalToGlobalBegin(flow%grid%da(NPHASEDOF),flow%distribution%rho, &
+       call DMLocalToGlobalBegin(flow%grid%da(NCOMPONENTDOF),flow%distribution%rho, &
             INSERT_VALUES, flow%distribution%rho_g, ierr)
-       call DMLocalToGlobalEnd(flow%grid%da(NPHASEDOF),flow%distribution%rho, &
+       call DMLocalToGlobalEnd(flow%grid%da(NCOMPONENTDOF),flow%distribution%rho, &
             INSERT_VALUES, flow%distribution%rho_g, ierr)
        call VecScale(flow%distribution%rho_g, &
             flow%mass_scale/(flow%grid%length_scale**3), ierr)
-       call DMDAVecGetArrayF90(flow%grid%da(NPHASEDOF),flow%distribution%rho, &
+       call DMDAVecGetArrayF90(flow%grid%da(NCOMPONENTDOF),flow%distribution%rho, &
             flow%distribution%rho_a, ierr)
        call IOView(io, flow%distribution%rho_g, 'rho')
        call VecScale(flow%distribution%rho_g, &

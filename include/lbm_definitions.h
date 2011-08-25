@@ -1,7 +1,7 @@
   ! da # of dofs enum
   PetscInt, parameter:: ONEDOF = 1
-  PetscInt, parameter:: NPHASEDOF = 2
-  PetscInt, parameter:: NPHASEXBDOF = 3
+  PetscInt, parameter:: NCOMPONENTDOF = 2
+  PetscInt, parameter:: NCOMPONENTXBDOF = 3
   PetscInt, parameter:: NFLOWDOF = 4
   PetscInt, parameter:: NSPECIEDOF = 5
   PetscInt, parameter:: NSPECIEXBDOF = 6
@@ -51,7 +51,7 @@
 
   ! fluid types
   PetscInt, parameter :: NULL_FLUID_TYPE = 0
-  PetscInt, parameter :: PHASE_FLUID_TYPE = 0
+  PetscInt, parameter :: COMPONENT_FLUID_TYPE = 0
   PetscInt, parameter :: SPECIE_FLUID_TYPE = 0
 
   ! relaxation types
@@ -61,7 +61,7 @@
   ! max cruft for bags, these can be arbitrarily
   ! increased with no memory problems as nothing
   ! is actually allocated of this size
-  PetscInt, parameter :: NMAX_PHASES = 5
+  PetscInt, parameter :: NMAX_COMPONENTS = 5
   PetscInt, parameter :: NMAX_DIRECTIONS = 27
   
 

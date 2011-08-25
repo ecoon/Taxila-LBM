@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            09:24:24 MDT
-!!!     last modified:   17 August 2011
-!!!       at:            10:54:21 MDT
+!!!     last modified:   25 August 2011
+!!!       at:            11:06:14 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -196,11 +196,11 @@ contains
          btype(Z_DIRECTION), grid%info%stencil_type, &
          grid%info%NX, grid%info%NY, grid%info%NZ, &
          grid%info%nproc_x, grid%info%nproc_y, grid%info%nproc_z, &
-         grid%da_sizes(NPHASEDOF), grid%info%stencil_size_rho, &
+         grid%da_sizes(NCOMPONENTDOF), grid%info%stencil_size_rho, &
          grid%info%ownership_x, grid%info%ownership_y, grid%info%ownership_z, &
-         grid%da(NPHASEDOF), ierr)
+         grid%da(NCOMPONENTDOF), ierr)
 
-    call DMDAGetGhostCorners(grid%da(ONEDOF), rgxs, rgys, rgzs, &
+    call DMDAGetGhostCorners(grid%da(NCOMPONENTDOF), rgxs, rgys, rgzs, &
          grid%info%rgxl, grid%info%rgyl, grid%info%rgzl, ierr)
     grid%info%rgxs = rgxs+1
     grid%info%rgxe = grid%info%rgxs+grid%info%rgxl-1
@@ -228,8 +228,8 @@ contains
 
     ! set the names
     call PetscObjectSetName(grid%da(ONEDOF), trim(grid%name)//'DA_one', ierr)
-    call PetscObjectSetName(grid%da(NPHASEDOF), trim(grid%name)//'DA_NPHASE', ierr)
-    call PetscObjectSetName(grid%da(NPHASEXBDOF), trim(grid%name)//'DA_NPHASEXB', ierr)
+    call PetscObjectSetName(grid%da(NCOMPONENTDOF), trim(grid%name)//'DA_NCOMPONENT', ierr)
+    call PetscObjectSetName(grid%da(NCOMPONENTXBDOF), trim(grid%name)//'DA_NCOMPONENTXB', ierr)
     call PetscObjectSetName(grid%da(NFLOWDOF), trim(grid%name)//'DA_NFLOW', ierr)
     if (grid%nda > 4) then
        call PetscObjectSetName(grid%da(NSPECIEDOF), &
