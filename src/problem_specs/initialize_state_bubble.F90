@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         14 January 2011
 !!!       on:            17:27:04 MST
-!!!     last modified:   17 August 2011
-!!!       at:            18:08:28 MDT
+!!!     last modified:   25 August 2011
+!!!       at:            13:26:31 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -73,9 +73,6 @@
     ! local variables
     PetscErrorCode ierr
     PetscBool flag
-    logical,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, &
-         dist%info%gzs:dist%info%gze):: bound
     PetscScalar,dimension(dist%s):: rho1, rho2         ! left and right fluid densities?
     PetscInt nmax
     character(len=30) bubblestring
@@ -100,8 +97,9 @@
     call PetscOptionsGetRealArray(options%my_prefix, '-rho_outer', rho2, nmax, flag, ierr)
 
     ! initialize state
-    fi=0.0
-    u=0.0
+    fi = 0.d0
+    u = 0.d0
+    rho = 0.d0
 
     !---duct with nonwetting bubble in middle ----------
     !--- rho2: nonwetting
@@ -120,30 +118,19 @@
     call PetscPrintf(options%comm, bubblestring, ierr)
 
     ! set bound to indicate fluid
-    bound=.false.
     do i=dist%info%xs,dist%info%xe
-       do j=dist%info%ys,dist%info%ye
-          do k=dist%info%zs,dist%info%ze
-             if((i.ge.lx.and.i.le.rx).and.(j.ge.ly.and.j.le.ry).and.(k.ge.lz.and.k.le.rz)) then
-                bound(i,j,k)=.true.
-             endif
-          enddo
-       enddo
+    do j=dist%info%ys,dist%info%ye
+    do k=dist%info%zs,dist%info%ze
+      if (walls(i,j,k).eq.0) then
+        if((i.ge.lx.and.i.le.rx).and.(j.ge.ly.and.j.le.ry).and.(k.ge.lz.and.k.le.rz)) then
+          rho(:,i,j,k)=rho1(:)
+        else
+          rho(:,i,j,k)=rho2(:)
+        endif
+      end if
     enddo
-
-    ! set density
-    where(bound)
-       rho(1,:,:,:)=rho1(1)
-       rho(2,:,:,:)=rho1(2)
-    else where
-       rho(1,:,:,:)=rho2(1)
-       rho(2,:,:,:)=rho2(2)
-    end where
-
-    where(walls > 0)
-       rho(1,:,:,:) = 0
-       rho(2,:,:,:) = 0
-    end where
+    enddo
+    enddo
 
     ! set state at equilibrium       
     do m=1,dist%s
@@ -181,8 +168,6 @@
     ! local variables
     PetscErrorCode ierr
     PetscBool flag
-    logical,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: bound
     PetscScalar,dimension(dist%s):: rho1, rho2   ! initial region densities
     PetscInt nmax
     character(len=30) bubblestring
@@ -223,29 +208,17 @@
     write(bubblestring,'(a,I4,I4,I4,I4)') 'bubble format:', ly, ry
     call PetscPrintf(options%comm, bubblestring, ierr)
 
-    ! set bound to indicate fluid
-    bound=.false.
     do j=dist%info%ys,dist%info%ye
-      do i=dist%info%xs,dist%info%xe    
+    do i=dist%info%xs,dist%info%xe    
+      if (walls(i,j).eq.0) then
         if((i.ge.lx.and.i.le.rx).and.(j.ge.ly.and.j.le.ry)) then
-          bound(i,j)=.true.
+          rho(:,i,j)=rho1(:)
+        else
+          rho(:,i,j)=rho2(:)
         endif
-      enddo
+      end if
     enddo
-
-    ! set density
-    where(bound)
-       rho(1,:,:)=rho1(1)
-       rho(2,:,:)=rho1(2)
-    else where
-       rho(1,:,:)=rho2(1)
-       rho(2,:,:)=rho2(2)
-    end where
-
-    where(walls > 0)
-       rho(1,:,:) = 0
-       rho(2,:,:) = 0
-    end where
+    enddo
 
     ! set state at equilibrium       
     do m=1,dist%s
