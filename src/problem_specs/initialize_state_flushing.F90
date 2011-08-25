@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
-!!!     last modified:   17 August 2011
-!!!       at:            18:09:03 MDT
+!!!     last modified:   25 August 2011
+!!!       at:            13:26:00 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -72,9 +72,6 @@
     ! local variables
     PetscErrorCode ierr
     PetscBool flag
-    logical,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, &
-         dist%info%gzs:dist%info%gze):: bound
     PetscScalar,dimension(dist%s):: rho1, rho2         ! left and right fluid densities?
     PetscInt nmax
     PetscBool flushx, flushy, flushz
@@ -89,14 +86,18 @@
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
 
     rho1 = 0.d0
-    if (help) call PetscPrintf(options%comm, "-rho_invading=<0,0>: component density of the invading fluid", ierr)
+    if (help) call PetscPrintf(options%comm, &
+         "-rho_invading=<0,0>: component density of the invading fluid", ierr)
     nmax = dist%s
-    call PetscOptionsGetRealArray(options%my_prefix, '-rho_invading', rho1, nmax, flag, ierr)
+    call PetscOptionsGetRealArray(options%my_prefix, '-rho_invading', &
+         rho1, nmax, flag, ierr)
 
     rho2 = 0.d0
-    if (help) call PetscPrintf(options%comm, "-rho_defending=<0,0>: component density of the defending fluid", ierr)
+    if (help) call PetscPrintf(options%comm, &
+         "-rho_defending=<0,0>: component density of the defending fluid", ierr)
     nmax = dist%s
-    call PetscOptionsGetRealArray(options%my_prefix, '-rho_defending', rho2, nmax, flag, ierr)
+    call PetscOptionsGetRealArray(options%my_prefix, '-rho_defending', &
+         rho2, nmax, flag, ierr)
     
     flushz = .TRUE.
     flushy = .FALSE.
@@ -113,43 +114,49 @@
 
     ! flushing experiement 
     if (flushx) then
-       bound=.false.
-       do i=dist%info%xs,dist%info%xe
-          do j=dist%info%ys,dist%info%ye
-             do k=dist%info%zs,dist%info%ze
-                if(i.le.10) bound(i,j,k)=.true.
-             enddo
-          enddo
-       enddo
+      do k=dist%info%zs,dist%info%ze
+      do j=dist%info%ys,dist%info%ye
+      do i=dist%info%xs,dist%info%xe
+        if (walls(i,j,k).eq.0) then
+          if (i.le.10) then
+            rho(:,i,j,k)=rho1(:)
+          else 
+            rho(:,i,j,k)=rho2(:)
+          end if
+        end if
+      enddo
+      enddo
+      enddo
     else if (flushy) then
-       bound=.false.
-       do i=dist%info%xs,dist%info%xe
-          do j=dist%info%ys,dist%info%ye
-             do k=dist%info%zs,dist%info%ze
-                if(j.le.10) bound(i,j,k)=.true.
-             enddo
-          enddo
-       enddo
+      do k=dist%info%zs,dist%info%ze
+      do j=dist%info%ys,dist%info%ye
+      do i=dist%info%xs,dist%info%xe
+        if (walls(i,j,k).eq.0) then
+          if (j.le.10) then
+            rho(:,i,j,k)=rho1(:)
+          else 
+            rho(:,i,j,k)=rho2(:)
+          end if
+        end if
+      enddo
+      enddo
+      enddo
     else if (flushz) then
-       bound=.false.
-       do i=dist%info%xs,dist%info%xe
-          do j=dist%info%ys,dist%info%ye
-             do k=dist%info%zs,dist%info%ze
-                if(k.le.10) bound(i,j,k)=.true.
-             enddo
-          enddo
-       enddo
+      do k=dist%info%zs,dist%info%ze
+      do j=dist%info%ys,dist%info%ye
+      do i=dist%info%xs,dist%info%xe
+        if (walls(i,j,k).eq.0) then
+          if (k.le.10) then
+            rho(:,i,j,k)=rho1(:)
+          else 
+            rho(:,i,j,k)=rho2(:)
+          end if
+        end if
+      enddo
+      enddo
+      enddo
     end if
 
-    ! set density
-    where(bound)
-       rho(1,:,:,:)=rho1(1)
-       rho(2,:,:,:)=rho1(2)
-    else where
-       rho(1,:,:,:)=rho2(1)
-       rho(2,:,:,:)=rho2(2)
-    end where
-    
     ! set state at equilibrium       
     nowalls = 0.d0
     do m=1,dist%s
@@ -224,29 +231,30 @@
 
     ! flushing experiement 
     if (flushx) then
-       bound=.false.
-       do i=dist%info%xs,dist%info%xe
-          do j=dist%info%ys,dist%info%ye
-             if(i.le.10) bound(i,j)=.true.
-          enddo
-       enddo
+      do j=dist%info%ys,dist%info%ye
+      do i=dist%info%xs,dist%info%xe
+        if (walls(i,j).eq.0) then
+          if (i.le.10) then
+            rho(:,i,j)=rho1(:)
+          else 
+            rho(:,i,j)=rho2(:)
+          end if
+        end if
+      enddo
+      enddo
     else if (flushy) then
-       bound=.false.
-       do i=dist%info%xs,dist%info%xe
-          do j=dist%info%ys,dist%info%ye
-             if(j.le.10) bound(i,j)=.true.
-          enddo
-       enddo
+      do j=dist%info%ys,dist%info%ye
+      do i=dist%info%xs,dist%info%xe
+        if (walls(i,j).eq.0) then
+          if (j.le.10) then
+            rho(:,i,j)=rho1(:)
+          else 
+            rho(:,i,j)=rho2(:)
+          end if
+        end if
+      enddo
+      enddo
     end if
-
-    ! set density
-    where(bound)
-       rho(1,:,:)=rho1(1)
-       rho(2,:,:)=rho1(2)
-    else where
-       rho(1,:,:)=rho2(1)
-       rho(2,:,:)=rho2(2)
-    end where
     
     ! set state at equilibrium       
     nowalls = 0.d0
