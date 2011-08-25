@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         22 August 2011
 !!!       on:            15:53:59 MDT
-!!!     last modified:   23 August 2011
-!!!       at:            16:38:26 MDT
+!!!     last modified:   25 August 2011
+!!!       at:            10:43:02 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -101,7 +101,7 @@ contains
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
 
     if (help) call PetscPrintf(options%comm, '  -eos_'//trim(eos%name)//&
-         '={rho,sc,pr,thermo}: name of equation of state', ierr)
+         '={rho,sc,pr,thermo}: name of equation of state\n', ierr)
     call PetscOptionsGetString(options%my_prefix, '-eos_'//trim(eos%name), eos_name, &
          flag, ierr)
 
@@ -127,6 +127,7 @@ contains
       if (StringCompareIgnoreCase(test_eos_name, eos_name, 6)) then
         eos%eos_type = EOS_THERMO
         call EOSSetFromOptions_Thermo(eos, options, ierr)
+        done = PETSC_TRUE
       end if
     end if
 
@@ -135,6 +136,7 @@ contains
       if (StringCompareIgnoreCase(test_eos_name, eos_name, 2)) then
         eos%eos_type = EOS_PR
         call EOSSetFromOptions_PR(eos, options, ierr)
+        done = PETSC_TRUE
       end if
     end if
 
@@ -207,7 +209,7 @@ contains
 
     ! get options
     if (help) call PetscPrintf(options%comm, '  -eos_sc_rho0_'//trim(eos%name)//&
-         '=1:'//' coefficient', ierr)
+         '=1:'//' coefficient\n', ierr)
     call PetscOptionsGetReal(options%my_prefix, '-eos_sc_rho0_'//trim(eos%name), &
          eos%rho0, flag, ierr)
   end subroutine EOSSetFromOptions_SC
@@ -242,13 +244,13 @@ contains
     eos%psi0 = 1.d0
 
     ! get options
-    if (help) call PetscPrintf(options%comm, '  -eos_sc_psi0_'//trim(eos%name)//&
-         '=1:'//' coefficient', ierr)
-    call PetscOptionsGetReal(options%my_prefix, '-eos_sc_psi0_'//trim(eos%name), &
+    if (help) call PetscPrintf(options%comm, '  -eos_thermo_psi0_'//trim(eos%name)//&
+         '=1:'//' coefficient\n', ierr)
+    call PetscOptionsGetReal(options%my_prefix, '-eos_thermo_psi0_'//trim(eos%name), &
          eos%psi0, flag, ierr)
-    if (help) call PetscPrintf(options%comm, '  -eos_sc_rho0_'//trim(eos%name)//&
-         '=1:'//' coefficient', ierr)
-    call PetscOptionsGetReal(options%my_prefix, '-eos_sc_rho0_'//trim(eos%name), &
+    if (help) call PetscPrintf(options%comm, '  -eos_thermo_rho0_'//trim(eos%name)//&
+         '=1:'//' coefficient\n', ierr)
+    call PetscOptionsGetReal(options%my_prefix, '-eos_thermo_rho0_'//trim(eos%name), &
          eos%rho0, flag, ierr)
   end subroutine EOSSetFromOptions_Thermo
 
@@ -281,11 +283,11 @@ contains
     eos%b = 2.d0/21.d0
 
     if (help) call PetscPrintf(options%comm, '  -eos_pr_a_'//trim(eos%name)//&
-         '=2/49:'//' coefficient a', ierr)
+         '=2/49:'//' coefficient a\n', ierr)
     call PetscOptionsGetReal(options%my_prefix, '-eos_pr_a_'//trim(eos%name), &
          eos%a, flag, ierr)
     if (help) call PetscPrintf(options%comm, '  -eos_pr_b_'//trim(eos%name)//&
-         '=2/49:'//' coefficient b', ierr)
+         '=2/49:'//' coefficient b\n', ierr)
     call PetscOptionsGetReal(options%my_prefix, '-eos_pr_b_'//trim(eos%name), &
          eos%b, flag, ierr)
 
@@ -296,14 +298,14 @@ contains
     ! get T, or default to T/T_c = 0.9
     eos%T = 0.9d0*eos%T_c
     if (help) call PetscPrintf(options%comm, '  -eos_pr_T_'//trim(eos%name)//&
-         '=1.:'//' temperature (LU)', ierr)
+         '=1.:'//' temperature (LU)\n', ierr)
     call PetscOptionsGetReal(options%my_prefix, '-eos_pr_T_'//trim(eos%name), &
          eos%T, flag, ierr)
 
     ! get omega, or default to water
     eos%omega = 0.344d0
     if (help) call PetscPrintf(options%comm, '  -eos_pr_omega_'//trim(eos%name)//&
-         '=0.344:'//' coefficient', ierr)
+         '=0.344:'//' coefficient\n', ierr)
     call PetscOptionsGetReal(options%my_prefix, '-eos_pr_omega_'//trim(eos%name), &
          eos%omega, flag, ierr)
   end subroutine EOSSetFromOptions_PR

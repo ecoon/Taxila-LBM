@@ -145,8 +145,8 @@
 
       ! set up the DA sizes
       lbm%grid%da_sizes(ONEDOF) = 1
-      lbm%grid%da_sizes(NPHASEDOF) = lbm%flow%ncomponents
-      lbm%grid%da_sizes(NPHASEXBDOF) = lbm%flow%ncomponents*(lbm%flow%disc%b+1)
+      lbm%grid%da_sizes(NCOMPONENTDOF) = lbm%flow%ncomponents
+      lbm%grid%da_sizes(NCOMPONENTXBDOF) = lbm%flow%ncomponents*(lbm%flow%disc%b+1)
       lbm%grid%da_sizes(NFLOWDOF) = lbm%flow%ndims
       if (associated(lbm%transport)) then
          lbm%grid%da_sizes(NSPECIEDOF) = lbm%transport%nspecies
@@ -187,9 +187,9 @@
       call WallsCommunicate(lbm%walls)
 
       if (istep.eq.0) then
-         call DMDALocalToLocalBegin(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi, &
+         call DMDALocalToLocalBegin(lbm%grid%da(NCOMPONENTXBDOF), lbm%flow%distribution%fi, &
               INSERT_VALUES, lbm%flow%distribution%fi, ierr)
-         call DMDALocalToLocalEnd(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi, &
+         call DMDALocalToLocalEnd(lbm%grid%da(NCOMPONENTXBDOF), lbm%flow%distribution%fi, &
               INSERT_VALUES, lbm%flow%distribution%fi, ierr)
          if (associated(lbm%transport)) then
             call DMDALocalToLocalBegin(lbm%grid%da(NSPECIEXBDOF), &
@@ -481,9 +481,9 @@
          write(*,*) 'reading initial condition from file', lbm%options%ic_file
       endif
       call IOLoadFile(lbm%io, lbm%flow%distribution%fi_g, lbm%options%ic_file)
-      call DMGlobalToLocalBegin(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi_g, &
+      call DMGlobalToLocalBegin(lbm%grid%da(NCOMPONENTXBDOF), lbm%flow%distribution%fi_g, &
            INSERT_VALUES, lbm%flow%distribution%fi, ierr)
-      call DMGlobalToLocalEnd(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi_g, &
+      call DMGlobalToLocalEnd(lbm%grid%da(NCOMPONENTXBDOF), lbm%flow%distribution%fi_g, &
            INSERT_VALUES, lbm%flow%distribution%fi, ierr)
       return
     end subroutine LBMInitializeStateFromFile
@@ -508,9 +508,9 @@
       endif
       call IOLoad(lbm%io, lbm%flow%distribution%fi_g, 'fi')
       
-      call DMGlobalToLocalBegin(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi_g, &
+      call DMGlobalToLocalBegin(lbm%grid%da(NCOMPONENTXBDOF), lbm%flow%distribution%fi_g, &
            INSERT_VALUES, lbm%flow%distribution%fi, ierr)
-      call DMGlobalToLocalEnd(lbm%grid%da(NPHASEXBDOF), lbm%flow%distribution%fi_g, &
+      call DMGlobalToLocalEnd(lbm%grid%da(NCOMPONENTXBDOF), lbm%flow%distribution%fi_g, &
            INSERT_VALUES, lbm%flow%distribution%fi, ierr)
       return
     end subroutine LBMInitializeStateRestarted
