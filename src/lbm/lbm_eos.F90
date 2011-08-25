@@ -143,23 +143,24 @@ contains
     end  if
   end subroutine EOSSetFromOptions
 
-  subroutine EOSApply(eos, rho, psi, m, dist)
+  subroutine EOSApply(eos, rho, psi, g_mm, m, dist)
     type(eos_type) eos
     type(distribution_type) dist
     PetscScalar,dimension(dist%s,dist%info%rgxyzl) :: rho, psi
+    PetscScalar g_mm
     PetscInt m
 
     PetscErrorCode ierr
 
     select case(eos%eos_type)
     case (EOS_DENSITY)
-      call EOSApply_Rho(eos, rho, psi, m, dist)
+      call EOSApply_Rho(eos, rho, psi, g_mm, m, dist)
     case (EOS_SC)
-      call EOSApply_SC(eos, rho, psi, m, dist)
+      call EOSApply_SC(eos, rho, psi, g_mm, m, dist)
     case (EOS_Thermo)
-      call EOSApply_Thermo(eos, rho, psi, m, dist)
+      call EOSApply_Thermo(eos, rho, psi, g_mm, m, dist)
     case (EOS_PR)
-      call EOSApply_PR(eos, rho, psi, m, dist)
+      call EOSApply_PR(eos, rho, psi, g_mm, m, dist)
     case DEFAULT
       SETERRQ(PETSC_COMM_WORLD, 1, 'Invalid EOS type', ierr)
     end select
@@ -176,10 +177,11 @@ contains
     PetscErrorCode ierr
   end subroutine EOSSetFromOptions_Rho
 
-  subroutine EOSApply_Rho(eos, rho, psi, m, dist)
+  subroutine EOSApply_Rho(eos, rho, psi, g_mm, m, dist)
     type(eos_type) eos
     type(distribution_type) dist
     PetscScalar,dimension(dist%s,dist%info%rgxyzl) :: rho, psi
+    PetscScalar g_mm
     PetscInt m
 
     PetscInt i
@@ -210,10 +212,11 @@ contains
          eos%rho0, flag, ierr)
   end subroutine EOSSetFromOptions_SC
 
-  subroutine EOSApply_SC(eos, rho, psi, m, dist)
+  subroutine EOSApply_SC(eos, rho, psi, g_mm, m, dist)
     type(eos_type) eos
     type(distribution_type) dist
     PetscScalar,dimension(dist%s,dist%info%rgxyzl) :: rho, psi
+    PetscScalar g_mm
     PetscInt m
 
     PetscInt i
@@ -249,10 +252,11 @@ contains
          eos%rho0, flag, ierr)
   end subroutine EOSSetFromOptions_Thermo
 
-  subroutine EOSApply_Thermo(eos, rho, psi, m, dist)
+  subroutine EOSApply_Thermo(eos, rho, psi, g_mm, m, dist)
     type(eos_type) eos
     type(distribution_type) dist
     PetscScalar,dimension(dist%s,dist%info%rgxyzl) :: rho, psi
+    PetscScalar g_mm
     PetscInt m
 
     PetscInt i
@@ -304,17 +308,23 @@ contains
          eos%omega, flag, ierr)
   end subroutine EOSSetFromOptions_PR
 
-  subroutine EOSApply_PR(eos, rho, psi, gmm, m, dist)
+  subroutine EOSApply_PR(eos, rho, psi, g_mm, m, dist)
     type(eos_type) eos
     type(distribution_type) dist
     PetscScalar,dimension(dist%s,dist%info%rgxyzl) :: rho, psi
-    PetsScalar gmm
+    PetscScalar g_mm
     PetscInt m
 
     PetscInt i
+    PetscScalar alpha
+    
+    alpha = (1.d0 + (0.37464 + 1.54226*eos%omega - 0.26992*eos%omega**2)*(1.d0 - & 
+            SQRT(eos%T/eos%T_c)))**2
     do i=1,dist%info%rgxyzl
       !!!! FIX MEEE !!!!
-      psi(m,i) = rho(m,i)
+      psi(m,i) = SQRT( 2.d0*( rho(m,i)*eos%R*eos%T/(1.d0 - eos%b*rho(m,i)) - &
+                 eos%a*alpha*rho(m,i)**2/(1.d0 + 2.d0*eos%b*rho(m,i) - eos%b**2*rho(m,i)**2) &
+                 - rho(m,i)/3.d0 )/(dist%disc%c_0*g_mm ) )
     end do
   end subroutine EOSApply_PR
 end module LBM_EOS_module
