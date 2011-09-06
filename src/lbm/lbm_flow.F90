@@ -697,7 +697,7 @@ contains
           velt(d,i,j) = (sum(vel(:,d,i,j)*mm,1) + 0.5*sum(forces(:,d,i,j),1))/rhot(i,j)
        end do
        prs(i,j) = rhot(i,j)/3.d0
-       if (flow%ncomponents > 1) then
+       !if (flow%ncomponents > 1) then
           do m=1,flow%ncomponents
             ! In Qinjun's original code the pressure was calculated as:
             ! prs(i,j) = prs(i,j) + 1.5*rho(m,i,j)*sum(rho(:,i,j)*flow%components(m)%gf,1)
@@ -707,7 +707,7 @@ contains
             prs(i,j) = prs(i,j) + flow%disc%c_0/2.d0*psi(m,i,j) &
                   *sum(flow%components(m)%gf*psi(:,i,j),1)
           end do
-       end if
+       !end if
     end if
     end do
     end do
