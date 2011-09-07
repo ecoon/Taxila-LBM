@@ -87,7 +87,7 @@ contains
     nullify(relax%s5)
     nullify(relax%tau_mrt)
 
-    relax%d_k = 0.
+    relax%d_k = 0. !2.d0/3.d0
     relax%c_s2 = 1.d0/3.d0
 
     nullify(relax%data)

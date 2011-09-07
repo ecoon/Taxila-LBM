@@ -223,7 +223,7 @@ contains
 
     PetscInt i
     do i=1,dist%info%rgxyzl
-      psi(m,i) = eos%rho0*(1.d0 - EXP(-rho(m,i)))
+      psi(m,i) = eos%rho0*(1.d0 - EXP(-rho(m,i)/eos%rho0))
     end do
   end subroutine EOSApply_SC
 
@@ -263,7 +263,7 @@ contains
 
     PetscInt i
     do i=1,dist%info%rgxyzl
-      psi(m,i) = -eos%psi0*EXP(-eos%rho0/rho(m,i))
+      psi(m,i) = eos%psi0*EXP(-eos%rho0/rho(m,i))
     end do
   end subroutine EOSApply_Thermo
 
@@ -292,8 +292,8 @@ contains
          eos%b, flag, ierr)
 
     ! from these, calculate T_c and p_c
-    eos%T_c = eos%a/eos%b*0.18727d0/0.45724d0/eos%R
-    eos%p_c = 0.18727d0*eos%R*eos%T_c/eos%b
+    eos%T_c = eos%a/eos%b*0.0778d0/0.45724d0/eos%R
+    eos%p_c = 0.0778d0*eos%R*eos%T_c/eos%b
 
     ! get T, or default to T/T_c = 0.9
     eos%T = 0.9d0*eos%T_c
@@ -318,12 +318,11 @@ contains
     PetscInt m
 
     PetscInt i
-    PetscScalar alpha
-    
-    alpha = (1.d0 + (0.37464 + 1.54226*eos%omega - 0.26992*eos%omega**2)*(1.d0 - & 
+    PetscScalar alpha   
+
+    alpha = (1.d0 + (0.37464d0 + 1.54226d0*eos%omega - 0.26992d0*eos%omega**2)*(1.d0 - & 
             SQRT(eos%T/eos%T_c)))**2
     do i=1,dist%info%rgxyzl
-      !!!! FIX MEEE !!!!
       psi(m,i) = SQRT( 2.d0*( rho(m,i)*eos%R*eos%T/(1.d0 - eos%b*rho(m,i)) - &
                  eos%a*alpha*rho(m,i)**2/(1.d0 + 2.d0*eos%b*rho(m,i) - eos%b**2*rho(m,i)**2) &
                  - rho(m,i)/3.d0 )/(dist%disc%c_0*g_mm ) )
