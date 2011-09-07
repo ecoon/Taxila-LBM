@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
-!!!     last modified:   24 August 2011
-!!!       at:            11:31:12 MDT
+!!!     last modified:   07 September 2011
+!!!       at:            12:40:24 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -650,7 +650,7 @@ contains
           velt(d,i,j,k) = (sum(vel(:,d,i,j,k)*mm,1) + 0.5*sum(forces(:,d,i,j,k),1))/rhot(i,j,k)
        end do
        prs(i,j,k) = rhot(i,j,k)/3.d0
-       if (flow%ncomponents > 1) then
+       if (flow%use_nonideal_eos .or. (flow%ncomponents > 1)) then
           do m=1,flow%ncomponents
             ! In Qinjun's original code the pressure was calculated as:
             ! prs(i,j) = prs(i,j) + 3*rho(m,i,j)*sum(rho(:,i,j)*flow%components(m)%gf,1)
@@ -697,7 +697,7 @@ contains
           velt(d,i,j) = (sum(vel(:,d,i,j)*mm,1) + 0.5*sum(forces(:,d,i,j),1))/rhot(i,j)
        end do
        prs(i,j) = rhot(i,j)/3.d0
-       !if (flow%ncomponents > 1) then
+       if (flow%use_nonideal_eos .or. (flow%ncomponents > 1)) then
           do m=1,flow%ncomponents
             ! In Qinjun's original code the pressure was calculated as:
             ! prs(i,j) = prs(i,j) + 1.5*rho(m,i,j)*sum(rho(:,i,j)*flow%components(m)%gf,1)
