@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
-!!!     last modified:   17 August 2011
-!!!       at:            18:10:01 MDT
+!!!     last modified:   06 September 2011
+!!!       at:            16:59:20 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -81,6 +81,7 @@
     PetscScalar :: xp3_ave_p, xm3_ave_p, t
     PetscBool flag
     PetscInt i
+    PetscInt direction
 
     ! initialize state
     fi = 0.d0
@@ -89,17 +90,48 @@
     xp3_ave_p = 0.d0
     xm3_ave_p = 0.d0
 
-    call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_xp_component1', xp3_ave_p, &
+    direction = 1
+    call PetscOptionsGetInt(options%my_prefix, '-gradient_direction', direction, &
          flag, ierr)
-    if (.not.flag) SETERRQ(1, 1, 'invalid boundary pressure for xp_component1', ierr)
-    call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_xm_component1', xm3_ave_p, &
-         flag, ierr)
-    if (.not.flag) SETERRQ(1, 1, 'invalid boundary value for xm_component1', ierr)
 
-    do i=dist%info%xs,dist%info%xe
-       t = dble(i-1)/dble(dist%info%NX-1)
-       rho(1,i,:,:) = (1-t)*xm3_ave_p + t*xp3_ave_p
-    end do    
+    select case(direction)
+    case(1)
+      call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_xp_component1', xp3_ave_p, &
+           flag, ierr)
+      if (.not.flag) SETERRQ(1, 1, 'invalid boundary pressure for xp_component1', ierr)
+      call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_xm_component1', xm3_ave_p, &
+           flag, ierr)
+      if (.not.flag) SETERRQ(1, 1, 'invalid boundary value for xm_component1', ierr)
+      
+      do i=dist%info%xs,dist%info%xe
+        t = dble(i-1)/dble(dist%info%NX-1)
+        rho(1,i,:,:) = (1-t)*xm3_ave_p + t*xp3_ave_p
+      end do
+    case(2)
+      call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_yp_component1', xp3_ave_p, &
+           flag, ierr)
+      if (.not.flag) SETERRQ(1, 1, 'invalid boundary pressure for yp_component1', ierr)
+      call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_ym_component1', xm3_ave_p, &
+           flag, ierr)
+      if (.not.flag) SETERRQ(1, 1, 'invalid boundary value for ym_component1', ierr)
+      
+      do i=dist%info%ys,dist%info%ye
+        t = dble(i-1)/dble(dist%info%NY-1)
+        rho(1,:,i,:) = (1-t)*xm3_ave_p + t*xp3_ave_p
+      end do
+    case(3)
+      call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_zp_component1', xp3_ave_p, &
+           flag, ierr)
+      if (.not.flag) SETERRQ(1, 1, 'invalid boundary pressure for zp_component1', ierr)
+      call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_zm_component1', xm3_ave_p, &
+           flag, ierr)
+      if (.not.flag) SETERRQ(1, 1, 'invalid boundary value for zm_component1', ierr)
+      
+      do i=dist%info%ys,dist%info%ye
+        t = dble(i-1)/dble(dist%info%NZ-1)
+        rho(1,:,:,i) = (1-t)*xm3_ave_p + t*xp3_ave_p
+      end do
+    end select
     
     ! set state at equilibrium       
     nowalls = 0.d0
