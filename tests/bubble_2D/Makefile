@@ -3,7 +3,7 @@ ifndef LBM_DIR
 endif
 
 HOST=`hostname | cut -d"-" -f1`
-ifeq ($(HOST), jaguar)
+ifeq ($(HOST),jaguar)
   COMP:=ftn
 else
   COMP:= $(shell basename $(shell mpif90 -show | cut -d" " -f 1))
@@ -27,11 +27,11 @@ FFLAGS += -I$(LBM_MOD_DIR)
 
 # optimization flags
 ifndef LBM_OPT
-  ifeq ($(COMP), gfortran)
+  ifeq ($(COMP),gfortran)
     FFLAGS += -fbounds-check 
-  else ifeq ($(COMP), pgf90)
+  else ifeq ($(COMP),pgf90)
     FFLAGS += -Mbounds
-  else ifeq ($(COMP), pgf95)
+  else ifeq ($(COMP),pgf95)
     FFLAGS += -Mbounds
   endif
 else
