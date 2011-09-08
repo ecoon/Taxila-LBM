@@ -2,7 +2,7 @@ ifndef LBM_DIR
   LBM_DIR:=$(shell pwd)/..
 endif
 
-HOST=`hostname | cut -d"-" -f1`
+HOST:= $(shell hostname | cut -d"-" -f1)
 ifeq ($(HOST),jaguar)
   COMP:=ftn
 else
