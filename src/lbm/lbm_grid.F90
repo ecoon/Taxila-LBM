@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            09:24:24 MDT
-!!!     last modified:   25 August 2011
-!!!       at:            11:06:14 MDT
+!!!     last modified:   08 September 2011
+!!!       at:            10:48:08 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -143,6 +143,10 @@ contains
             grid%da_sizes(ONEDOF), grid%info%stencil_size, grid%info%ownership_x, &
             grid%info%ownership_y, grid%info%ownership_z,grid%da(ONEDOF), ierr)
     else
+      ! petsc does a bad job of guessing a partitioning, because it thinks 
+      ! we're in 3D, not in 2D, so give it a hint
+       if (grid%info%ndims.eq.2) grid%info%nproc_z = 1
+
        call DMDACreate3d(grid%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
             btype(Z_DIRECTION), grid%info%stencil_type, grid%info%NX, grid%info%NY, &
             grid%info%NZ, grid%info%nproc_x, grid%info%nproc_y, grid%info%nproc_z, &
@@ -168,7 +172,7 @@ contains
          grid%info%zl, ierr)
     call DMDAGetGhostCorners(grid%da(ONEDOF), gxs, gys, gzs, grid%info%gxl, grid%info%gyl,&
          grid%info%gzl, ierr)
-    
+
     ! set grid%info including corners
     grid%info%xs = xs+1
     grid%info%gxs = gxs+1
