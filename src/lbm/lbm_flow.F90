@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
-!!!     last modified:   07 September 2011
-!!!       at:            12:40:24 MDT
+!!!     last modified:   08 September 2011
+!!!       at:            10:36:48 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -707,7 +707,7 @@ contains
             prs(i,j) = prs(i,j) + flow%disc%c_0/2.d0*psi(m,i,j) &
                   *sum(flow%components(m)%gf*psi(:,i,j),1)
           end do
-       !end if
+       end if
     end if
     end do
     end do
