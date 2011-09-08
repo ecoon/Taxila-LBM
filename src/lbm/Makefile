@@ -9,10 +9,6 @@ else
   COMP:= $(shell basename $(shell mpif90 -show | cut -d" " -f 1))
 endif
 
-ifndef MAKE
-  MAKE=make
-endif
-
 LBM_SRC_DIR= $(LBM_DIR)/src/lbm
 LBM_UTIL_DIR= $(LBM_DIR)/src/utils
 LBM_PROBLEM_DIR= $(LBM_DIR)/src/problem_specs
@@ -90,14 +86,14 @@ BEGINLIB:
 	@echo " with compiler family $(COMP)"
 	@echo ""
 allclean: 
-	@cd $(LBM_UTIL_DIR); $(MAKE) allclean
-	@cd $(LBM_PROBLEM_DIR); $(MAKE) allclean
+	@cd $(LBM_UTIL_DIR); make allclean
+	@cd $(LBM_PROBLEM_DIR); make allclean
 	rm -f ./*.mod
 	rm -f ./*.o
 	rm -f $(LBM_LIB_DIR)/$(LBM_LIB_NAME)
 	rm -f $(LBM_MOD_DIR)/*.mod
 utils:
-	@cd $(LBM_UTIL_DIR); $(MAKE) fortran
+	@cd $(LBM_UTIL_DIR); make fortran
 
 tags:
 	rm -f TAGS
