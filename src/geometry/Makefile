@@ -2,7 +2,13 @@ ifndef LBM_DIR
   LBM_DIR:=$(shell pwd)/..
 endif
 
-COMP:= $(shell basename $(shell ${PETSC_DIR}/${PETSC_ARCH}/bin/mpif90 -show | cut -d" " -f 1))
+HOST=`hostname | cut -d"-" -f1`
+ifeq ($(HOST), jaguar)
+  COMP:=ftn
+else
+  COMP:= $(shell basename $(shell mpif90 -show | cut -d" " -f 1))
+endif
+
 ifndef MAKE
   MAKE=make
 endif
