@@ -3,7 +3,7 @@ ifndef LBM_DIR
 endif
 
 HOST=`hostname | cut -d"-" -f1`
-ifeq ($(HOST), jaguar)
+ifeq ($(HOST),jaguar)
   COMP:=ftn
 else
   COMP:= $(shell basename $(shell mpif90 -show | cut -d" " -f 1))
