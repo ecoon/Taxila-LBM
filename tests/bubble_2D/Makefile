@@ -9,10 +9,6 @@ else
   COMP:= $(shell basename $(shell mpif90 -show | cut -d" " -f 1))
 endif
 
-ifndef MAKE
-  MAKE=make
-endif
-
 LBM_SRC_DIR= $(LBM_DIR)/src/lbm
 LBM_PROBLEM_DIR= $(LBM_DIR)/src/problem_specs
 LBM_INCLUDE_DIR= $(LBM_DIR)/include
@@ -78,13 +74,13 @@ BEGIN:
 	@echo ""
 
 allclean: 
-	@cd $(LBM_SRC_DIR); $(MAKE) allclean
-	@cd $(LBM_PROBLEM_DIR); $(MAKE) allclean
+	@cd $(LBM_SRC_DIR); make allclean
+	@cd $(LBM_PROBLEM_DIR); make allclean
 	rm -f ./*.o
 	rm -f runSimulation
 
 source: 
-	@cd $(LBM_SRC_DIR); $(MAKE) fortran
+	@cd $(LBM_SRC_DIR); make fortran
 
 test: fortran
 	@echo ""

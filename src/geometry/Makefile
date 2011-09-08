@@ -9,10 +9,6 @@ else
   COMP:= $(shell basename $(shell mpif90 -show | cut -d" " -f 1))
 endif
 
-ifndef MAKE
-  MAKE=make
-endif
-
 LBM_INCLUDE_DIR= $(LBM_DIR)/include
 FFLAGS = -I$(LBM_INCLUDE_DIR) 
 
