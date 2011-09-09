@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         09 December 2010
 !!!       on:            14:16:32 MST
-!!!     last modified:   23 August 2011
-!!!       at:            16:35:36 MDT
+!!!     last modified:   09 September 2011
+!!!       at:            15:19:46 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -37,6 +37,7 @@
        character(len=MAXSTRINGLENGTH):: ic_file
        character(len=MAXSTRINGLENGTH):: output_prefix
        PetscBool mpiio
+       PetscBool supress_ic_output
 
        PetscInt flow_disc
        PetscInt transport_disc
@@ -80,6 +81,7 @@
       options%restart_counter = -1
       options%istep = 0
       options%mpiio = PETSC_FALSE
+      options%supress_ic_output = PETSC_FALSE
       options%ic_from_file = PETSC_FALSE
       options%ic_file = ''
 
@@ -163,6 +165,8 @@
 
       if (help) call PetscPrintf(options%comm, "  -mpiio: use mpiio for i/o\n", ierr)
       call PetscOptionsGetBool(options%my_prefix, '-mpiio', options%mpiio, flag, ierr)
+      if (help) call PetscPrintf(options%comm, "  -supress_ic_output: do not output initial condition\n", ierr)
+      call PetscOptionsGetBool(options%my_prefix, '-supress_ic_output', options%supress_ic_output, flag, ierr)
 
       if (help) call PetscPrintf(options%comm, &
            "  -flow_relaxation_mode <0>: flow relaxation as SRT=0, MRT=1\n", ierr)
