@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
-!!!     last modified:   08 September 2011
-!!!       at:            10:36:48 MDT
+!!!     last modified:   09 September 2011
+!!!       at:            11:46:04 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -123,7 +123,7 @@ contains
     flow%io_prs = PETSC_TRUE
     flow%io_rhot = PETSC_FALSE
     flow%io_rho = PETSC_TRUE
-    flow%io_fi = PETSC_TRUE
+    flow%io_fi = PETSC_FALSE
     flow%io_velt = PETSC_TRUE
 
     flow%body_forces = PETSC_FALSE
@@ -363,6 +363,18 @@ contains
           flow%bc%flags(BOUNDARY_ZP) = BC_PERIODIC
        end if
     end if
+
+    ! check io options
+    if (help) call PetscPrintf(options%comm, "  -output_flow_fi <FALSE>: output distribution functions for flow\n", ierr)
+    call PetscOptionsGetBool(options%my_prefix, '-output_flow_fi', flow%io_fi, flag, ierr)
+    if (help) call PetscPrintf(options%comm, "  -output_flow_rho <TRUE>: output densities\n", ierr)
+    call PetscOptionsGetBool(options%my_prefix, '-output_flow_rho', flow%io_rho, flag, ierr)
+    if (help) call PetscPrintf(options%comm, "  -output_flow_velt <TRUE>: output total velocity\n", ierr)
+    call PetscOptionsGetBool(options%my_prefix, '-output_flow_velt', flow%io_velt, flag, ierr)
+    if (help) call PetscPrintf(options%comm, "  -output_flow_rhot <FALSE>: output total density\n", ierr)
+    call PetscOptionsGetBool(options%my_prefix, '-output_flow_rhot', flow%io_rhot, flag, ierr)
+    if (help) call PetscPrintf(options%comm, "  -output_flow_prs <TRUE>: output pressure\n", ierr)
+    call PetscOptionsGetBool(options%my_prefix, '-output_flow_prs', flow%io_prs, flag, ierr)
   end subroutine FlowSetFromOptions
 
   subroutine FlowSetGrid(flow, grid)
