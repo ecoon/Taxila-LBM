@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   17 August 2011
-!!!       at:            18:13:55 MDT
+!!!     last modified:   14 September 2011
+!!!       at:            12:17:03 PDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -176,7 +176,7 @@ contains
          trim(options%my_prefix)//'stencil_size', &
          'number of grid points in the stencil', ierr)
     info%stencil_size => info%data%stencil_size
-    call PetscBagRegisterInt(info%bag, info%data%stencil_size_rho, 1, &
+    call PetscBagRegisterInt(info%bag, info%data%stencil_size_rho, -1, &
          trim(options%my_prefix)//'stencil_size_rho', &
          'number of grid points in the stencil for rho -- sets higher order terms', ierr)
     info%stencil_size_rho => info%data%stencil_size_rho

@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
-!!!     last modified:   17 August 2011
-!!!       at:            17:16:42 MDT
+!!!     last modified:   14 September 2011
+!!!       at:            12:40:23 PDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -31,7 +31,7 @@
     PetscScalar,dimension(dist%s,0:dist%b,dist%info%gxyzl) :: fi
     PetscScalar,dimension(dist%s,dist%info%rgxyzl) :: rho
     PetscScalar,dimension(dist%s, 1:dist%info%ndims, dist%info%gxyzl):: u
-    PetscScalar,dimension(dist%info%gxyzl) :: walls
+    PetscScalar,dimension(dist%info%rgxyzl):: walls
 
     select case(dist%info%ndims)
     case (2) 
@@ -65,15 +65,15 @@
          dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, &
          dist%info%gzs:dist%info%gze):: u
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, &
-         dist%info%gzs:dist%info%gze):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, &
+         dist%info%rgzs:dist%info%rgze):: walls
 
     ! local variables
     PetscErrorCode ierr
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, &
-         dist%info%gzs:dist%info%gze):: nowalls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, &
+         dist%info%rgzs:dist%info%rgze):: nowalls
 
     ! initialize state
     fi = 0.0
@@ -108,13 +108,13 @@
     PetscScalar,dimension(dist%s, 1:dist%info%ndims, &
          dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: u
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
 
     ! local variables
     PetscErrorCode ierr
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: nowalls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: nowalls
 
     ! initialize state
     fi = 0.d0

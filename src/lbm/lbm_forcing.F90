@@ -38,7 +38,7 @@ contains
     type(component_type) components(dist%s)
     PetscScalar,dimension(1:dist%s, 1:dist%info%rgxyzl):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims, 1:dist%info%gxyzl):: forces
-    PetscScalar,dimension(1:dist%info%gxyzl):: walls
+    PetscScalar,dimension(1:dist%info%rgxyzl):: walls
 
     select case(dist%info%ndims)
     case(2)
@@ -55,8 +55,8 @@ contains
          dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: forces
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
 
     ! local
     PetscInt i,j,k,m,n,d
@@ -217,7 +217,7 @@ contains
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           !!!!! 8th order isotropy !!!!!
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-          if(dist%info%stencil_size > 1) then
+          if(dist%disc%deriv_order > 4) then
 
           ! diagonals squared length 3
           if (walls(i+1,j+1,k+1).eq.0) then
@@ -966,8 +966,8 @@ contains
          dist%info%rgys:dist%info%rgye):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: forces
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
 
     ! local
     PetscInt i,j,m,n,d
@@ -1047,7 +1047,7 @@ contains
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           !!!!! 8th order isotropy !!!!!
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-          if(dist%info%stencil_size > 1) then
+          if(dist%disc%deriv_order > 4) then
              ! N/S/E/W squared length 4 
              if (walls(i+2,j).eq.0.and.walls(i+1,j).eq.0) then
                 gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
@@ -1174,7 +1174,7 @@ contains
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           !!!!! 10th order isotropy !!!!!
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-          if(dist%info%stencil_size > 2) then
+          if(dist%disc%deriv_order > 8) then
              ! N/S/E/W squared length 9 
              if (walls(i+3,j).eq.0.and.walls(i+2,j).eq.0.and.walls(i+1,j).eq.0) then
                 gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
@@ -1328,13 +1328,13 @@ contains
          dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: forces
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walldata
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walldata
 
     ! local
     PetscInt i,j,k,m,n,d
-    PetscScalar,dimension(0:dist%b,  dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: tmp
+    PetscScalar,dimension(0:dist%b,  dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: tmp
     PetscErrorCode ierr
 
     call DistributionGatherValueToDirection(dist, walldata, tmp)
@@ -1373,13 +1373,13 @@ contains
          dist%info%rgys:dist%info%rgye):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: forces
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: walldata
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walldata
 
     ! local
     PetscInt i,j,m,n,d
-    PetscScalar,dimension(0:dist%b,  dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: tmp
+    PetscScalar,dimension(0:dist%b,  dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: tmp
     PetscErrorCode ierr
 
     call DistributionGatherValueToDirection(dist, walldata, tmp)
@@ -1419,7 +1419,7 @@ contains
     type(component_type) components(1:dist%s)
     PetscScalar,dimension(dist%s, dist%info%rgxyzl):: rho
     PetscScalar,dimension(dist%s, dist%info%ndims, 1:dist%info%gxyzl):: forces
-    PetscScalar,dimension(dist%info%gxyzl):: walls
+    PetscScalar,dimension(dist%info%rgxyzl):: walls
     PetscScalar,dimension(dist%info%ndims) :: gvt
 
     select case(dist%info%ndims)
@@ -1437,8 +1437,8 @@ contains
          dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: forces
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
     PetscScalar,dimension(dist%info%ndims) :: gvt
 
     ! local
@@ -1467,8 +1467,8 @@ contains
          dist%info%rgys:dist%info%rgye):: rho
     PetscScalar,dimension(1:dist%s, 1:dist%info%ndims,  dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: forces
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
     PetscScalar,dimension(dist%info%ndims) :: gvt
 
     ! local

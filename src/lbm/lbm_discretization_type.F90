@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         15 March 2011
 !!!       on:            17:04:20 MDT
-!!!     last modified:   10 August 2011
-!!!       at:            15:27:50 MDT
+!!!     last modified:   14 September 2011
+!!!       at:            12:06:06 PDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -24,7 +24,7 @@ module LBM_Discretization_Type_module
      PetscInt name
      PetscInt ndims
      PetscInt b
-     PetscInt stencil_size
+     PetscInt deriv_order
 
      PetscScalar :: c_0 ! grid factor for fluid-fluid terms
      PetscInt,pointer:: ci(:,:)
