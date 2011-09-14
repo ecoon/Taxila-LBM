@@ -60,7 +60,7 @@ contains
     allocate(disc%opposites(0:disc%b))
     allocate(disc%mt_mrt(0:disc%b,0:disc%b))         ! transpose of M
     allocate(disc%mmt_mrt(0:disc%b))                 ! diagonal M dot MT matrix
-    allocate(disc%ffw(1:4*disc%stencil_size))        ! slightly larger than needed in all cases
+    allocate(disc%ffw(1:4*disc%deriv_order))        ! slightly larger than needed in all cases
 
     disc%opposites(ORIGIN) = ORIGIN
     disc%opposites(EAST) = WEST
@@ -94,12 +94,12 @@ contains
     disc%mmt_mrt = (/ 9, 36, 36, 6, 12, 6, 12, 4, 4 /)
 
     disc%ffw = 0.0
-    if(disc%stencil_size.eq.1) then
+    if(disc%deriv_order.eq.4) then
       disc%ffw(1) = 1./3.
       disc%ffw(2) = 1./12.
     end if
     
-    if(disc%stencil_size.eq.2) then 
+    if(disc%deriv_order.eq.8) then 
       disc%ffw(1) = 4./21.
       disc%ffw(2) = 4./45.
       disc%ffw(4) = 1./60.
@@ -107,7 +107,7 @@ contains
       disc%ffw(8) = 1./5040.
     end if
 
-    if(disc%stencil_size.eq.3) then 
+    if(disc%deriv_order.eq.10) then 
       disc%ffw( 1) = 262./1785.
       disc%ffw( 2) = 93./1190.
       disc%ffw( 4) = 7./340.
@@ -153,8 +153,8 @@ contains
          dist%info%rgys:dist%info%rgye):: rho
     PetscScalar,dimension(dist%s,1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: u
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
     PetscInt m
 
     PetscInt i,j,d,n

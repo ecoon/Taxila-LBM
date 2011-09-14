@@ -24,7 +24,7 @@
 #include "lbm_definitions.h"
 !   input variables
     type(info_type) info
-    PetscScalar,dimension(info%gxyzl):: walls
+    PetscScalar,dimension(info%rgxyzl):: walls
     character(len=MAXSTRINGLENGTH) filename
 
     walls=0

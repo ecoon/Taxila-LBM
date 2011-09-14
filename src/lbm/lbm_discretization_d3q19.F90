@@ -16,7 +16,7 @@
   
 module LBM_Discretization_Directions_D3Q19_module
   implicit none
-
+  
   PetscInt, parameter, public :: ORIGIN = 0
   PetscInt, parameter, public :: EAST = 1
   PetscInt, parameter, public :: NORTH = 2
@@ -45,6 +45,7 @@ module LBM_Discretization_D3Q19_module
   use LBM_Discretization_Type_module
   use LBM_Discretization_Directions_D3Q19_module
   use LBM_Distribution_Function_type_module
+  use petsc
   implicit none
 
   private
@@ -61,6 +62,8 @@ module LBM_Discretization_D3Q19_module
 contains
   subroutine DiscretizationSetup_D3Q19(disc)
     type(discretization_type) disc
+    PetscErrorCode ierr
+
     disc%name = D3Q19_DISCRETIZATION
     disc%ndims = 3
     disc%b = 18
@@ -69,7 +72,7 @@ contains
     allocate(disc%opposites(0:disc%b))
     allocate(disc%mt_mrt(0:disc%b,0:disc%b))         ! transpose of M
     allocate(disc%mmt_mrt(0:disc%b))                 ! diagonal M dot MT matrix 
-    allocate(disc%ffw(1:4*disc%stencil_size))        ! slightly larger than needed in all cases
+    allocate(disc%ffw(1:4*disc%deriv_order))        ! slightly larger than needed in all cases
 
     disc%opposites(ORIGIN) = ORIGIN
     disc%opposites(EAST) = WEST
@@ -128,12 +131,12 @@ contains
     disc%mmt_mrt = (/ 19, 2394, 252, 10, 40, 10, 40, 10, 40, 36, 72, 12, 24, 4, 4, 4, 8, 8, 8 /)
 
     disc%ffw = 0.0
-    if(disc%stencil_size.eq.1) then
+    if(disc%deriv_order.eq.4) then ! 4th order isotropy
       disc%ffw(1) = 1./6.
       disc%ffw(2) = 1./12.
     end if
 
-    if(disc%stencil_size.eq.2) then 
+    if(disc%deriv_order.eq.8) then ! 8th order isotropy
       disc%ffw(1) = 4./45.
       disc%ffw(2) = 1./21.
       disc%ffw(3) = 2./105.
@@ -144,7 +147,7 @@ contains
     end if
 
     ! Not implemented yet
-    if(disc%stencil_size.eq.3) then 
+    if(disc%deriv_order.eq.10) then ! 10th order
       disc%ffw( 1) = 352./5355.
       disc%ffw( 2) = 38./1071.
       disc%ffw( 3) = 271./14280.
@@ -156,6 +159,8 @@ contains
       disc%ffw( 9) = 1./5355.   ! w_{300}(9) in Sbragaglia, Phys Rev E (2007)
       disc%ffw(10) = 1./10710.
       disc%ffw(11) = 1./42840.    
+      SETERRQ(PETSC_COMM_WORLD, 1, &
+           'Derivative order 10 for D3 not yet implemented', ierr)
     end if
 
   end subroutine DiscretizationSetup_D3Q19
@@ -204,8 +209,8 @@ contains
          dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: rho
     PetscScalar,dimension(dist%s, 1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: u
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
     PetscInt m
 
     PetscInt i,j,k,d,n

@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         21 June 2011
 !!!       on:            10:07:45 MDT
-!!!     last modified:   10 August 2011
-!!!       at:            09:17:16 MDT
+!!!     last modified:   14 September 2011
+!!!       at:            16:02:13 PDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -167,7 +167,7 @@ contains
 
   subroutine WallsSetGhostNodes(walls, data)
     type(walls_type) walls
-    PetscScalar,dimension(walls%grid%info%gxyzl):: data
+    PetscScalar,dimension(walls%grid%info%rgxyzl):: data
     select case(walls%ndims)
     case (2)
       call WallsSetGhostNodesD2(walls, data, walls%grid%info)

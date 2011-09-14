@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         09 December 2010
 !!!       on:            14:16:32 MST
-!!!     last modified:   09 September 2011
-!!!       at:            15:19:46 MDT
+!!!     last modified:   14 September 2011
+!!!       at:            12:14:16 PDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -50,6 +50,7 @@
        PetscInt flow_relaxation_mode
        PetscBool flow_fluidsolid_forces
        PetscBool flow_use_nonideal_eos
+       PetscInt deriv_order
 
        PetscBool steadystate
        PetscInt steadystate_rampup_steps
@@ -101,6 +102,7 @@
       options%flow_relaxation_mode = RELAXATION_MODE_SRT
       options%flow_fluidsolid_forces = PETSC_FALSE
       options%flow_use_nonideal_eos = PETSC_FALSE
+      options%deriv_order = 4
 
       options%steadystate = PETSC_FALSE
       options%steadystate_rampup_steps = 0
@@ -276,6 +278,10 @@
               options%transport_reactive_matrix, flag, ierr)
       end if
       
+      if (help) call PetscPrintf(options%comm, &
+           "  -derivative_order <4>: \n", ierr)
+      call PetscOptionsGetInt(options%my_prefix,'-derivative_order', options%deriv_order,flag,ierr)
+
       wpnum = 0
       wpstring = ''
       wpdummy = 0

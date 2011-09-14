@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 March 2011
 !!!       on:            16:33:56 MDT
-!!!     last modified:   17 August 2011
-!!!       at:            18:04:38 MDT
+!!!     last modified:   14 September 2011
+!!!       at:            15:15:50 PDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -28,7 +28,7 @@ module LBM_Discretization_module
   public:: DiscretizationCreate, &
        DiscretizationDestroy, &
        DiscretizationSetType, &
-       DiscretizationSetSizes, &
+       DiscretizationSetDerivOrder, &
        DiscretizationSetUp, &
        DiscretizationSetUpRelax, &
        DiscretizationEquilf, &
@@ -63,11 +63,17 @@ contains
     if (associated(disc%ffw)) deallocate(disc%ffw)
   end subroutine DiscretizationDestroy
   
-  subroutine DiscretizationSetSizes(disc, stencil_size)
+  subroutine DiscretizationSetDerivOrder(disc, deriv_order)
     type(discretization_type) disc
-    PetscInt stencil_size
-    disc%stencil_size = stencil_size
-  end subroutine DiscretizationSetSizes
+    PetscInt deriv_order
+    PetscErrorCode ierr
+
+    if ((deriv_order.eq.4).or.(deriv_order.eq.8).or.(deriv_order.eq.10)) then
+       disc%deriv_order = deriv_order
+    else
+       SETERRQ(1, 1, 'Invalid derivative order', ierr)       
+    end if
+  end subroutine DiscretizationSetDerivOrder
 
   subroutine DiscretizationSetType(disc, name)
     type(discretization_type) disc
@@ -115,7 +121,7 @@ contains
     PetscScalar,dimension(dist%s,0:dist%b,dist%info%gxyzl):: feq
     PetscScalar,dimension(dist%s,dist%info%rgxyzl):: rho
     PetscScalar,dimension(dist%s,dist%info%ndims,dist%info%gxyzl):: u
-    PetscScalar,dimension(dist%info%gxyzl):: walls
+    PetscScalar,dimension(dist%info%rgxyzl):: walls
     PetscInt m
 
     PetscErrorCode ierr
