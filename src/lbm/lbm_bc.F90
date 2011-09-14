@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            09:03:18 MST
-!!!     last modified:   05 August 2011
-!!!       at:            11:05:11 MDT
+!!!     last modified:   14 September 2011
+!!!       at:            12:32:20 PDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -341,7 +341,7 @@ contains
   subroutine BCApply(bc, walls, dist)
     type(bc_type) bc
     type(distribution_type) dist
-    PetscScalar,dimension(1:dist%info%gxyzl):: walls
+    PetscScalar,dimension(1:dist%info%rgxyzl):: walls
 
     logical,dimension(0:10):: bcs_done    
     PetscInt lcv_sides
@@ -370,7 +370,7 @@ contains
   subroutine BCApplyPseudoperiodic(bc, walls, dist)
     type(bc_type) bc
     type(distribution_type) dist
-    PetscScalar,dimension(dist%info%gxyzl):: walls
+    PetscScalar,dimension(dist%info%rgxyzl):: walls
     PetscErrorCode ierr
 
     ! first, check to make sure number of components = 2
@@ -392,7 +392,7 @@ contains
   subroutine BCApplyDirichlet(bc, walls, dist)
     type(bc_type) bc
     type(distribution_type) dist
-    PetscScalar,dimension(dist%info%gxyzl):: walls
+    PetscScalar,dimension(dist%info%rgxyzl):: walls
 
     select case(dist%info%ndims)
     case(2)
@@ -407,7 +407,7 @@ contains
   subroutine BCApplyFlux(bc, walls, dist)
     type(bc_type) bc
     type(distribution_type) dist
-    PetscScalar,dimension(dist%info%gxyzl):: walls
+    PetscScalar,dimension(dist%info%rgxyzl):: walls
 
     select case(dist%info%ndims)
     case(2)
@@ -422,7 +422,7 @@ contains
   subroutine BCApplyVelocity(bc, walls, dist)
     type(bc_type) bc
     type(distribution_type) dist
-    PetscScalar,dimension(dist%info%gxyzl):: walls
+    PetscScalar,dimension(dist%info%rgxyzl):: walls
 
     select case(dist%info%ndims)
     case(2)
@@ -437,7 +437,7 @@ contains
   subroutine BCApplyZeroGradient(bc, walls, dist)
     type(bc_type) bc
     type(distribution_type) dist
-    PetscScalar,dimension(dist%info%gxyzl):: walls
+    PetscScalar,dimension(dist%info%rgxyzl):: walls
     PetscErrorCode ierr
 
     SETERRQ(PETSC_COMM_SELF, 1, 'zero gradient BC not implemented yet', ierr)
@@ -456,8 +456,8 @@ contains
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
     PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye, &
          dist%info%zs:dist%info%ze):: xm_vals, xp_vals
     PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
@@ -566,8 +566,8 @@ contains
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: fi
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
     PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye):: xm_vals, xp_vals
     PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe):: ym_vals, yp_vals
 
@@ -634,8 +634,8 @@ contains
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
     PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye, &
          dist%info%zs:dist%info%ze):: xm_vals, xp_vals
     PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
@@ -744,8 +744,8 @@ contains
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: fi
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
     PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye):: xm_vals, xp_vals
     PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe):: ym_vals, yp_vals
 
@@ -812,8 +812,8 @@ contains
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
     PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye, &
          dist%info%zs:dist%info%ze):: xm_vals, xp_vals
     PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
@@ -922,8 +922,8 @@ contains
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: fi
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
     PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye):: xm_vals, xp_vals
     PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe):: ym_vals, yp_vals
 
@@ -989,8 +989,8 @@ contains
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
     PetscErrorCode ierr
 
     PetscInt i,j,k,n
@@ -1143,8 +1143,8 @@ contains
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: fi
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
     PetscErrorCode ierr
 
     PetscInt i,j,n
@@ -1242,8 +1242,8 @@ contains
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
 
     PetscInt i,j,k,n
     PetscScalar tmp
@@ -1396,8 +1396,8 @@ contains
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: fi
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
 
     PetscInt i,j,n
     PetscScalar tmp

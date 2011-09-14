@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            15:15:25 MDT
-!!!     last modified:   17 August 2011
-!!!       at:            18:12:14 MDT
+!!!     last modified:   14 September 2011
+!!!       at:            12:36:18 PDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -176,7 +176,7 @@ contains
     type(distribution_type) dist
     PetscScalar,dimension(dist%s, 0:dist%b, 1:dist%info%gxyzl):: fi
     PetscScalar,dimension(dist%s, 0:dist%b, 1:dist%info%gxyzl):: fi_eq
-    PetscScalar,dimension(1:dist%info%gxyzl):: walls
+    PetscScalar,dimension(1:dist%info%rgxyzl):: walls
     PetscInt m
     type(relaxation_type) relax
     PetscErrorCode ierr
@@ -212,8 +212,8 @@ contains
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
     PetscScalar,dimension(dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi_eq
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
     type(relaxation_type) relax
     PetscInt m
 
@@ -239,8 +239,8 @@ contains
          dist%info%gys:dist%info%gye):: fi
     PetscScalar,dimension(dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: fi_eq
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
     type(relaxation_type) relax
     PetscInt m
 
@@ -264,8 +264,8 @@ contains
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
     PetscScalar,dimension(dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi_eq
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
     type(relaxation_type) relax
     PetscInt m
 
@@ -297,8 +297,8 @@ contains
          dist%info%gys:dist%info%gye):: fi
     PetscScalar,dimension(dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: fi_eq
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
     type(relaxation_type) relax
     PetscInt m
 

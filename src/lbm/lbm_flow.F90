@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
-!!!     last modified:   09 September 2011
-!!!       at:            11:46:04 MDT
+!!!     last modified:   14 September 2011
+!!!       at:            12:35:47 PDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -183,7 +183,7 @@ contains
     flow%components => ComponentCreate(flow%comm, flow%ncomponents)
 
     call DiscretizationSetType(flow%disc, options%flow_disc)
-    call DiscretizationSetSizes(flow%disc, flow%grid%info%stencil_size)
+    call DiscretizationSetDerivOrder(flow%disc, options%deriv_order)
     call DiscretizationSetUp(flow%disc)
     
     flow%use_nonideal_eos = options%flow_use_nonideal_eos
@@ -532,7 +532,7 @@ contains
 
   subroutine FlowUpdateMoments(flow, walls)
     type(flow_type) flow
-    PetscScalar,dimension(1:flow%grid%info%gxyzl):: walls
+    PetscScalar,dimension(1:flow%grid%info%rgxyzl):: walls
     call DistributionCalcDensity(flow%distribution, walls)
     call DistributionCalcFlux(flow%distribution, walls)
   end subroutine FlowUpdateMoments
@@ -541,7 +541,7 @@ contains
     use LBM_IO_module
     type(flow_type) flow
     type(io_type) io
-    PetscScalar,dimension(1:flow%grid%info%gxyzl):: walls
+    PetscScalar,dimension(1:flow%grid%info%rgxyzl):: walls
     PetscErrorCode ierr
 
     if (flow%io_fi) then
@@ -581,7 +581,7 @@ contains
 
   subroutine FlowUpdateDiagnostics(flow, walls)
     type(flow_type) flow
-    PetscScalar,dimension(1:flow%grid%info%gxyzl):: walls
+    PetscScalar,dimension(1:flow%grid%info%rgxyzl):: walls
     PetscErrorCode ierr
     
     PetscInt m
@@ -627,9 +627,9 @@ contains
 
   subroutine FlowUpdateDiagnosticsD3(flow, rho, psi, vel, forces, walls, rhot, prs, velt)
     type(flow_type) flow
-    PetscScalar,dimension(flow%grid%info%gxs:flow%grid%info%gxe, &
-         flow%grid%info%gys:flow%grid%info%gye, &
-         flow%grid%info%gzs:flow%grid%info%gze):: walls
+    PetscScalar,dimension(flow%grid%info%rgxs:flow%grid%info%rgxe, &
+         flow%grid%info%rgys:flow%grid%info%rgye, &
+         flow%grid%info%rgzs:flow%grid%info%rgze):: walls
     PetscScalar,dimension(flow%ncomponents, &
          flow%grid%info%rgxs:flow%grid%info%rgxe, &
          flow%grid%info%rgys:flow%grid%info%rgye, &
@@ -681,8 +681,8 @@ contains
 
   subroutine FlowUpdateDiagnosticsD2(flow, rho, psi, vel, forces, walls, rhot, prs, velt)
     type(flow_type) flow
-    PetscScalar,dimension(flow%grid%info%gxs:flow%grid%info%gxe, &
-         flow%grid%info%gys:flow%grid%info%gye):: walls
+    PetscScalar,dimension(flow%grid%info%rgxs:flow%grid%info%rgxe, &
+         flow%grid%info%rgys:flow%grid%info%rgye):: walls
     PetscScalar,dimension(flow%ncomponents, &
          flow%grid%info%rgxs:flow%grid%info%rgxe, &
          flow%grid%info%rgys:flow%grid%info%rgye):: rho, psi
@@ -774,13 +774,13 @@ contains
 
   subroutine FlowBounceback(flow, walls)
     type(flow_type) flow
-    PetscScalar,dimension(flow%grid%info%gxyzl):: walls
+    PetscScalar,dimension(flow%grid%info%rgxyzl):: walls
     call DistributionBounceback(flow%distribution, walls)
   end subroutine FlowBounceback
 
   subroutine FlowCollision(flow, walls)
     type(flow_type) flow
-    PetscScalar,dimension(flow%grid%info%gxyzl):: walls
+    PetscScalar,dimension(flow%grid%info%rgxyzl):: walls
     select case(flow%ndims)
     case(2)
        call FlowCollisionD2(flow, flow%distribution%fi_a, flow%distribution%rho_a, &
@@ -801,8 +801,8 @@ contains
          dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: rho
     PetscScalar,dimension(1:dist%s,1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: u,forces
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
 
     PetscScalar,dimension(dist%info%ndims,dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze ):: up
@@ -859,8 +859,8 @@ contains
          dist%info%rgys:dist%info%rgye):: rho
     PetscScalar,dimension(1:dist%s,1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: u,forces
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
 
     PetscScalar,dimension(dist%info%ndims,dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye ):: up
@@ -907,7 +907,7 @@ contains
 
   subroutine FlowApplyBCs(flow, walls)
     type(flow_type) flow
-    PetscScalar,dimension(flow%grid%info%gxyzl):: walls
+    PetscScalar,dimension(flow%grid%info%rgxyzl):: walls
     call BCApply(flow%bc, walls, flow%distribution)
   end subroutine FlowApplyBCs
 

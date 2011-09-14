@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         04 April 2011
 !!!       on:            14:35:39 MDT
-!!!     last modified:   17 August 2011
-!!!       at:            17:13:46 MDT
+!!!     last modified:   14 September 2011
+!!!       at:            12:37:17 PDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -144,7 +144,7 @@ contains
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
 
     call DiscretizationSetType(transport%disc, options%transport_disc)
-    call DiscretizationSetSizes(transport%disc, transport%grid%info%stencil_size)
+    call DiscretizationSetDerivOrder(transport%disc, options%deriv_order)
     call DiscretizationSetUp(transport%disc)
     
     do lcv=1,transport%nspecies
@@ -340,14 +340,14 @@ contains
   subroutine TransportUpdateMoments(transport, walls)
     type(transport_type) transport
 
-    PetscScalar,dimension(1:transport%grid%info%gxyzl):: walls
+    PetscScalar,dimension(1:transport%grid%info%rgxyzl):: walls
     call DistributionCalcDensity(transport%distribution, walls)
     call DistributionCalcFlux(transport%distribution, walls)
   end subroutine TransportUpdateMoments
 
   subroutine TransportUpdateDiagnostics(transport, walls)
     type(transport_type) transport
-    PetscScalar,dimension(1:transport%grid%info%gxyzl):: walls
+    PetscScalar,dimension(1:transport%grid%info%rgxyzl):: walls
     ! nothing to do
   end subroutine TransportUpdateDiagnostics
 
@@ -355,7 +355,7 @@ contains
     use LBM_IO_module
     type(transport_type) transport
     type(io_type) io
-    PetscScalar,dimension(1:transport%grid%info%gxyzl):: walls
+    PetscScalar,dimension(1:transport%grid%info%rgxyzl):: walls
     PetscErrorCode ierr
 
     if (transport%io_fi) then
@@ -395,7 +395,7 @@ contains
     use LBM_Flow_module
     type(transport_type) transport
     type(flow_type) flow
-    PetscScalar,dimension(transport%grid%info%gxyzl):: walls
+    PetscScalar,dimension(transport%grid%info%rgxyzl):: walls
     PetscErrorCode ierr
 
     call DMDAVecGetArrayF90(flow%grid%da(NFLOWDOF),flow%velt_g,flow%velt_a,ierr)
@@ -422,8 +422,8 @@ contains
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze)::fi,fi_eq
     PetscScalar,dimension(1:dist%s,dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: rho
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
     PetscScalar,dimension(1:dist%info%ndims, dist%info%xs:dist%info%xe, &
          dist%info%ys:dist%info%ye, dist%info%zs:dist%info%ze):: u
 
@@ -448,8 +448,8 @@ contains
          dist%info%gxs:dist%info%gxe, dist%info%gys:dist%info%gye)::fi,fi_eq
     PetscScalar,dimension(1:dist%s,dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye):: rho
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe,&
-         dist%info%gys:dist%info%gye):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe,&
+         dist%info%rgys:dist%info%rgye):: walls
     PetscScalar,dimension(1:dist%info%ndims, &
          dist%info%xs:dist%info%xe, dist%info%ys:dist%info%ye):: u
 
@@ -469,7 +469,7 @@ contains
   ! bounceback if nonreactive walls, otherwise call reaction algorithm
   subroutine TransportReactWithWalls(transport, walls)
     type(transport_type) transport
-    PetscScalar,dimension(transport%grid%info%gxyzl):: walls
+    PetscScalar,dimension(transport%grid%info%rgxyzl):: walls
     
     if (transport%reactive_matrix) then
        select case(transport%ndims)
@@ -493,8 +493,8 @@ contains
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze)::gi
     PetscScalar,dimension(1:dist%s,dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: psi
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
 
     PetscScalar gi_opp(transport%nspecies)
 
@@ -524,8 +524,8 @@ contains
          dist%info%gys:dist%info%gye)::gi
     PetscScalar,dimension(1:dist%s,dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: psi
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
 
     PetscScalar gi_opp(transport%nspecies)
 
@@ -547,7 +547,7 @@ contains
     
   subroutine TransportApplyBCs(transport, walls)
     type(transport_type) transport
-    PetscScalar,dimension(transport%grid%info%gxyzl):: walls
+    PetscScalar,dimension(transport%grid%info%rgxyzl):: walls
     call BCApply(transport%bc, walls, transport%distribution)
   end subroutine TransportApplyBCs
 end module LBM_Transport_module

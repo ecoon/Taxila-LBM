@@ -7,7 +7,6 @@
 # numerical params
 -flow_relaxation_mode 1 # MRT
 -discretization d2q9
--stencil_size_rho 1
 
 # component parameters
 -ncomponents 2
@@ -52,4 +51,4 @@
 
 # i/o
 -output_file_prefix test_solution/
-
+-output_flow_fi # get fi for comparison

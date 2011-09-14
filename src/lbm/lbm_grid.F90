@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            09:24:24 MDT
-!!!     last modified:   08 September 2011
-!!!       at:            10:48:08 MDT
+!!!     last modified:   14 September 2011
+!!!       at:            15:59:56 PDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -101,7 +101,19 @@ contains
     PetscErrorCode ierr
 
     call InfoSetFromOptions(grid%info, options, ierr)
-    
+
+    ! update a few things
+    if (grid%info%stencil_size_rho < 0) then
+       select case(options%deriv_order)
+       case (4)
+          grid%info%stencil_size_rho = 1
+       case (8)
+          grid%info%stencil_size_rho = 2
+       case (10)
+          grid%info%stencil_size_rho = 3
+       end select
+    end if
+
     if (options%transport_disc /= NULL_DISCRETIZATION) then
        grid%nda = 6
     else
@@ -140,7 +152,7 @@ contains
        call DMDACreate3d(grid%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
             btype(Z_DIRECTION), grid%info%stencil_type, grid%info%NX, grid%info%NY, &
             grid%info%NZ, grid%info%nproc_x, grid%info%nproc_y, grid%info%nproc_z, &
-            grid%da_sizes(ONEDOF), grid%info%stencil_size, grid%info%ownership_x, &
+            grid%da_sizes(ONEDOF), grid%info%stencil_size_rho, grid%info%ownership_x, &
             grid%info%ownership_y, grid%info%ownership_z,grid%da(ONEDOF), ierr)
     else
       ! petsc does a bad job of guessing a partitioning, because it thinks 
@@ -150,7 +162,7 @@ contains
        call DMDACreate3d(grid%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
             btype(Z_DIRECTION), grid%info%stencil_type, grid%info%NX, grid%info%NY, &
             grid%info%NZ, grid%info%nproc_x, grid%info%nproc_y, grid%info%nproc_z, &
-            grid%da_sizes(ONEDOF), grid%info%stencil_size, PETSC_NULL_INTEGER, &
+            grid%da_sizes(ONEDOF), grid%info%stencil_size_rho, PETSC_NULL_INTEGER, &
             PETSC_NULL_INTEGER, PETSC_NULL_INTEGER,grid%da(ONEDOF), ierr)
        
        call DMDAGetInfo(grid%da(ONEDOF), PETSC_NULL_INTEGER, PETSC_NULL_INTEGER, &
@@ -168,12 +180,33 @@ contains
             grid%info%ownership_y,grid%info%ownership_z,ierr)
     end if
 
-    call DMDAGetCorners(grid%da(ONEDOF), xs, ys, zs, grid%info%xl, grid%info%yl, &
-         grid%info%zl, ierr)
-    call DMDAGetGhostCorners(grid%da(ONEDOF), gxs, gys, gzs, grid%info%gxl, grid%info%gyl,&
-         grid%info%gzl, ierr)
+    ! create the rho DA seperately, since the stencil size (and therefore
+    ! the ghost start/end/length) are potentially different
+    call DMDACreate3d(grid%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
+         btype(Z_DIRECTION), grid%info%stencil_type, &
+         grid%info%NX, grid%info%NY, grid%info%NZ, &
+         grid%info%nproc_x, grid%info%nproc_y, grid%info%nproc_z, &
+         grid%da_sizes(NCOMPONENTDOF), grid%info%stencil_size_rho, &
+         grid%info%ownership_x, grid%info%ownership_y, grid%info%ownership_z, &
+         grid%da(NCOMPONENTDOF), ierr)
+
+    ! create all other DAs
+    do lcv=3,grid%nda
+       call DMDACreate3d(grid%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
+            btype(Z_DIRECTION), grid%info%stencil_type, &
+            grid%info%NX, grid%info%NY, grid%info%NZ, &
+            grid%info%nproc_x, grid%info%nproc_y, grid%info%nproc_z, &
+            grid%da_sizes(lcv), grid%info%stencil_size, &
+            grid%info%ownership_x, grid%info%ownership_y, grid%info%ownership_z, &
+            grid%da(lcv), ierr)
+    end do
 
     ! set grid%info including corners
+    call DMDAGetCorners(grid%da(NCOMPONENTXBDOF), xs, ys, zs, grid%info%xl, grid%info%yl, &
+         grid%info%zl, ierr)
+    call DMDAGetGhostCorners(grid%da(NCOMPONENTXBDOF), gxs, gys, gzs, grid%info%gxl, grid%info%gyl,&
+         grid%info%gzl, ierr)
+
     grid%info%xs = xs+1
     grid%info%gxs = gxs+1
     grid%info%xe = grid%info%xs+grid%info%xl-1
@@ -194,16 +227,6 @@ contains
     grid%info%xyzl = grid%info%xl*grid%info%yl*grid%info%zl
     grid%info%gxyzl = grid%info%gxl*grid%info%gyl*grid%info%gzl
 
-    ! create the rho DA seperately, since the stencil size (and therefore
-    ! the ghost start/end/length) are potentially different
-    call DMDACreate3d(grid%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
-         btype(Z_DIRECTION), grid%info%stencil_type, &
-         grid%info%NX, grid%info%NY, grid%info%NZ, &
-         grid%info%nproc_x, grid%info%nproc_y, grid%info%nproc_z, &
-         grid%da_sizes(NCOMPONENTDOF), grid%info%stencil_size_rho, &
-         grid%info%ownership_x, grid%info%ownership_y, grid%info%ownership_z, &
-         grid%da(NCOMPONENTDOF), ierr)
-
     call DMDAGetGhostCorners(grid%da(NCOMPONENTDOF), rgxs, rgys, rgzs, &
          grid%info%rgxl, grid%info%rgyl, grid%info%rgzl, ierr)
     grid%info%rgxs = rgxs+1
@@ -218,17 +241,6 @@ contains
     end if
 
     grid%info%rgxyzl = grid%info%rgxl*grid%info%rgyl*grid%info%rgzl
-
-    ! create all other DAs
-    do lcv=3,grid%nda
-       call DMDACreate3d(grid%comm, btype(X_DIRECTION), btype(Y_DIRECTION), &
-            btype(Z_DIRECTION), grid%info%stencil_type, &
-            grid%info%NX, grid%info%NY, grid%info%NZ, &
-            grid%info%nproc_x, grid%info%nproc_y, grid%info%nproc_z, &
-            grid%da_sizes(lcv), grid%info%stencil_size, &
-            grid%info%ownership_x, grid%info%ownership_y, grid%info%ownership_z, &
-            grid%da(lcv), ierr)
-    end do
 
     ! set the names
     call PetscObjectSetName(grid%da(ONEDOF), trim(grid%name)//'DA_one', ierr)

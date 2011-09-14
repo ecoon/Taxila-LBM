@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            14:06:07 MDT
-!!!     last modified:   17 August 2011
-!!!       at:            10:47:26 MDT
+!!!     last modified:   14 September 2011
+!!!       at:            12:34:10 PDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -193,7 +193,7 @@ contains
 
   subroutine DistributionCalcDensity(distribution, walls)
     type(distribution_type) distribution
-    PetscScalar,dimension(1:distribution%info%gxyzl):: walls
+    PetscScalar,dimension(1:distribution%info%rgxyzl):: walls
 
     select case(distribution%info%ndims)
     case(2)
@@ -210,8 +210,8 @@ contains
     PetscScalar,dimension(1:distribution%s, 0:distribution%b, &
          distribution%info%gxs:distribution%info%gxe, &
          distribution%info%gys:distribution%info%gye):: fi
-    PetscScalar,dimension(distribution%info%gxs:distribution%info%gxe, &
-         distribution%info%gys:distribution%info%gye):: walls
+    PetscScalar,dimension(distribution%info%rgxs:distribution%info%rgxe, &
+         distribution%info%rgys:distribution%info%rgye):: walls
     PetscScalar,dimension(distribution%s, &
          distribution%info%rgxs:distribution%info%rgxe, &
          distribution%info%rgys:distribution%info%rgye):: rho
@@ -237,9 +237,9 @@ contains
          distribution%info%gxs:distribution%info%gxe, &
          distribution%info%gys:distribution%info%gye, &
          distribution%info%gzs:distribution%info%gze):: fi
-    PetscScalar,dimension(distribution%info%gxs:distribution%info%gxe, &
-         distribution%info%gys:distribution%info%gye, &
-         distribution%info%gzs:distribution%info%gze):: walls
+    PetscScalar,dimension(distribution%info%rgxs:distribution%info%rgxe, &
+         distribution%info%rgys:distribution%info%rgye, &
+         distribution%info%rgzs:distribution%info%rgze):: walls
     PetscScalar,dimension(distribution%s, &
          distribution%info%rgxs:distribution%info%rgxe, &
          distribution%info%rgys:distribution%info%rgye, &
@@ -261,7 +261,7 @@ contains
 
   subroutine DistributionCalcFlux(distribution, walls)
     type(distribution_type) distribution
-    PetscScalar,dimension(distribution%info%gxyzl):: walls
+    PetscScalar,dimension(distribution%info%rgxyzl):: walls
 
     select case(distribution%info%ndims)
     case(2)
@@ -277,9 +277,9 @@ contains
          distribution%info%gxs:distribution%info%gxe, &
          distribution%info%gys:distribution%info%gye, &
          distribution%info%gzs:distribution%info%gze):: fi
-    PetscScalar,dimension(distribution%info%gxs:distribution%info%gxe, &
-         distribution%info%gys:distribution%info%gye, &
-         distribution%info%gzs:distribution%info%gze):: walls
+    PetscScalar,dimension(distribution%info%rgxs:distribution%info%rgxe, &
+         distribution%info%rgys:distribution%info%rgye, &
+         distribution%info%rgzs:distribution%info%rgze):: walls
     PetscScalar,dimension(distribution%s, distribution%info%ndims, &
          distribution%info%gxs:distribution%info%gxe, &
          distribution%info%gys:distribution%info%gye, &
@@ -308,8 +308,8 @@ contains
     PetscScalar,dimension(distribution%s, 0:distribution%b, &
          distribution%info%gxs:distribution%info%gxe, &
          distribution%info%gys:distribution%info%gye):: fi
-    PetscScalar,dimension(distribution%info%gxs:distribution%info%gxe, &
-         distribution%info%gys:distribution%info%gye):: walls
+    PetscScalar,dimension(distribution%info%rgxs:distribution%info%rgxe, &
+         distribution%info%rgys:distribution%info%rgye):: walls
     PetscScalar,dimension(distribution%s, distribution%info%ndims, &
          distribution%info%gxs:distribution%info%gxe, &
          distribution%info%gys:distribution%info%gye):: u
@@ -425,7 +425,7 @@ contains
 
   subroutine DistributionBounceback(dist, walls)
     type(distribution_type) dist
-    PetscScalar,dimension(dist%info%gxyzl):: walls
+    PetscScalar,dimension(dist%info%rgxyzl):: walls
     PetscErrorCode ierr
 
     select case(dist%info%ndims)
@@ -444,9 +444,9 @@ contains
          dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, &
          dist%info%gzs:dist%info%gze):: fi
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, &
-         dist%info%gzs:dist%info%gze):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, &
+         dist%info%rgzs:dist%info%rgze):: walls
 
     PetscInt i,j,k,n
     PetscInt tmp(dist%s, 0:dist%b)
@@ -467,8 +467,8 @@ contains
     PetscScalar,dimension(dist%s,0:dist%b,&
          dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: fi
-    PetscScalar,dimension(dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: walls
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
 
     PetscInt i,j,n
     PetscInt tmp(dist%s, 0:dist%b)
