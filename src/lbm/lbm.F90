@@ -389,16 +389,19 @@
          call PetscLogStagePush(logger%stage(OUTPUT_STAGE), ierr)
          if (lbm%options%current_waypoint > 0) then
             if (lbm%options%waypoints(lbm%options%current_waypoint) .eq. lcv_step) then
+               if (lcv_step.eq.kstep) lbm%flow%io_fi = (lbm%flow%io_fi.OR.lbm%flow%io_last_fi)
                call PetscLogEventBegin(logger%event_output,ierr)
                call LBMOutput(lbm, lcv_step)
                call PetscLogEventEnd(logger%event_output,ierr)
                lbm%options%current_waypoint = lbm%options%current_waypoint + 1
             else if((lbm%options%kwrite > 0).and.(mod(lcv_step,lbm%options%kwrite).eq.0)) then
+               if (lcv_step.eq.kstep) lbm%flow%io_fi = (lbm%flow%io_fi.OR.lbm%flow%io_last_fi)
                call PetscLogEventBegin(logger%event_output,ierr)
                call LBMOutput(lbm, lcv_step)
                call PetscLogEventEnd(logger%event_output,ierr)
             endif
          else if((lbm%options%kwrite > 0).and.(mod(lcv_step,lbm%options%kwrite).eq.0)) then
+            if (lcv_step.eq.kstep) lbm%flow%io_fi = (lbm%flow%io_fi.OR.lbm%flow%io_last_fi)
             call PetscLogEventBegin(logger%event_output,ierr)
             call LBMOutput(lbm, lcv_step)
             call PetscLogEventEnd(logger%event_output,ierr)
