@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
-!!!     last modified:   14 September 2011
-!!!       at:            12:35:47 PDT
+!!!     last modified:   19 September 2011
+!!!       at:            15:29:39 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -43,6 +43,7 @@ module LBM_Flow_module
      type(bc_type),pointer:: bc
      
      PetscBool io_fi
+     PetscBool io_last_fi
      PetscBool io_rho
      Vec rhot_g
      PetscScalar,pointer:: rhot_a(:)
@@ -124,6 +125,7 @@ contains
     flow%io_rhot = PETSC_FALSE
     flow%io_rho = PETSC_TRUE
     flow%io_fi = PETSC_FALSE
+    flow%io_last_fi = PETSC_FALSE
     flow%io_velt = PETSC_TRUE
 
     flow%body_forces = PETSC_FALSE
@@ -365,8 +367,12 @@ contains
     end if
 
     ! check io options
-    if (help) call PetscPrintf(options%comm, "  -output_flow_fi <FALSE>: output distribution functions for flow\n", ierr)
+    if (help) call PetscPrintf(options%comm, &
+         "  -output_flow_fi <FALSE>: output distribution functions for flow\n", ierr)
     call PetscOptionsGetBool(options%my_prefix, '-output_flow_fi', flow%io_fi, flag, ierr)
+    if (help) call PetscPrintf(options%comm, &
+         "  -output_flow_last_fi <FALSE>: output distribution functions at the last timestep\n", ierr)
+    call PetscOptionsGetBool(options%my_prefix, '-output_flow_last_fi', flow%io_last_fi, flag, ierr)
     if (help) call PetscPrintf(options%comm, "  -output_flow_rho <TRUE>: output densities\n", ierr)
     call PetscOptionsGetBool(options%my_prefix, '-output_flow_rho', flow%io_rho, flag, ierr)
     if (help) call PetscPrintf(options%comm, "  -output_flow_velt <TRUE>: output total velocity\n", ierr)
