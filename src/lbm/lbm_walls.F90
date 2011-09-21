@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         21 June 2011
 !!!       on:            10:07:45 MDT
-!!!     last modified:   14 September 2011
-!!!       at:            16:02:13 PDT
+!!!     last modified:   21 September 2011
+!!!       at:            08:54:21 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -179,42 +179,43 @@ contains
   subroutine WallsSetGhostNodesD2(walls, data, info)
     type(walls_type) walls
     type(info_type) info
-    PetscScalar,dimension(info%gxs:info%gxe,info%gys:info%gye):: data
+    PetscScalar,dimension(info%rgxs:info%rgxe,info%rgys:info%rgye):: data
     if ((info%xs.eq.1).and.(.not.info%periodic(X_DIRECTION))) then
-      data(info%gxs:info%xs-1,:) = 999.
+      data(info%rgxs:info%xs-1,:) = 999.
     end if
     if ((info%xe.eq.info%NX).and.(.not.info%periodic(X_DIRECTION))) then
-      data(info%xe+1:info%gxe,:) = 999.
+      data(info%xe+1:info%rgxe,:) = 999.
     end if
     if ((info%ys.eq.1).and.(.not.info%periodic(Y_DIRECTION))) then
-      data(:,info%gys:info%ys-1) = 999.
+      data(:,info%rgys:info%ys-1) = 999.
     end if
     if ((info%ye.eq.info%NY).and.(.not.info%periodic(Y_DIRECTION))) then
-      data(:,info%ye+1:info%gye) = 999.
+      data(:,info%ye+1:info%rgye) = 999.
     end if
   end subroutine WallsSetGhostNodesD2
   
   subroutine WallsSetGhostNodesD3(walls, data, info)
     type(walls_type) walls
     type(info_type) info
-    PetscScalar,dimension(info%gxs:info%gxe,info%gys:info%gye,info%gzs:info%gze):: data
+    PetscScalar,dimension(info%rgxs:info%rgxe,info%rgys:info%rgye, &
+         info%rgzs:info%rgze):: data
     if ((info%xs.eq.1).and.(.not.info%periodic(X_DIRECTION))) then
-      data(info%gxs:info%xs-1,:,:) = 999.
+      data(info%rgxs:info%xs-1,:,:) = 999.
     end if
     if ((info%xe.eq.info%NX).and.(.not.info%periodic(X_DIRECTION))) then
-      data(info%xe+1:info%gxe,:,:) = 999.
+      data(info%xe+1:info%rgxe,:,:) = 999.
     end if
     if ((info%ys.eq.1).and.(.not.info%periodic(Y_DIRECTION))) then
-      data(:,info%gys:info%ys-1,:) = 999.
+      data(:,info%rgys:info%ys-1,:) = 999.
     end if
     if ((info%ye.eq.info%NY).and.(.not.info%periodic(Y_DIRECTION))) then
-      data(:,info%ye+1:info%gye,:) = 999.
+      data(:,info%ye+1:info%rgye,:) = 999.
     end if
     if ((info%zs.eq.1).and.(.not.info%periodic(Z_DIRECTION))) then
-      data(:,:,info%gzs:info%zs-1) = 999.
+      data(:,:,info%rgzs:info%zs-1) = 999.
     end if
     if ((info%ze.eq.info%NZ).and.(.not.info%periodic(Z_DIRECTION))) then
-      data(:,:,info%ze+1:info%gze) = 999.
+      data(:,:,info%ze+1:info%rgze) = 999.
     end if
   end subroutine WallsSetGhostNodesD3
 
