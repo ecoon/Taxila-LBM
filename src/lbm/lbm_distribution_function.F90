@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            14:06:07 MDT
-!!!     last modified:   14 September 2011
-!!!       at:            12:34:10 PDT
+!!!     last modified:   01 October 2011
+!!!       at:            16:10:25 PDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -332,8 +332,8 @@ contains
 
   subroutine DistributionGatherValueToDirection(distribution, val, out)
     type(distribution_type) distribution
-    PetscScalar,intent(in),dimension(1:distribution%info%gxyzl):: val
-    PetscScalar,intent(out),dimension(0:distribution%b, 1:distribution%info%gxyzl):: out
+    PetscScalar,intent(in),dimension(1:distribution%info%rgxyzl):: val
+    PetscScalar,intent(out),dimension(0:distribution%b, 1:distribution%info%rgxyzl):: out
     PetscErrorCode ierr
     
     if (distribution%info%ndims.eq.2) then
@@ -347,11 +347,11 @@ contains
   
   subroutine DistributionGatherValueToDirectionD2(distribution, val, out)
     type(distribution_type) distribution
-    PetscScalar,intent(in),dimension(distribution%info%gxs:distribution%info%gxe, &
-         distribution%info%gys:distribution%info%gye):: val
+    PetscScalar,intent(in),dimension(distribution%info%rgxs:distribution%info%rgxe, &
+         distribution%info%rgys:distribution%info%rgye):: val
     PetscScalar,intent(out),dimension(0:distribution%b, &
-         distribution%info%gxs:distribution%info%gxe, &
-         distribution%info%gys:distribution%info%gye):: out
+         distribution%info%rgxs:distribution%info%rgxe, &
+         distribution%info%rgys:distribution%info%rgye):: out
 
     PetscInt n
     do n=0,distribution%b
@@ -496,12 +496,12 @@ contains
 
   subroutine DistributionGatherValueToDirectionD3(distribution, val, out)
     type(distribution_type) distribution
-    PetscScalar,intent(in),dimension(distribution%info%gxs:distribution%info%gxe, &
-         distribution%info%gys:distribution%info%gye, distribution%info%gzs:distribution%info%gze):: val
+    PetscScalar,intent(in),dimension(distribution%info%rgxs:distribution%info%rgxe, &
+         distribution%info%rgys:distribution%info%rgye, distribution%info%rgzs:distribution%info%rgze):: val
     PetscScalar,intent(out),dimension(0:distribution%b, &
-         distribution%info%gxs:distribution%info%gxe, &
-         distribution%info%gys:distribution%info%gye, &
-         distribution%info%gzs:distribution%info%gze):: out
+         distribution%info%rgxs:distribution%info%rgxe, &
+         distribution%info%rgys:distribution%info%rgye, &
+         distribution%info%rgzs:distribution%info%rgze):: out
     
     PetscInt n
     do n=0,distribution%b
