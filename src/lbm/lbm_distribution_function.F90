@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            14:06:07 MDT
-!!!     last modified:   01 October 2011
-!!!       at:            16:10:25 PDT
+!!!     last modified:   03 October 2011
+!!!       at:            14:26:00 PDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -40,6 +40,8 @@ module LBM_Distribution_Function_module
        DistributionCommunicateAll, &       
        DistributionCommunicateFi, &       
        DistributionCommunicateDensity, &       
+       DistributionCommunicateDensityBegin, &       
+       DistributionCommunicateDensityEnd, &       
        DistributionCalcDensity, &
        DistributionCalcFlux, &
        DistributionStream, &
@@ -181,15 +183,26 @@ contains
 
   subroutine DistributionCommunicateDensity(distribution)
     type(distribution_type) distribution
+    call DistributionCommunicateDensityBegin(distribution)
+    call DistributionCommunicateDensityEnd(distribution)
+  end subroutine DistributionCommunicateDensity
+
+  subroutine DistributionCommunicateDensityBegin(distribution)
+    type(distribution_type) distribution
     PetscErrorCode ierr
     call DMDAVecRestoreArrayF90(distribution%da_rho, distribution%rho, &
          distribution%rho_a, ierr)
     call DMDALocalToLocalBegin(distribution%da_rho, distribution%rho, INSERT_VALUES, &
          distribution%rho, ierr)
+  end subroutine DistributionCommunicateDensityBegin
+
+  subroutine DistributionCommunicateDensityEnd(distribution)
+    type(distribution_type) distribution
+    PetscErrorCode ierr
     call DMDALocalToLocalEnd(distribution%da_rho, distribution%rho, INSERT_VALUES, &
          distribution%rho, ierr)
     call DMDAVecGetArrayF90(distribution%da_rho, distribution%rho, distribution%rho_a, ierr)
-  end subroutine DistributionCommunicateDensity
+  end subroutine DistributionCommunicateDensityEnd
 
   subroutine DistributionCalcDensity(distribution, walls)
     type(distribution_type) distribution
