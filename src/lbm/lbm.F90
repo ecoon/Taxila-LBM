@@ -326,7 +326,9 @@
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
             call PetscLogEventBegin(logger%event_moments,ierr)
-            call FlowUpdateMoments(lbm%flow, lbm%walls%walls_a)
+            call DistributionCalcDensity(lbm%flow%distribution, lbm%walls%walls_a)
+            call DistributionCommunicateDensityBegin(lbm%flow%distribution)
+            call DistributionCalcFlux(lbm%flow%distribution, lbm%walls%walls_a)
             call PetscLogEventEnd(logger%event_moments,ierr)
          end if
 
@@ -339,9 +341,7 @@
          ! add in momentum forcing terms
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
-            call PetscLogEventBegin(logger%event_communicate_rho,ierr)
-            call DistributionCommunicateDensity(lbm%flow%distribution)
-            call PetscLogEventEnd(logger%event_communicate_rho,ierr)
+            call DistributionCommunicateDensityEnd(lbm%flow%distribution)
             call FlowCalcForces(lbm%flow, lbm%walls)
             call BCZeroForces(lbm%flow%bc, lbm%flow%forces, lbm%flow%distribution)
          end if
