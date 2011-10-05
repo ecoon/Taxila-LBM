@@ -189,8 +189,8 @@
       if (istep.eq.0) then
          call DMDALocalToLocalBegin(lbm%grid%da(NCOMPONENTXBDOF), lbm%flow%distribution%fi, &
               INSERT_VALUES, lbm%flow%distribution%fi, ierr)
-         call DMDALocalToLocalEnd(lbm%grid%da(NCOMPONENTXBDOF), lbm%flow%distribution%fi, &
-              INSERT_VALUES, lbm%flow%distribution%fi, ierr)
+         ! call DMDALocalToLocalEnd(lbm%grid%da(NCOMPONENTXBDOF), lbm%flow%distribution%fi, &
+         !      INSERT_VALUES, lbm%flow%distribution%fi, ierr)
          if (associated(lbm%transport)) then
             call DMDALocalToLocalBegin(lbm%grid%da(NSPECIEXBDOF), &
                  lbm%transport%distribution%fi, INSERT_VALUES, &
@@ -280,6 +280,7 @@
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
             call PetscLogEventBegin(logger%event_stream_flow,ierr)
+            call DistributionCommunicateFiEnd(lbm%flow%distribution)
             call FlowStream(lbm%flow)
             call PetscLogEventEnd(logger%event_stream_flow,ierr)
          end if
@@ -367,23 +368,6 @@
             call PetscLogEventEnd(logger%event_collision_tran,ierr)
          end if
 
-         ! communicate, update fi
-         call PetscLogStagePop(ierr)
-         call PetscLogStagePush(logger%stage(COMMUNICATION_STAGE), ierr)
-         if ((.not.lbm%options%steadystate).or. &
-              (lcv_step < lbm%options%steadystate_rampup_steps)) then
-            call PetscLogEventBegin(logger%event_communicate_fi,ierr)
-            call DistributionCommunicateFi(lbm%flow%distribution)
-            call PetscLogEventEnd(logger%event_communicate_fi,ierr)
-         end if
-
-         if (associated(lbm%transport)) then
-            call PetscLogEventBegin(logger%event_communicate_fi,ierr)
-            call DistributionCommunicateFi(lbm%transport%distribution)
-            call PetscLogEventEnd(logger%event_communicate_fi,ierr)
-         end if
-
-         
          ! check for output
          call PetscLogStagePop(ierr)
          call PetscLogStagePush(logger%stage(OUTPUT_STAGE), ierr)
@@ -406,7 +390,24 @@
             call LBMOutput(lbm, lcv_step)
             call PetscLogEventEnd(logger%event_output,ierr)
          endif
+
+         ! communicate, update fi
+         call PetscLogStagePop(ierr)
+         call PetscLogStagePush(logger%stage(COMMUNICATION_STAGE), ierr)
+         if ((.not.lbm%options%steadystate).or. &
+              (lcv_step < lbm%options%steadystate_rampup_steps)) then
+            call PetscLogEventBegin(logger%event_communicate_fi,ierr)
+            call DistributionCommunicateFiBegin(lbm%flow%distribution)
+            call PetscLogEventEnd(logger%event_communicate_fi,ierr)
+         end if
+
+         if (associated(lbm%transport)) then
+            call PetscLogEventBegin(logger%event_communicate_fi,ierr)
+            call DistributionCommunicateFi(lbm%transport%distribution)
+            call PetscLogEventEnd(logger%event_communicate_fi,ierr)
+         end if
       end do
+      call DistributionCommunicateFiEnd(lbm%flow%distribution)
 
       timerunits = 'timestep'
       call TimingEndPerUnit(timer1, (kstep-istep+1), timerunits, supress_output)

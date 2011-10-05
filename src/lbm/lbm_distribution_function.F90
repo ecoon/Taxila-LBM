@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            14:06:07 MDT
-!!!     last modified:   03 October 2011
-!!!       at:            14:26:00 PDT
+!!!     last modified:   05 October 2011
+!!!       at:            15:44:39 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -39,6 +39,8 @@ module LBM_Distribution_Function_module
        DistributionRestoreArrays, &
        DistributionCommunicateAll, &       
        DistributionCommunicateFi, &       
+       DistributionCommunicateFiBegin, &       
+       DistributionCommunicateFiEnd, &       
        DistributionCommunicateDensity, &       
        DistributionCommunicateDensityBegin, &       
        DistributionCommunicateDensityEnd, &       
@@ -172,14 +174,29 @@ contains
   subroutine DistributionCommunicateFi(distribution)
     type(distribution_type) distribution
     PetscErrorCode ierr
+    call DistributionCommunicateFiBegin(distribution)
+    call DistributionCommunicateFiEnd(distribution)
+  end subroutine DistributionCommunicateFi
+
+  subroutine DistributionCommunicateFiBegin(distribution)
+    type(distribution_type) distribution
+    PetscErrorCode ierr
+
     call DMDAVecRestoreArrayF90(distribution%da_fi, distribution%fi, &
          distribution%fi_a, ierr)
     call DMDALocalToLocalBegin(distribution%da_fi, distribution%fi, INSERT_VALUES, &
          distribution%fi, ierr)
+
+  end subroutine DistributionCommunicateFiBegin
+
+  subroutine DistributionCommunicateFiEnd(distribution)
+    type(distribution_type) distribution
+    PetscErrorCode ierr
+
     call DMDALocalToLocalEnd(distribution%da_fi, distribution%fi, INSERT_VALUES, &
          distribution%fi, ierr)
     call DMDAVecGetArrayF90(distribution%da_fi, distribution%fi, distribution%fi_a, ierr)
-  end subroutine DistributionCommunicateFi
+  end subroutine DistributionCommunicateFiEnd
 
   subroutine DistributionCommunicateDensity(distribution)
     type(distribution_type) distribution
