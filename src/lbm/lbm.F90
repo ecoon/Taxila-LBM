@@ -187,19 +187,6 @@
       call WallsCommunicate(lbm%walls)
 
       if (istep.eq.0) then
-         call DMDALocalToLocalBegin(lbm%grid%da(NCOMPONENTXBDOF), lbm%flow%distribution%fi, &
-              INSERT_VALUES, lbm%flow%distribution%fi, ierr)
-         ! call DMDALocalToLocalEnd(lbm%grid%da(NCOMPONENTXBDOF), lbm%flow%distribution%fi, &
-         !      INSERT_VALUES, lbm%flow%distribution%fi, ierr)
-         if (associated(lbm%transport)) then
-            call DMDALocalToLocalBegin(lbm%grid%da(NSPECIEXBDOF), &
-                 lbm%transport%distribution%fi, INSERT_VALUES, &
-                 lbm%transport%distribution%fi, ierr)
-            call DMDALocalToLocalEnd(lbm%grid%da(NSPECIEXBDOF), &
-                 lbm%transport%distribution%fi, INSERT_VALUES, &
-                 lbm%transport%distribution%fi, ierr)
-         end if
-
          ! get arrays
          call FlowGetArrays(lbm%flow, ierr)
          if (associated(lbm%transport)) then
@@ -246,8 +233,17 @@
       else
          ! just get arrays
          call FlowGetArrays(lbm%flow, ierr)
+         if (associated(lbm%transport)) then
+            call TransportGetArrays(lbm%transport, ierr)
+         end if
       endif
       call IOIncrementCounter(lbm%io)
+
+      ! start the io
+      call DistributionCommunicateFiBegin(lbm%flow%distribution)
+      if (associated(lbm%transport)) then
+        call DistributionCommunicateFiBegin(lbm%transport%distribution)
+      end if
     end subroutine LBMInit2
 
     subroutine LBMRun1(lbm, istep, kstep)
@@ -287,6 +283,7 @@
 
          if (associated(lbm%transport)) then
             call PetscLogEventBegin(logger%event_stream_tran,ierr)
+            call DistributionCommunicateFiEnd(lbm%transport%distribution)
             call TransportStream(lbm%transport)
             call PetscLogEventEnd(logger%event_stream_tran,ierr)
          end if
@@ -403,11 +400,14 @@
 
          if (associated(lbm%transport)) then
             call PetscLogEventBegin(logger%event_communicate_fi,ierr)
-            call DistributionCommunicateFi(lbm%transport%distribution)
+            call DistributionCommunicateFiBegin(lbm%transport%distribution)
             call PetscLogEventEnd(logger%event_communicate_fi,ierr)
          end if
       end do
       call DistributionCommunicateFiEnd(lbm%flow%distribution)
+      if (associated(lbm%transport)) then
+        call DistributionCommunicateFiEnd(lbm%transport%distribution)
+      end if
 
       timerunits = 'timestep'
       call TimingEndPerUnit(timer1, (kstep-istep+1), timerunits, supress_output)
@@ -445,7 +445,6 @@
            lbm%flow%distribution%flux, lbm%walls%walls_a, lbm%flow%distribution, &
            lbm%flow%components, lbm%options)
       call FlowRestoreArrays(lbm%flow, ierr)
-      return
     end subroutine LBMInitializeState_Flow
 
     subroutine LBMInitializeState_FlowTransport(lbm, flow_subroutine, trans_subroutine)
