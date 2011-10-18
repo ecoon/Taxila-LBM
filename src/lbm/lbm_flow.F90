@@ -6,7 +6,7 @@
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
 !!!     last modified:   18 October 2011
-!!!       at:            10:42:52 MDT
+!!!       at:            13:44:37 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -199,7 +199,7 @@ contains
     end do
 
     ! set up control for forcing terms
-    gravity(:) = 0.d0
+    gravity(:) = 0.
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
     if (help) call PetscPrintf(options%comm, "-gvt=<0,0,0>: gravity\n", ierr)
     nmax = flow%ndims
@@ -402,35 +402,35 @@ contains
     ! viscosity/time scale
     if (flow%components(1)%viscosity < -990.) then
        ! tau is correct, viscosity is not given
-       flow%components(1)%time_scale = 1.d0
+       flow%components(1)%time_scale = 1.
        flow%components(1)%viscosity = flow%grid%length_scale * &
-         flow%grid%length_scale * (flow%components(1)%relax%tau - 0.5d0)/3.d0
+         flow%grid%length_scale * (flow%components(1)%relax%tau - 0.5)/3.
     else        
        flow%components(1)%time_scale = flow%grid%length_scale * &
-            flow%grid%length_scale * (flow%components(1)%relax%tau - 0.5d0)/ &
-            (flow%components(1)%viscosity*3.d0)
+            flow%grid%length_scale * (flow%components(1)%relax%tau - 0.5)/ &
+            (flow%components(1)%viscosity*3.)
     end if
     flow%time_scale = flow%components(1)%time_scale
     flow%velocity_scale = flow%grid%length_scale/flow%time_scale
 
     ! density
     if (flow%components(1)%density < -990.) then
-       flow%components(1)%density = 1.d0
+       flow%components(1)%density = 1.
     end if
     flow%mass_scale = flow%components(1)%mm*flow%components(1)%density*(flow%grid%length_scale**3)
 
     if (flow%ncomponents > 1) then
       do lcv=2,flow%ncomponents
         ! Assert correct viscosity ratios
-        if (flow%components(lcv)%viscosity < -990.d0) then
+        if (flow%components(lcv)%viscosity < -990.) then
            flow%components(lcv)%viscosity = flow%grid%length_scale * &
                 flow%grid%length_scale * &
-                (flow%components(1)%relax%tau - 0.5d0)/(3.d0*flow%time_scale)
+                (flow%components(1)%relax%tau - 0.5)/(3.*flow%time_scale)
         else 
-          consistent_tau = (3.d0*flow%time_scale*flow%components(lcv)%viscosity) &
+          consistent_tau = (3.*flow%time_scale*flow%components(lcv)%viscosity) &
                 /(flow%grid%length_scale* &
-                flow%grid%length_scale) + 0.5d0
-          if (abs(flow%components(lcv)%relax%tau - 1.d0) < eps) then
+                flow%grid%length_scale) + 0.5
+          if (abs(flow%components(lcv)%relax%tau - 1.) < eps) then
              ! tau not specified, so set it
              flow%components(lcv)%relax%tau = consistent_tau
              if (flow%grid%info%rank .eq. 0) then
@@ -446,13 +446,13 @@ contains
         end if
 
         ! Assert correct density ratios
-        if (flow%components(lcv)%density < -990.d0) then
+        if (flow%components(lcv)%density < -990.) then
           flow%components(lcv)%density = flow%mass_scale/flow%components(1)%mm / &
                (flow%grid%length_scale**3)
         else
           consistent_mm = flow%mass_scale / flow%components(1)%density / &
                (flow%grid%length_scale**3)
-          if (abs(flow%components(lcv)%mm - 1.d0) < eps) then
+          if (abs(flow%components(lcv)%mm - 1.) < eps) then
              ! mm not specified, so set it
              flow%components(lcv)%mm = consistent_mm
              if (flow%grid%info%rank .eq. 0) then
@@ -484,7 +484,7 @@ contains
     PetscInt lcv
     PetscErrorCode ierr
     PetscScalar zero
-    zero = 0.d0
+    zero = 0.
 
     do lcv=1,flow%ncomponents
        call DiscretizationSetUpRelax(flow%disc, flow%components(lcv)%relax)
@@ -505,9 +505,9 @@ contains
     allocate(flow%fi_eq(1:flow%ncomponents, 0:flow%disc%b, &
          1:flow%grid%info%gxyzl))
     allocate(flow%psi_of_rho(flow%ncomponents,flow%grid%info%rgxyzl))
-    flow%vel_eq = 0.d0
-    flow%forces = 0.d0
-    flow%fi_eq = 0.d0
+    flow%vel_eq = zero
+    flow%forces = zero
+    flow%fi_eq = zero
 
     call DMCreateGlobalVector(flow%grid%da(ONEDOF), flow%prs_g, ierr)
     call DMCreateGlobalVector(flow%grid%da(ONEDOF), flow%rhot_g, ierr)
@@ -579,7 +579,7 @@ contains
 
     call VecScale(flow%velt_g, flow%velocity_scale, ierr)
     if (flow%io_velt) call IOView(io, flow%velt_g, 'u')
-    call VecScale(flow%velt_g, 1.d0/flow%velocity_scale, ierr)
+    call VecScale(flow%velt_g, 1./flow%velocity_scale, ierr)
 
     if (flow%io_rhot) call IOView(io, flow%rhot_g, 'rhot')
     if (flow%io_prs) call IOView(io, flow%prs_g, 'prs')
@@ -667,7 +667,7 @@ contains
        do d=1,flow%ndims
           velt(d,i,j,k) = (sum(vel(:,d,i,j,k)*mm,1) + 0.5*sum(forces(:,d,i,j,k),1))/rhot(i,j,k)
        end do
-       prs(i,j,k) = rhot(i,j,k)/3.d0
+       prs(i,j,k) = rhot(i,j,k)/3.
        if (flow%use_nonideal_eos .or. (flow%ncomponents > 1)) then
           do m=1,flow%ncomponents
             ! In Qinjun's original code the pressure was calculated as:
@@ -675,7 +675,7 @@ contains
             ! However, with the HOD for fluid-fluid the new gf is 1/6 of the old gf, so
             ! I have accounted for it in the new pressure calculation.  This equation
             ! has been verified by Laplace's law for viscosity ratios of 1 and 5. 
-             prs(i,j,k) = prs(i,j,k) + flow%disc%c_0/2.d0*psi(m,i,j,k) &
+             prs(i,j,k) = prs(i,j,k) + flow%disc%c_0/2.*psi(m,i,j,k) &
                   *sum(flow%components(m)%gf*psi(:,i,j,k),1)
           end do
        end if
@@ -714,7 +714,7 @@ contains
        do d=1,flow%ndims
           velt(d,i,j) = (sum(vel(:,d,i,j)*mm,1) + 0.5*sum(forces(:,d,i,j),1))/rhot(i,j)
        end do
-       prs(i,j) = rhot(i,j)/3.d0
+       prs(i,j) = rhot(i,j)/3.
        if (flow%use_nonideal_eos .or. (flow%ncomponents > 1)) then
           do m=1,flow%ncomponents
             ! In Qinjun's original code the pressure was calculated as:
@@ -722,7 +722,7 @@ contains
             ! However, with the hod for fluid-fluid the new gf is 1/3 of the old gf, so
             ! I have accounted for it in the new pressure calculation.  This equation
             ! has been verified by Laplace's law for viscosity ratios of 1 and 5.        
-            prs(i,j) = prs(i,j) + flow%disc%c_0/2.d0*psi(m,i,j) &
+            prs(i,j) = prs(i,j) + flow%disc%c_0/2.*psi(m,i,j) &
                   *sum(flow%components(m)%gf*psi(:,i,j),1)
           end do
        end if
@@ -741,7 +741,7 @@ contains
     PetscErrorCode ierr
     PetscInt m
 
-    flow%forces = 0.d0
+    flow%forces = 0.
     if (flow%fluidfluid_forces) then
       call PetscLogEventBegin(logger%event_forcing_fluidfluid,ierr)
       if (flow%use_nonideal_eos) then

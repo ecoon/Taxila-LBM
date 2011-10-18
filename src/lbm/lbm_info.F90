@@ -6,7 +6,7 @@
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
 !!!     last modified:   18 October 2011
-!!!       at:            13:01:55 MDT
+!!!       at:            13:50:14 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -159,12 +159,12 @@ contains
     ! register data
     ! -- grid size
     call PetscBagGetData(info%bag, info%data, ierr)
-    call PetscBagRegisterInt(info%bag, info%data%NX, 0, trim(options%my_prefix)//'NX', &
+    call PetscBagRegisterInt(info%bag, info%data%NX, ZERO_I, trim(options%my_prefix)//'NX', &
          'grid size in X', ierr)
-    call PetscBagRegisterInt(info%bag, info%data%NY, 0, trim(options%my_prefix)//'NY', &
+    call PetscBagRegisterInt(info%bag, info%data%NY, ZERO_I, trim(options%my_prefix)//'NY', &
          'grid size in Y', ierr)
     if (info%ndims > 2) then
-       call PetscBagRegisterInt(info%bag, info%data%NZ, 0, trim(options%my_prefix)//'NZ', &
+       call PetscBagRegisterInt(info%bag, info%data%NZ, ZERO_I, trim(options%my_prefix)//'NZ', &
             'grid size in Z', ierr)
     else 
        info%data%NZ = 1

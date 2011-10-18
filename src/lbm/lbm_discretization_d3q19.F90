@@ -132,33 +132,33 @@ contains
 
     disc%ffw = 0.0
     if(disc%deriv_order.eq.4) then ! 4th order isotropy
-      disc%ffw(1) = 1./6.
-      disc%ffw(2) = 1./12.
+      disc%ffw(1) = 1.d0/6.
+      disc%ffw(2) = 1.d0/12.
     end if
 
     if(disc%deriv_order.eq.8) then ! 8th order isotropy
-      disc%ffw(1) = 4./45.
-      disc%ffw(2) = 1./21.
-      disc%ffw(3) = 2./105.
-      disc%ffw(4) = 5./504.
-      disc%ffw(5) = 1./315.
-      disc%ffw(6) = 1./630.
-      disc%ffw(8) = 1./5040.
+      disc%ffw(1) = 4.d0/45.
+      disc%ffw(2) = 1.d0/21.
+      disc%ffw(3) = 2.d0/105.
+      disc%ffw(4) = 5.d0/504.
+      disc%ffw(5) = 1.d0/315.
+      disc%ffw(6) = 1.d0/630.
+      disc%ffw(8) = 1.d0/5040.
     end if
 
     ! Not implemented yet
     if(disc%deriv_order.eq.10) then ! 10th order
-      disc%ffw( 1) = 352./5355.
-      disc%ffw( 2) = 38./1071.
-      disc%ffw( 3) = 271./14280.
-      disc%ffw( 4) = 139./14280.
-      disc%ffw( 5) = 53./10710.
-      disc%ffw( 6) = 5./2142.
-      disc%ffw( 7) = 1./4284.   ! w_{221}(9) in Sbragaglia, Phys Rev E (2007)
-      disc%ffw( 8) = 41./85680.
-      disc%ffw( 9) = 1./5355.   ! w_{300}(9) in Sbragaglia, Phys Rev E (2007)
-      disc%ffw(10) = 1./10710.
-      disc%ffw(11) = 1./42840.    
+      disc%ffw( 1) = 352.d0/5355.
+      disc%ffw( 2) = 38.d0/1071.
+      disc%ffw( 3) = 271.d0/14280.
+      disc%ffw( 4) = 139.d0/14280.
+      disc%ffw( 5) = 53.d0/10710.
+      disc%ffw( 6) = 5.d0/2142.
+      disc%ffw( 7) = 1.d0/4284.   ! w_{221}(9) in Sbragaglia, Phys Rev E (2007)
+      disc%ffw( 8) = 41.d0/85680.
+      disc%ffw( 9) = 1.d0/5355.   ! w_{300}(9) in Sbragaglia, Phys Rev E (2007)
+      disc%ffw(10) = 1.d0/10710.
+      disc%ffw(11) = 1.d0/42840.    
       SETERRQ(PETSC_COMM_WORLD, 1, &
            'Derivative order 10 for D3 not yet implemented', ierr)
     end if
@@ -176,24 +176,24 @@ contains
     if (relax%mode .eq. RELAXATION_MODE_MRT) then
        !! Not tested yet
        relax%tau_mrt(0) = oneontau
-       relax%tau_mrt(1) = relax%s1 !0.6 !oneontau  !s_e
-       relax%tau_mrt(2) = relax%s2 !1.4 !oneontau  !s_ep
+       relax%tau_mrt(1) = relax%s1 
+       relax%tau_mrt(2) = relax%s2 
        relax%tau_mrt(3) = oneontau 
-       relax%tau_mrt(4) = relax%s3 !1.99 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_q
+       relax%tau_mrt(4) = relax%s3 
        relax%tau_mrt(5) = oneontau 
-       relax%tau_mrt(6) = relax%s3 !1.99 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_q
+       relax%tau_mrt(6) = relax%s3 
        relax%tau_mrt(7) = oneontau 
-       relax%tau_mrt(8) = relax%s3 !1.99  !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_q
-       relax%tau_mrt(9) = oneontau  !s_v
-       relax%tau_mrt(10) = relax%s4 !0.1 !oneontau !s_pi
-       relax%tau_mrt(11) = oneontau !s_v
-       relax%tau_mrt(12) = relax%s4 !0.1 !oneontau !s_pi
-       relax%tau_mrt(13) = oneontau !s_v
-       relax%tau_mrt(14) = oneontau !s_v
-       relax%tau_mrt(15) = oneontau !s_v
-       relax%tau_mrt(16) = relax%s5 !0.3 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_m
-       relax%tau_mrt(17) = relax%s5 ! 0.3 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_m
-       relax%tau_mrt(18) = relax%s5 !0.3 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !s_m
+       relax%tau_mrt(8) = relax%s3 
+       relax%tau_mrt(9) = oneontau 
+       relax%tau_mrt(10) = relax%s4
+       relax%tau_mrt(11) = oneontau
+       relax%tau_mrt(12) = relax%s4
+       relax%tau_mrt(13) = oneontau
+       relax%tau_mrt(14) = oneontau
+       relax%tau_mrt(15) = oneontau
+       relax%tau_mrt(16) = relax%s5
+       relax%tau_mrt(17) = relax%s5
+       relax%tau_mrt(18) = relax%s5
     end if
   end subroutine DiscretizationSetupRelax_D3Q19
 
@@ -225,13 +225,13 @@ contains
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
     if (walls(i,j,k).eq.0) then
-       feq(m,0,i,j,k) = rho(m,i,j,k)*(relax%d_k - usqr(i,j,k)/2.d0)
+       feq(m,0,i,j,k) = rho(m,i,j,k)*(relax%d_k - usqr(i,j,k)/2.)
        do n=1,disc%b
           udote = sum(disc%ci(n,:)*u(m,:,i,j,k), 1)
           feq(m,n,i,j,k)= disc%weights(n)*rho(m,i,j,k)* &
-               (1.5d0*(1.d0-relax%d_k) + udote/relax%c_s2 &
-               + udote*udote/(2.d0*relax%c_s2*relax%c_s2) &
-               - usqr(i,j,k)/(2.d0*relax%c_s2))
+               (1.5*(1.-relax%d_k) + udote/relax%c_s2 &
+               + udote*udote/(2.*relax%c_s2*relax%c_s2) &
+               - usqr(i,j,k)/(2.*relax%c_s2))
        end do
     end if
     end do
@@ -248,7 +248,7 @@ contains
 
     PetscScalar wtmp
     PetscScalar,dimension(0:disc%b)::ftmp
-    integer m
+    PetscInt m
     
     wtmp = 0
 
