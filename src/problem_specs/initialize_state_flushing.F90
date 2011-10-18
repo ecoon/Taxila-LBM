@@ -85,14 +85,14 @@
     ! input data
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
 
-    rho1 = 0.d0
+    rho1 = 0.
     if (help) call PetscPrintf(options%comm, &
          "-rho_invading=<0,0>: component density of the invading fluid", ierr)
     nmax = dist%s
     call PetscOptionsGetRealArray(options%my_prefix, '-rho_invading', &
          rho1, nmax, flag, ierr)
 
-    rho2 = 0.d0
+    rho2 = 0.
     if (help) call PetscPrintf(options%comm, &
          "-rho_defending=<0,0>: component density of the defending fluid", ierr)
     nmax = dist%s
@@ -158,7 +158,7 @@
     end if
 
     ! set state at equilibrium       
-    nowalls = 0.d0
+    nowalls = 0.
     do m=1,dist%s
        call DiscretizationEquilf(dist%disc, rho, u, &
             nowalls, fi, m, components(m)%relax, dist)    
@@ -208,12 +208,12 @@
     ! input data
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
 
-    rho1 = 0.d0
+    rho1 = 0.
     if (help) call PetscPrintf(options%comm, "-rho_invading=<0,0>: ???", ierr)
     nmax = dist%s
     call PetscOptionsGetRealArray(options%my_prefix, '-rho_invading', rho1, nmax, flag, ierr)
 
-    rho2 = 0.d0
+    rho2 = 0.
     if (help) call PetscPrintf(options%comm, "-rho_defending=<0,0>: ???", ierr)
     nmax = dist%s
     call PetscOptionsGetRealArray(options%my_prefix, '-rho_defending', rho2, nmax, flag, ierr)
@@ -226,8 +226,8 @@
     call PetscOptionsGetBool(options%my_prefix, '-flush_direction_y', flushy, flag, ierr)
     
     ! initialize state
-    fi=0.d0
-    u=0.d0
+    fi=0.
+    u=0.
 
     ! flushing experiement 
     if (flushx) then
@@ -257,7 +257,7 @@
     end if
     
     ! set state at equilibrium       
-    nowalls = 0.d0
+    nowalls = 0.
     do m=1,dist%s
        call DiscretizationEquilf(dist%disc, rho, u, &
             nowalls, fi, m, components(m)%relax, dist)    
