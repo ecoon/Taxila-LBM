@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            15:15:25 MDT
-!!!     last modified:   14 September 2011
-!!!       at:            12:36:18 PDT
+!!!     last modified:   18 October 2011
+!!!       at:            13:48:12 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -87,8 +87,8 @@ contains
     nullify(relax%s5)
     nullify(relax%tau_mrt)
 
-    relax%d_k = 0. !2.d0/3.d0
-    relax%c_s2 = 1.d0/3.d0
+    relax%d_k = 0. 
+    relax%c_s2 = 1.d0/3.
 
     nullify(relax%data)
     relax%bag = 0
@@ -145,27 +145,27 @@ contains
     call PetscBagCreate(relax%comm, sizeofdata, relax%bag, ierr)
     call PetscBagGetData(relax%bag, relax%data, ierr)
 
-    call PetscBagRegisterScalar(relax%bag, relax%data%tau, 1.d0, &
+    call PetscBagRegisterScalar(relax%bag, relax%data%tau, ONE_S, &
          trim(options%my_prefix)//'tau_'//trim(relax%name), 'relaxation time', ierr)
     relax%tau => relax%data%tau
 
-    call PetscBagRegisterScalar(relax%bag, relax%data%s1, 1.d0, &
+    call PetscBagRegisterScalar(relax%bag, relax%data%s1, ONE_S, &
          trim(options%my_prefix)//'s1_'//trim(relax%name), 'MRT relaxation time', ierr)
     relax%s1 => relax%data%s1
 
-    call PetscBagRegisterScalar(relax%bag, relax%data%s2, 1.d0, &
+    call PetscBagRegisterScalar(relax%bag, relax%data%s2, ONE_S, &
          trim(options%my_prefix)//'s2_'//trim(relax%name), 'MRT relaxation time', ierr)
     relax%s2 => relax%data%s2
 
-    call PetscBagRegisterScalar(relax%bag, relax%data%s3, 1.d0, &
+    call PetscBagRegisterScalar(relax%bag, relax%data%s3, ONE_S, &
          trim(options%my_prefix)//'s3_'//trim(relax%name), 'MRT relaxation time', ierr)
     relax%s3 => relax%data%s3
    
-    call PetscBagRegisterScalar(relax%bag, relax%data%s4, 1.d0, &
+    call PetscBagRegisterScalar(relax%bag, relax%data%s4, ONE_S, &
          trim(options%my_prefix)//'s4_'//trim(relax%name), 'MRT relaxation time', ierr)
     relax%s4 => relax%data%s4
 
-    call PetscBagRegisterScalar(relax%bag, relax%data%s5, 1.d0, &
+    call PetscBagRegisterScalar(relax%bag, relax%data%s5, ONE_S, &
          trim(options%my_prefix)//'s5_'//trim(relax%name), 'MRT relaxation time', ierr)
     relax%s5 => relax%data%s5
 

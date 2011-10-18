@@ -67,14 +67,14 @@ contains
     PetscScalar,dimension(dist%info%ndims):: weightsum
     PetscErrorCode ierr
 
-    gradrho = 0.d0
-    weightsum = 0.d0
+    gradrho = 0.
+    weightsum = 0.
 
     do k=dist%info%zs,dist%info%ze
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
        if (walls(i,j,k).eq.0) then
-          weightsum = 0.d0
+          weightsum = 0.
 
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           !!!!! 4th order isotropy !!!!!
@@ -976,13 +976,13 @@ contains
     PetscScalar,dimension(dist%info%ndims):: weightsum
     PetscErrorCode ierr
 
-    gradrho = 0.d0
-    weightsum = 0.d0
+    gradrho = 0.
+    weightsum = 0.
 
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
        if (walls(i,j).eq.0) then
-          weightsum = 0.d0
+          weightsum = 0.
 
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           !!!!! 4th order isotropy !!!!!
@@ -1344,7 +1344,7 @@ contains
     do i=dist%info%xs,dist%info%xe
     if (walldata(i,j,k).eq.0) then
       do n=1,2*dist%info%ndims
-        if ((tmp(n,i,j,k) > 0.d0).and.(tmp(n,i,j,k) < 998.d0)) then
+        if ((tmp(n,i,j,k) > 0.).and.(tmp(n,i,j,k) < 998.)) then
           do d=1,dist%info%ndims
             forces(:,d,i,j,k) = forces(:,d,i,j,k) &
                  - 1./6.*rho(:,i,j,k)*walls%minerals(int(tmp(n,i,j,k)))%gw(:)
@@ -1352,7 +1352,7 @@ contains
         end if
       end do
       do n=2*dist%info%ndims+1,dist%b
-        if ((tmp(n,i,j,k) > 0.d0).and.(tmp(n,i,j,k) < 998.d0)) then
+        if ((tmp(n,i,j,k) > 0.).and.(tmp(n,i,j,k) < 998.)) then
           do d=1,dist%info%ndims
             forces(:,d,i,j,k) = forces(:,d,i,j,k) &
                  - 1./12.*rho(:,i,j,k)*walls%minerals(int(tmp(n,i,j,k)))%gw(:)
@@ -1393,7 +1393,7 @@ contains
     do i=dist%info%xs,dist%info%xe
     if (walldata(i,j).eq.0) then
       do n=1,2*dist%info%ndims
-        if ((tmp(n,i,j) > 0.d0).and.(tmp(n,i,j) < 998.d0)) then
+        if ((tmp(n,i,j) > 0.).and.(tmp(n,i,j) < 998.)) then
           do d=1,dist%info%ndims
             forces(:,d,i,j) = forces(:,d,i,j) &
                  - 1./3.*rho(:,i,j)*walls%minerals(int(tmp(n,i,j)))%gw(:)*dist%disc%ci(n,d)
@@ -1401,7 +1401,7 @@ contains
         end if
       end do
       do n=2*dist%info%ndims+1,dist%b
-        if ((tmp(n,i,j) > 0.d0).and.(tmp(n,i,j) < 998.d0)) then
+        if ((tmp(n,i,j) > 0.).and.(tmp(n,i,j) < 998.)) then
           do d=1,dist%info%ndims
             forces(:,d,i,j) = forces(:,d,i,j) &
                  - 1./12.*rho(:,i,j)*walls%minerals(int(tmp(n,i,j)))%gw(:)*dist%disc%ci(n,d)

@@ -91,3 +91,4 @@
   PetscScalar, parameter :: NEG_ONE_S = -1.  
   PetscScalar, parameter :: TWO_S = 2.
   PetscScalar, parameter :: THREE_S = 3.
+  PetscScalar, parameter :: NEG_NINENINENINE_S = -999.

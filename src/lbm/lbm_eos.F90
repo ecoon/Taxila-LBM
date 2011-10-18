@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         22 August 2011
 !!!       on:            15:53:59 MDT
-!!!     last modified:   25 August 2011
-!!!       at:            10:43:02 MDT
+!!!     last modified:   18 October 2011
+!!!       at:            13:43:19 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -55,15 +55,15 @@ contains
     eos%id = 0
     eos%eos_type = EOS_NULL
 
-    eos%omega = 0.344d0
-    eos%T = 0.d0
-    eos%T_c = 0.d0
-    eos%p_c = 0.d0
-    eos%R = 1.d0
-    eos%a = 0.d0
-    eos%b = 0.d0
-    eos%psi0 = 0.d0
-    eos%rho0 = 0.d0
+    eos%omega = 0.344
+    eos%T = 0.
+    eos%T_c = 0.
+    eos%p_c = 0.
+    eos%R = 1.
+    eos%a = 0.
+    eos%b = 0.
+    eos%psi0 = 0.
+    eos%rho0 = 0.
 
     eos%name = ''
   end function EOSCreate
@@ -205,7 +205,7 @@ contains
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
 
     ! set defaults
-    eos%rho0 = 1.d0
+    eos%rho0 = 1.
 
     ! get options
     if (help) call PetscPrintf(options%comm, '  -eos_sc_rho0_'//trim(eos%name)//&
@@ -223,7 +223,7 @@ contains
 
     PetscInt i
     do i=1,dist%info%rgxyzl
-      psi(m,i) = eos%rho0*(1.d0 - EXP(-rho(m,i)/eos%rho0))
+      psi(m,i) = eos%rho0*(1. - EXP(-rho(m,i)/eos%rho0))
     end do
   end subroutine EOSApply_SC
 
@@ -240,8 +240,8 @@ contains
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
 
     ! set defaults
-    eos%rho0 = 1.d0
-    eos%psi0 = 1.d0
+    eos%rho0 = 1.
+    eos%psi0 = 1.
 
     ! get options
     if (help) call PetscPrintf(options%comm, '  -eos_thermo_psi0_'//trim(eos%name)//&
@@ -279,8 +279,8 @@ contains
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
 
     ! set defaults
-    eos%a = 2.d0/49.d0
-    eos%b = 2.d0/21.d0
+    eos%a = 2.d0/49.
+    eos%b = 2.d0/21.
 
     if (help) call PetscPrintf(options%comm, '  -eos_pr_a_'//trim(eos%name)//&
          '=2/49:'//' coefficient a\n', ierr)
@@ -292,18 +292,18 @@ contains
          eos%b, flag, ierr)
 
     ! from these, calculate T_c and p_c
-    eos%T_c = eos%a/eos%b*0.0778d0/0.45724d0/eos%R
-    eos%p_c = 0.0778d0*eos%R*eos%T_c/eos%b
+    eos%T_c = eos%a/eos%b*0.0778/0.45724/eos%R
+    eos%p_c = 0.0778*eos%R*eos%T_c/eos%b
 
     ! get T, or default to T/T_c = 0.9
-    eos%T = 0.9d0*eos%T_c
+    eos%T = 0.9*eos%T_c
     if (help) call PetscPrintf(options%comm, '  -eos_pr_T_'//trim(eos%name)//&
          '=1.:'//' temperature (LU)\n', ierr)
     call PetscOptionsGetReal(options%my_prefix, '-eos_pr_T_'//trim(eos%name), &
          eos%T, flag, ierr)
 
     ! get omega, or default to water
-    eos%omega = 0.344d0
+    eos%omega = 0.344
     if (help) call PetscPrintf(options%comm, '  -eos_pr_omega_'//trim(eos%name)//&
          '=0.344:'//' coefficient\n', ierr)
     call PetscOptionsGetReal(options%my_prefix, '-eos_pr_omega_'//trim(eos%name), &
@@ -320,12 +320,12 @@ contains
     PetscInt i
     PetscScalar alpha   
 
-    alpha = (1.d0 + (0.37464d0 + 1.54226d0*eos%omega - 0.26992d0*eos%omega**2)*(1.d0 - & 
+    alpha = (1. + (0.37464 + 1.54226*eos%omega - 0.26992*eos%omega**2)*(1. - & 
             SQRT(eos%T/eos%T_c)))**2
     do i=1,dist%info%rgxyzl
-      psi(m,i) = SQRT( 2.d0*( rho(m,i)*eos%R*eos%T/(1.d0 - eos%b*rho(m,i)) - &
-                 eos%a*alpha*rho(m,i)**2/(1.d0 + 2.d0*eos%b*rho(m,i) - eos%b**2*rho(m,i)**2) &
-                 - rho(m,i)/3.d0 )/(dist%disc%c_0*g_mm ) )
+      psi(m,i) = SQRT( 2.*( rho(m,i)*eos%R*eos%T/(1. - eos%b*rho(m,i)) - &
+                 eos%a*alpha*rho(m,i)**2/(1. + 2.*eos%b*rho(m,i) - eos%b**2*rho(m,i)**2) &
+                 - rho(m,i)/3. )/(dist%disc%c_0*g_mm ) )
     end do
   end subroutine EOSApply_PR
 end module LBM_EOS_module
