@@ -95,26 +95,26 @@ contains
 
     disc%ffw = 0.0
     if(disc%deriv_order.eq.4) then
-      disc%ffw(1) = 1./3.
-      disc%ffw(2) = 1./12.
+      disc%ffw(1) = 1.d0/3.
+      disc%ffw(2) = 1.d0/12.
     end if
     
     if(disc%deriv_order.eq.8) then 
-      disc%ffw(1) = 4./21.
-      disc%ffw(2) = 4./45.
-      disc%ffw(4) = 1./60.
-      disc%ffw(5) = 2./315.
-      disc%ffw(8) = 1./5040.
+      disc%ffw(1) = 4.d0/21.
+      disc%ffw(2) = 4.d0/45.
+      disc%ffw(4) = 1.d0/60.
+      disc%ffw(5) = 2.d0/315.
+      disc%ffw(8) = 1.d0/5040.
     end if
 
     if(disc%deriv_order.eq.10) then 
-      disc%ffw( 1) = 262./1785.
-      disc%ffw( 2) = 93./1190.
-      disc%ffw( 4) = 7./340.
-      disc%ffw( 5) = 6./595.
-      disc%ffw( 8) = 9./9520.
-      disc%ffw( 9) = 2./5355.
-      disc%ffw(10) = 1./7140.
+      disc%ffw( 1) = 262.d0/1785.
+      disc%ffw( 2) = 93.d0/1190.
+      disc%ffw( 4) = 7.d0/340.
+      disc%ffw( 5) = 6.d0/595.
+      disc%ffw( 8) = 9.d0/9520.
+      disc%ffw( 9) = 2.d0/5355.
+      disc%ffw(10) = 1.d0/7140.
     end if
 
   end subroutine DiscretizationSetUp_D2Q9
@@ -128,13 +128,13 @@ contains
      
     oneontau = 1.d0/relax%tau
     if (relax%mode .eq. RELAXATION_MODE_MRT) then
-       relax%tau_mrt(0) = oneontau !1.d0
-       relax%tau_mrt(1) = relax%s1 !0.7d0
-       relax%tau_mrt(2) = relax%s2 !1.d0 !1.5d0
-       relax%tau_mrt(3) = oneontau !1.d0
-       relax%tau_mrt(4) = relax%s3 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !0.8d0
-       relax%tau_mrt(5) = oneontau !1.d0
-       relax%tau_mrt(6) = relax%s3 !8.d0*(2.d0-oneontau)/(8.d0-oneontau) !0.8d0
+       relax%tau_mrt(0) = oneontau 
+       relax%tau_mrt(1) = relax%s1 
+       relax%tau_mrt(2) = relax%s2 
+       relax%tau_mrt(3) = oneontau 
+       relax%tau_mrt(4) = relax%s3 
+       relax%tau_mrt(5) = oneontau 
+       relax%tau_mrt(6) = relax%s3 
        relax%tau_mrt(7) = oneontau
        relax%tau_mrt(8) = oneontau
     end if
@@ -167,13 +167,13 @@ contains
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
     if (walls(i,j).eq.0) then
-       feq(m,0,i,j) = rho(m,i,j)*((1.d0 + relax%d_k*5.d0)/6.d0 - 2.d0*usqr(i,j)/3.d0)
+       feq(m,0,i,j) = rho(m,i,j)*((1. + relax%d_k*5.)/6. - 2.*usqr(i,j)/3.)
        do n=1,dist%b
           udote = sum(disc%ci(n,:)*u(m,:,i,j), 1)
           feq(m,n,i,j)= disc%weights(n)*rho(m,i,j)* &
-               (1.5d0*(1.d0-relax%d_k) + udote/relax%c_s2 &
-               + udote*udote/(2.d0*relax%c_s2*relax%c_s2) &
-               - usqr(i,j)/(2.d0*relax%c_s2))
+               (1.5*(1.-relax%d_k) + udote/relax%c_s2 &
+               + udote*udote/(2.*relax%c_s2*relax%c_s2) &
+               - usqr(i,j)/(2.*relax%c_s2))
        end do
     end if
     end do
@@ -189,7 +189,7 @@ contains
 
     PetscScalar rhovtmp
     PetscScalar,dimension(0:dist%b)::ftmp
-    integer m
+    PetscInt m
     rhovtmp = 0
 
     ! written for the NORTH boundary.

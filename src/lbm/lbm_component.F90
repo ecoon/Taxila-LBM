@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            13:43:00 MDT
-!!!     last modified:   23 August 2011
-!!!       at:            16:39:11 MDT
+!!!     last modified:   18 October 2011
+!!!       at:            13:39:35 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -184,25 +184,25 @@ contains
     call PetscBagSetName(component%bag, TRIM(options%my_prefix)//component%name, "", ierr)
     call PetscBagGetData(component%bag, component%data, ierr)
 
-    call PetscBagRegisterScalar(component%bag, component%data%mm, 1.d0, &
+    call PetscBagRegisterScalar(component%bag, component%data%mm, ONE_S, &
          trim(options%my_prefix)//'mm_'//trim(component%name), 'molecular mass', ierr)
     component%mm => component%data%mm
 
-    call PetscBagRegisterScalar(component%bag, component%data%viscosity, -999.d0, &
+    call PetscBagRegisterScalar(component%bag, component%data%viscosity, NEG_NINENINENINE_S, &
          trim(options%my_prefix)//'viscosity_'//trim(component%name), 'kinematic viscosity [m^2/s], defaults to ND value', &
          ierr)
     component%viscosity => component%data%viscosity
 
-    call PetscBagRegisterScalar(component%bag, component%data%density, -999.d0, &
+    call PetscBagRegisterScalar(component%bag, component%data%density, NEG_NINENINENINE_S, &
          trim(options%my_prefix)//'density_'//trim(component%name), &
          'density [kg/m^3], defaults to ND value', ierr)
     component%density => component%data%density
 
-    component%relax%d_k = 1.d0 - 2.d0/(3.d0*component%mm) ! d_k = 1/3 for mm=1
+    component%relax%d_k = 1. - 2./(3.*component%mm) ! d_k = 1/3 for mm=1
 
     do lcv=1,component%s
        write(paramname, '(I1, I1)') component%id, lcv
-       call PetscBagRegisterScalar(component%bag, component%data%gf(lcv), 0.d0, &
+       call PetscBagRegisterScalar(component%bag, component%data%gf(lcv), ZERO_S, &
             trim(options%my_prefix)//'g_'//trim(paramname), 'component-component interaction potential coefficient', ierr)
     end do
     component%gf => component%data%gf(1:options%ncomponents)

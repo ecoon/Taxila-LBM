@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         21 June 2011
 !!!       on:            10:44:10 MDT
-!!!     last modified:   21 June 2011
-!!!       at:            12:43:09 MDT
+!!!     last modified:   18 October 2011
+!!!       at:            13:38:22 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -142,7 +142,7 @@ contains
       call PetscOptionsGetString(options%my_prefix, "-component"//trim(paramname)//"_name", &
            componentname, flag, ierr)
       paramname = 'gw_'//trim(mineral%name)//'_'//trim(componentname)
-      call PetscBagRegisterScalar(mineral%bag, mineral%data%gw(lcv), 0.d0, &
+      call PetscBagRegisterScalar(mineral%bag, mineral%data%gw(lcv), ZERO_S, &
            trim(options%my_prefix)//trim(paramname), &
            'mineral-component interaction potential coefficient', ierr)
     end do

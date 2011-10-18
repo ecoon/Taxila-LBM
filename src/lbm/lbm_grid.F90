@@ -6,7 +6,7 @@
 !!!     created:         28 March 2011
 !!!       on:            09:24:24 MDT
 !!!     last modified:   18 October 2011
-!!!       at:            12:59:48 MDT
+!!!       at:            13:47:21 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -272,11 +272,11 @@ contains
        call DMDASetUniformCoordinates(grid%da(ONEDOF), &
             grid%info%corners(X_DIRECTION,1), grid%info%corners(X_DIRECTION,2), &
             grid%info%corners(Y_DIRECTION,1), grid%info%corners(Y_DIRECTION,2), &
-            0.d0, 1.d0, ierr)
+            ZERO_S, ONE_S, ierr)
        call DMDASetUniformCoordinates(grid%da(NFLOWDOF), &
             grid%info%corners(X_DIRECTION,1), grid%info%corners(X_DIRECTION,2), &
             grid%info%corners(Y_DIRECTION,1), grid%info%corners(Y_DIRECTION,2), &
-            0.d0, 1.d0, ierr)
+            ZERO_S, ONE_S, ierr)
     end if
     CHKERRQ(ierr)
   end subroutine GridSetUp

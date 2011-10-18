@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            15:34:44 MDT
-!!!     last modified:   05 May 2011
-!!!       at:            10:29:53 MDT
+!!!     last modified:   18 October 2011
+!!!       at:            13:50:51 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -157,7 +157,7 @@ contains
     call PetscBagGetData(specie%bag, specie%data, ierr)
 
     ! register data
-    call PetscBagRegisterInt(specie%bag, specie%data%component, 1, &
+    call PetscBagRegisterInt(specie%bag, specie%data%component, ONE_I, &
          trim(options%my_prefix)//'component_'//trim(specie%name), &
          'Component of which specie is a component', ierr)
     specie%component => specie%data%component
