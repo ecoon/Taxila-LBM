@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            09:24:24 MDT
-!!!     last modified:   14 September 2011
-!!!       at:            15:59:56 PDT
+!!!     last modified:   18 October 2011
+!!!       at:            10:33:20 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -105,6 +105,8 @@ contains
     ! update a few things
     if (grid%info%stencil_size_rho < 0) then
        select case(options%deriv_order)
+       case (0)
+          grid%info%stencil_size_rho = 0
        case (4)
           grid%info%stencil_size_rho = 1
        case (8)

@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         09 December 2010
 !!!       on:            14:16:32 MST
-!!!     last modified:   14 September 2011
-!!!       at:            12:14:16 PDT
+!!!     last modified:   18 October 2011
+!!!       at:            10:33:02 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -279,7 +279,7 @@
       end if
       
       if (help) call PetscPrintf(options%comm, &
-           "  -derivative_order <4>: \n", ierr)
+           "  -derivative_order <4>: order of fluid-fluid term derivatives\n", ierr)
       call PetscOptionsGetInt(options%my_prefix,'-derivative_order', options%deriv_order,flag,ierr)
 
       wpnum = 0
