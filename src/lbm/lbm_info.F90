@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         06 December 2010
 !!!       on:            15:19:22 MST
-!!!     last modified:   14 September 2011
-!!!       at:            12:17:03 PDT
+!!!     last modified:   18 October 2011
+!!!       at:            13:01:55 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ ldeo.columbia.edu
 !!!  
@@ -41,8 +41,8 @@ module LBM_Info_module
      PetscInt ys,ye,yl,gys,gye,gyl,rgys,rgye,rgyl
      PetscInt zs,ze,zl,gzs,gze,gzl,rgzs,rgze,rgzl
      PetscInt xyzl,gxyzl,rgxyzl
-     PetscInt nproc_x,nproc_y,nproc_z,nprocs
-     PetscInt rank
+     PetscInt nproc_x,nproc_y,nproc_z
+     PetscMPIInt rank, nprocs
      PetscReal,pointer,dimension(:) :: gridsize
      PetscInt,pointer,dimension(:):: ownership_x,ownership_y,ownership_z
 
@@ -141,7 +141,9 @@ contains
     
     PetscScalar default
     PetscSizeT sizeofint, sizeofscalar, sizeofbool, sizeofdata
+    PetscInt one
 
+    one = 1
     ! grab, allocate sizes
     info%ndims = options%ndims
     allocate(info%gridsize(1:info%ndims))
@@ -172,11 +174,11 @@ contains
     info%NZ => info%data%NZ
 
     ! -- stencil info
-    call PetscBagRegisterInt(info%bag, info%data%stencil_size, 1, &
+    call PetscBagRegisterInt(info%bag, info%data%stencil_size, ONE_I, &
          trim(options%my_prefix)//'stencil_size', &
          'number of grid points in the stencil', ierr)
     info%stencil_size => info%data%stencil_size
-    call PetscBagRegisterInt(info%bag, info%data%stencil_size_rho, -1, &
+    call PetscBagRegisterInt(info%bag, info%data%stencil_size_rho, NEG_ONE_I, &
          trim(options%my_prefix)//'stencil_size_rho', &
          'number of grid points in the stencil for rho -- sets higher order terms', ierr)
     info%stencil_size_rho => info%data%stencil_size_rho
@@ -196,33 +198,33 @@ contains
     info%periodic => info%data%periodic
 
     ! -- grid corners
-    call PetscBagRegisterScalar(info%bag, info%data%corners(X_DIRECTION,1), 0.d0, &
+    call PetscBagRegisterScalar(info%bag, info%data%corners(X_DIRECTION,1), ZERO_S, &
          trim(options%my_prefix)//'x_start', 'lower x coordinate [m]', ierr)
     if (info%periodic(X_DIRECTION)) then
-       default = 1.d0*(info%NX)
+       default = 1.*(info%NX)
     else
-       default = 1.d0*(info%NX-1)
+       default = 1.*(info%NX-1)
     end if
     call PetscBagRegisterScalar(info%bag, info%data%corners(X_DIRECTION,2), default, &
          trim(options%my_prefix)//'x_end', 'upper x coordinate [m]', ierr)
 
-    call PetscBagRegisterScalar(info%bag, info%data%corners(Y_DIRECTION,1), 0.d0, &
+    call PetscBagRegisterScalar(info%bag, info%data%corners(Y_DIRECTION,1), ZERO_S, &
          trim(options%my_prefix)//'y_start', 'lower y coordinate [m]', ierr)
     if (info%periodic(Y_DIRECTION)) then
-       default = 1.d0*(info%NY)
+       default = 1.*(info%NY)
     else
-       default = 1.d0*(info%NY-1)
+       default = 1.*(info%NY-1)
     end if
     call PetscBagRegisterScalar(info%bag, info%data%corners(Y_DIRECTION,2), default, &
          trim(options%my_prefix)//'y_end', 'upper y coordinate [m]', ierr)
 
     if (info%ndims > 2) then
-       call PetscBagRegisterScalar(info%bag, info%data%corners(Z_DIRECTION,1), 0.d0, &
+       call PetscBagRegisterScalar(info%bag, info%data%corners(Z_DIRECTION,1), ZERO_S, &
             trim(options%my_prefix)//'z_start', 'lower z coordinate [m]', ierr)
        if (info%periodic(Z_DIRECTION)) then
-          default = 1.d0*(info%NZ)
+          default = 1.*(info%NZ)
        else
-          default = 1.d0*(info%NZ-1)
+          default = 1.*(info%NZ-1)
        end if
        call PetscBagRegisterScalar(info%bag, info%data%corners(Z_DIRECTION,2), default, &
             trim(options%my_prefix)//'z_end', 'upper z coordinate [m]', ierr)
@@ -244,27 +246,28 @@ contains
     ! calculate grid spacing
     if (info%periodic(X_DIRECTION)) then
        info%gridsize(X_DIRECTION) = (info%corners(X_DIRECTION,2) - &
-            info%corners(X_DIRECTION, 1))/dble(info%NX)
+            info%corners(X_DIRECTION, 1))/info%NX
     else 
        info%gridsize(X_DIRECTION) = (info%corners(X_DIRECTION,2) - &
-            info%corners(X_DIRECTION, 1))/dble(info%NX-1)
+            info%corners(X_DIRECTION, 1))/(info%NX-1)
     end if
     if (info%periodic(Y_DIRECTION)) then
        info%gridsize(Y_DIRECTION) = (info%corners(Y_DIRECTION,2) - &
-            info%corners(Y_DIRECTION, 1))/dble(info%NY)
+            info%corners(Y_DIRECTION, 1))/(info%NY)
     else 
        info%gridsize(Y_DIRECTION) = (info%corners(Y_DIRECTION,2) - &
-            info%corners(Y_DIRECTION, 1))/dble(info%NY-1)
+            info%corners(Y_DIRECTION, 1))/(info%NY-1)
     end if
     if (info%ndims > 2) then
        if (info%periodic(Z_DIRECTION)) then
           info%gridsize(Z_DIRECTION) = (info%corners(Z_DIRECTION,2) - &
-               info%corners(Z_DIRECTION, 1))/dble(info%NZ)
+               info%corners(Z_DIRECTION, 1))/(info%NZ)
        else 
           info%gridsize(Z_DIRECTION) = (info%corners(Z_DIRECTION,2) - &
-               info%corners(Z_DIRECTION, 1))/dble(info%NZ-1)
+               info%corners(Z_DIRECTION, 1))/(info%NZ-1)
        end if
     end if
+
     call MPI_Comm_rank(info%comm, info%rank, ierr)
     call MPI_Comm_size(info%comm, info%nprocs, ierr)
   end subroutine InfoSetFromOptions

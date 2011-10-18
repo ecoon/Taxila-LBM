@@ -34,7 +34,7 @@ PetscBool function StringCompare(string1,string2,n)
 
   implicit none
 
-  PetscInt :: i, n
+  integer :: i, n
   character(len=n) :: string1, string2
   
   do i=1,n
@@ -60,7 +60,7 @@ PetscBool function StringCompareIgnoreCase(string1,string2,n)
 
   implicit none
 
-  PetscInt :: i, n
+  integer :: i, n
   character(len=n) :: string1, string2
   
   character(len=n) :: upper1, upper2
@@ -94,7 +94,7 @@ subroutine StringToUpper(string)
       
   implicit none
 
-  PetscInt :: i
+  integer :: i
   character(len=*) :: string
 
   do i=1,len_trim(string)
@@ -116,7 +116,7 @@ subroutine StringToLower(string)
       
   implicit none
 
-  PetscInt :: i
+  integer :: i
   character(len=*) :: string
 
   do i=1,len_trim(string)
@@ -139,7 +139,7 @@ subroutine StringReadQuotedWord(string, name, return_blank_error, ierr)
 
   implicit none
 
-  PetscInt :: i, begins, ends, realends, length
+  integer :: i, begins, ends, realends, length
   PetscBool :: return_blank_error ! Return an error for a blank line
                                 ! Therefore, a blank line is not acceptable.
   character(len=*) :: string
@@ -238,8 +238,8 @@ subroutine StringAdjustl(string)
 
   character(len=*) :: string
   
-  PetscInt :: i
-  PetscInt :: string_length
+  integer :: i
+  integer :: string_length
   character(len=1) :: tab
 
   ! We have to manually convert any leading tabs into spaces, as the 
@@ -272,7 +272,7 @@ function StringNull(string)
   character(len=*) :: string
 
   PetscBool :: StringNull
-  PetscInt :: length
+  integer :: length
 
   length = len_trim(adjustl(string))
   if (length > 0) then
