@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         21 June 2011
 !!!       on:            10:07:45 MDT
-!!!     last modified:   21 September 2011
-!!!       at:            08:54:21 MDT
+!!!     last modified:   18 October 2011
+!!!       at:            10:41:23 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -73,7 +73,7 @@ contains
   subroutine WallsDestroy(walls, ierr)
     type(walls_type) walls
     PetscErrorCode ierr
-    integer lcv
+    PetscInt lcv
 
     if (associated(walls%minerals)) then
       do lcv=1,walls%nminerals
@@ -103,7 +103,7 @@ contains
     PetscErrorCode ierr
 
     PetscScalar,parameter:: eps=1.e-15 ! slightly larger than machine epsilon
-    integer lcv, lcv2
+    PetscInt lcv, lcv2
     PetscBool help
     PetscBool flag
 
@@ -137,7 +137,7 @@ contains
 
   subroutine WallsSetUp(walls)
     type(walls_type) walls
-    integer lcv
+    PetscInt lcv
     PetscErrorCode ierr
     PetscViewer viewer
     external initialize_walls

@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         08 December 2010
 !!!       on:            14:35:16 MST
-!!!     last modified:   25 May 2011
-!!!       at:            15:31:15 MDT
+!!!     last modified:   18 October 2011
+!!!       at:            13:09:32 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -64,9 +64,9 @@ module Timing_module
 
     subroutine TimingEnd(timing)
       type(timing_type) timing
-      integer id, nprocs
-      integer ierr
-      real mean_time
+      PetscMPIInt id, nprocs
+      PetscErrorCode ierr
+      PetscScalar mean_time
 
       call system_clock (timing%time_end, timing%rate, timing%max)
       timing%time = real(timing%time_end - timing%time_start)/real(timing%rate)
@@ -82,21 +82,21 @@ module Timing_module
 
     subroutine TimingEndPerUnit1(timing, numunits, unitname)
       type(timing_type) timing
-      integer numunits
+      PetscInt numunits
       character(len=MAXWORDLENGTH) unitname
-      call TimingEndPerUnit2(timing, numunits, unitname, .FALSE.)
+      call TimingEndPerUnit2(timing, numunits, unitname, PETSC_FALSE)
     end subroutine TimingEndPerUnit1
 
     subroutine TimingEndPerUnit2(timing, numunits, unitname, supress_output)
       ! same as TimingEnd, this just divides by a factor of the
       ! number of units, for instance the number of timesteps
       type(timing_type) timing
-      integer numunits
+      PetscInt numunits
       character(len=MAXWORDLENGTH) unitname
-      logical supress_output
+      PetscBool supress_output
 
-      integer id, nprocs
-      integer ierr
+      PetscMPIInt id, nprocs
+      PetscErrorCode ierr
       real mean_time
       integer charlen
 
@@ -110,7 +110,7 @@ module Timing_module
          charlen = LEN_TRIM(unitname)
          if (.not.supress_output) then
             write(*,*) 'Timing:', timing%name
-            write(*,*) '  took (per unit', unitname(1:charlen), ') (s):', mean_time/real(nprocs)/real(numunits)
+            write(*,*) '  took (per unit', unitname(1:charlen), ') (s):', mean_time/nprocs/numunits
          end if
       end if
     end subroutine TimingEndPerUnit2

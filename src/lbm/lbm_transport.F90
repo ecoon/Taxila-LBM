@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         04 April 2011
 !!!       on:            14:35:39 MDT
-!!!     last modified:   14 September 2011
-!!!       at:            12:37:17 PDT
+!!!     last modified:   18 October 2011
+!!!       at:            10:43:32 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -100,7 +100,7 @@ contains
   subroutine TransportDestroy(transport, ierr)
     type(transport_type),pointer:: transport
     PetscErrorCode ierr
-    integer lcv
+    PetscInt lcv
 
     if (associated(transport%disc)) call DiscretizationDestroy(transport%disc, ierr)
     if (associated(transport%species)) then
@@ -130,7 +130,7 @@ contains
     type(transport_type) transport
     type(options_type) options
     PetscErrorCode ierr
-    integer lcv
+    PetscInt lcv
     PetscBool help
     PetscBool flag
     PetscInt nmax
@@ -281,7 +281,7 @@ contains
 
   subroutine TransportSetUp(transport) 
     type(transport_type) transport
-    integer lcv
+    PetscInt lcv
     PetscErrorCode ierr
     PetscScalar zero
     zero = 0.d0

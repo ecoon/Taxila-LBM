@@ -6,7 +6,7 @@
 !!!     created:         28 March 2011
 !!!       on:            09:24:24 MDT
 !!!     last modified:   18 October 2011
-!!!       at:            10:33:20 MDT
+!!!       at:            12:59:48 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -59,7 +59,7 @@ contains
   subroutine GridDestroy(grid, ierr)
     type(grid_type) grid
     PetscErrorCode ierr
-    integer lcv
+    PetscInt lcv
 
     if (associated(grid%da)) then
        do lcv=1,grid%nda
@@ -113,6 +113,8 @@ contains
           grid%info%stencil_size_rho = 2
        case (10)
           grid%info%stencil_size_rho = 3
+       case default
+          grid%info%stencil_size_rho = 1
        end select
     end if
 
@@ -137,7 +139,7 @@ contains
     PetscInt ys,gys,rgys
     PetscInt zs,gzs,rgzs
 
-    integer lcv
+    PetscInt lcv
 
     btype(:) = DMDA_BOUNDARY_GHOSTED
     if (grid%info%periodic(X_DIRECTION)) btype(X_DIRECTION) = DMDA_BOUNDARY_PERIODIC

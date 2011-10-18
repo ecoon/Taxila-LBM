@@ -226,9 +226,9 @@
            call WallsOutputDiagnostics(lbm%walls, lbm%io)
            call PetscLogEventEnd(logger%event_output_walls,ierr)
            ! view grid coordinates
-           call PetscLogEventBegin(logger%event_output_grid,ierr)
-           call GridViewCoordinates(lbm%grid, lbm%io)
-           call PetscLogEventEnd(logger%event_output_grid,ierr)
+!           call PetscLogEventBegin(logger%event_output_grid,ierr)
+!           call GridViewCoordinates(lbm%grid, lbm%io)
+!           call PetscLogEventEnd(logger%event_output_grid,ierr)
          end if
       else
          ! just get arrays
