@@ -5,8 +5,8 @@
 ###     version:         
 ###     created:         25 January 2011
 ###       on:            10:53:33 MST
-###     last modified:   22 August 2011
-###       at:            11:52:20 MDT
+###     last modified:   17 October 2011
+###       at:            14:45:13 MDT
 ###     URL:             http://www.ldeo.columbia.edu/~ecoon/
 ###     email:           ecoon _at_ lanl.gov
 ###  
@@ -70,7 +70,8 @@ class SolutionReader(object):
 
         print 'loading', self._file_prefix+name
         data = PetscBinaryRead.readBinaryFile(self._file_prefix+name)
-        assert len(data) == 1
+        if len(data) != 1:
+            return data
         vec = data[0]
         
         ndofs = len(vec)/np.array(self._size).prod()
