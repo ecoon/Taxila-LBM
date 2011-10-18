@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
-!!!     last modified:   19 September 2011
-!!!       at:            15:29:39 MDT
+!!!     last modified:   18 October 2011
+!!!       at:            10:42:52 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -138,7 +138,7 @@ contains
   subroutine FlowDestroy(flow, ierr)
     type(flow_type) flow
     PetscErrorCode ierr
-    integer lcv
+    PetscInt lcv
 
     if (associated(flow%disc)) call DiscretizationDestroy(flow%disc, ierr)
     if (associated(flow%components)) then
@@ -171,7 +171,7 @@ contains
     type(flow_type) flow
     type(options_type) options
     PetscErrorCode ierr
-    integer lcv, lcv2
+    PetscInt lcv, lcv2
     PetscBool help
     PetscInt nmax
     PetscBool bcvalue
@@ -481,7 +481,7 @@ contains
 
   subroutine FlowSetUp(flow) 
     type(flow_type) flow
-    integer lcv
+    PetscInt lcv
     PetscErrorCode ierr
     PetscScalar zero
     zero = 0.d0

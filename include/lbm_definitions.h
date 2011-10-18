@@ -68,9 +68,26 @@
   ! cruft for use with pflotran
   PetscInt, parameter :: LBM_MODE = 8
 
-  ! EOS types, see Yuan and Schaeffer '06
+  ! EOS types, see Yuan and Schaeffer 06
   PetscInt, parameter :: EOS_NULL = 0
   PetscInt, parameter :: EOS_DENSITY = 1    ! psi = rho
   PetscInt, parameter :: EOS_SC = 2         ! psi = rho0*(1-exp(-rho)), Shan & Chen '93/'94
   PetscInt, parameter :: EOS_PR = 3         ! psi = cubic law from Peng & Robinson '??, 
   PetscInt, parameter :: EOS_THERMO = 4     ! psi = psi0*exp(-rho0/rho), see Shan & Chen '94
+
+
+  ! this sucks
+  PetscInt, parameter :: ZERO_I = 0
+  PetscInt, parameter :: ONE_I = 1  
+  PetscInt, parameter :: NEG_ONE_I = -1  
+  PetscInt, parameter :: TWO_I = 2
+  PetscInt, parameter :: THREE_I = 3
+  PetscInt, parameter :: FOUR_I = 4
+  PetscInt, parameter :: EIGHT_I = 8
+  PetscInt, parameter :: TEN_I = 10
+
+  PetscScalar, parameter :: ZERO_S = 0.
+  PetscScalar, parameter :: ONE_S = 1.  
+  PetscScalar, parameter :: NEG_ONE_S = -1.  
+  PetscScalar, parameter :: TWO_S = 2.
+  PetscScalar, parameter :: THREE_S = 3.
