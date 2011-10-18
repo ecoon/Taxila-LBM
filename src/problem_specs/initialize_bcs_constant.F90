@@ -118,30 +118,30 @@
 
     xp3_ave = 3.8e-3
     xm3_ave = 3.8e-3
-    xp3_max = 0.d0
-    xm3_max = 0.d0
-    xp3_ave_p = 0.d0
-    xm3_ave_p = 0.d0
-    xp3_ave_f = 0.d0
-    xm3_ave_f = 0.d0
+    xp3_max = 0.
+    xm3_max = 0.
+    xp3_ave_p = 0.
+    xm3_ave_p = 0.
+    xp3_ave_f = 0.
+    xm3_ave_f = 0.
 
     yp3_ave = 3.8e-3
     ym3_ave = 3.8e-3
-    yp3_max = 0.d0
-    ym3_max = 0.d0
-    yp3_ave_p = 0.d0
-    ym3_ave_p = 0.d0
-    yp3_ave_f = 0.d0
-    ym3_ave_f = 0.d0
+    yp3_max = 0.
+    ym3_max = 0.
+    yp3_ave_p = 0.
+    ym3_ave_p = 0.
+    yp3_ave_f = 0.
+    ym3_ave_f = 0.
 
     zp3_ave = 3.8e-3
     zm3_ave = 3.8e-3
-    zp3_max = 0.d0
-    zm3_max = 0.d0
-    zp3_ave_p = 0.d0
-    zm3_ave_p = 0.d0
-    zp3_ave_f = 0.d0
-    zm3_ave_f = 0.d0
+    zp3_max = 0.
+    zm3_max = 0.
+    zp3_ave_p = 0.
+    zm3_ave_p = 0.
+    zp3_ave_f = 0.
+    zm3_ave_f = 0.
 
     if (help) call PetscPrintf(options%comm, "-bc_pressure_{xyz}{mp}_component*: "// &
          "density of component * for a Dirichlet BC\n", ierr)
@@ -559,21 +559,21 @@
 
     xp3_ave = 3.8e-3
     xm3_ave = 3.8e-3
-    xp3_max = 0.d0
-    xm3_max = 0.d0
-    xp3_ave_p = 0.d0
-    xm3_ave_p = 0.d0
-    xp3_ave_f = 0.d0
-    xm3_ave_f = 0.d0
+    xp3_max = 0.
+    xm3_max = 0.
+    xp3_ave_p = 0.
+    xm3_ave_p = 0.
+    xp3_ave_f = 0.
+    xm3_ave_f = 0.
 
     yp3_ave = 3.8e-3
     ym3_ave = 3.8e-3
-    yp3_max = 0.d0
-    ym3_max = 0.d0
-    yp3_ave_p = 0.d0
-    ym3_ave_p = 0.d0
-    yp3_ave_f = 0.d0
-    ym3_ave_f = 0.d0
+    yp3_max = 0.
+    ym3_max = 0.
+    yp3_ave_p = 0.
+    ym3_ave_p = 0.
+    yp3_ave_f = 0.
+    ym3_ave_f = 0.
 
     if (help) call PetscPrintf(options%comm, "-bc_pressure_{xy}{mp}_component*: "// &
          "density of component * for a Dirichlet BC\n", ierr)

@@ -84,11 +84,11 @@
     PetscInt direction
 
     ! initialize state
-    fi = 0.d0
-    u = 0.d0
+    fi = 0.
+    u = 0.
 
-    xp3_ave_p = 0.d0
-    xm3_ave_p = 0.d0
+    xp3_ave_p = 0.
+    xm3_ave_p = 0.
 
     direction = 1
     call PetscOptionsGetInt(options%my_prefix, '-gradient_direction', direction, &
@@ -134,7 +134,7 @@
     end select
     
     ! set state at equilibrium       
-    nowalls = 0.d0
+    nowalls = 0.
     call DiscretizationEquilf(dist%disc, rho, u, nowalls, fi, 1, components(1)%relax, dist)    
     return
   end subroutine initialize_state_d3
@@ -174,11 +174,11 @@
     PetscInt direction
 
     ! initialize state
-    fi = 0.d0
-    u = 0.d0
+    fi = 0.
+    u = 0.
 
-    xp3_ave_p = 0.d0
-    xm3_ave_p = 0.d0
+    xp3_ave_p = 0.
+    xm3_ave_p = 0.
 
     direction = 1
     call PetscOptionsGetInt(options%my_prefix, '-gradient_direction', direction, &
@@ -212,7 +212,7 @@
     end select
 
     ! set state at equilibrium       
-    nowalls = 0.d0
+    nowalls = 0.
     call DiscretizationEquilf(dist%disc, rho, u, nowalls, fi, 1, components(1)%relax, dist)    
     return
   end subroutine initialize_state_d2
