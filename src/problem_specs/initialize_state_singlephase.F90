@@ -78,10 +78,10 @@
     ! initialize state
     fi = 0.0
     u = 0.0
-    rho = 1.d0
+    rho = 1.
     
     ! set state at equilibrium       
-    nowalls = 0.d0
+    nowalls = 0.
     call DiscretizationEquilf(dist%disc, rho, u, nowalls, fi, 1, components(1)%relax, dist)    
     return
   end subroutine initialize_state_d3
@@ -117,12 +117,12 @@
          dist%info%rgys:dist%info%rgye):: nowalls
 
     ! initialize state
-    fi = 0.d0
-    u = 0.d0
-    rho = 1.d0
+    fi = 0.
+    u = 0.
+    rho = 1.
     
     ! set state at equilibrium       
-    nowalls = 0.d0
+    nowalls = 0.
     call DiscretizationEquilf(dist%disc, rho, u, nowalls, fi, 1, components(1)%relax, dist)    
     return
   end subroutine initialize_state_d2

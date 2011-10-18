@@ -59,10 +59,10 @@
     flux_ym = .FALSE.
     flux_yp = .FALSE.
 
-    xp3_ave = 0.d0
-    xm3_ave = 0.d0
-    yp3_ave = 0.d0
-    ym3_ave = 0.d0
+    xp3_ave = 0.
+    xm3_ave = 0.
+    yp3_ave = 0.
+    ym3_ave = 0.
 
     if (help) call PetscPrintf(options%comm, "-bc_conc_{xy}{mp}_specie*: "// &
          "concentration of specie * for a Dirichlet BC\n", ierr)

@@ -86,20 +86,20 @@
     ! input data
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
 
-    rho1 = 0.d0
+    rho1 = 0.
     if (help) call PetscPrintf(options%comm, "-rho_inner=<0,0>: ???", ierr)
     nmax = dist%s
     call PetscOptionsGetRealArray(options%my_prefix, '-rho_inner', rho1, nmax, flag, ierr)
 
-    rho2 = 0.d0
+    rho2 = 0.
     if (help) call PetscPrintf(options%comm, "-rho_outer=<0,0>: ???", ierr)
     nmax = dist%s
     call PetscOptionsGetRealArray(options%my_prefix, '-rho_outer', rho2, nmax, flag, ierr)
 
     ! initialize state
-    fi = 0.d0
-    u = 0.d0
-    rho = 0.d0
+    fi = 0.
+    u = 0.
+    rho = 0.
 
     !---duct with nonwetting bubble in middle ----------
     !--- rho2: nonwetting
@@ -181,12 +181,12 @@
     ! input data
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
 
-    rho1 = 0.d0
+    rho1 = 0.
     if (help) call PetscPrintf(options%comm, "-rho_inner=<0,0>: ???", ierr)
     nmax = dist%s
     call PetscOptionsGetRealArray(options%my_prefix, '-rho_inner', rho1, nmax, flag, ierr)
 
-    rho2 = 0.d0
+    rho2 = 0.
     if (help) call PetscPrintf(options%comm, "-rho_outer=<0,0>: ???", ierr)
     nmax = dist%s
     call PetscOptionsGetRealArray(options%my_prefix, '-rho_outer', rho2, nmax, flag, ierr)

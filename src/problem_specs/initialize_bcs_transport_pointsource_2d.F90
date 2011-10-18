@@ -45,7 +45,7 @@
          "set the psi flux of primary specie in the inward normal direction", ierr)
     if (help) call PetscPrintf(options%comm, "-bc_conc_pointsource_location <val>: "// &
          "set the location of the point source in y-grid points", ierr)
-    pointsource_conc = 0.d0
+    pointsource_conc = 0.
 
     call PetscOptionsGetReal(options%my_prefix,'-bc_conc_pointsource', pointsource_conc,&
          flag, ierr)
@@ -59,21 +59,21 @@
     end if
 
     if (dist%info%xs.eq.1) then
-       xm_bcvals = 0.d0
+       xm_bcvals = 0.
        if (pointsource_node >= dist%info%ys .and. pointsource_node <= dist%info%ye) &
           xm_bcvals(1,X_DIRECTION,pointsource_node) = pointsource_conc
     end if
 
     if (dist%info%xe.eq.dist%info%NX) then
-       xp_bcvals = 0.d0
+       xp_bcvals = 0.
     end if
 
     if (dist%info%ys.eq.1) then
-       ym_bcvals = 0.d0
+       ym_bcvals = 0.
     end if
 
     if (dist%info%ye.eq.dist%info%NY) then
-       yp_bcvals = 0.d0
+       yp_bcvals = 0.
     end if
 
   end subroutine initialize_bcs_transport
