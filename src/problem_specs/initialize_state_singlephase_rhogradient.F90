@@ -127,7 +127,7 @@
            flag, ierr)
       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value for zm_component1', ierr)
       
-      do i=dist%info%ys,dist%info%ye
+      do i=dist%info%zs,dist%info%ze
         t = dble(i-1)/dble(dist%info%NZ-1)
         rho(1,:,:,i) = (1-t)*xm3_ave_p + t*xp3_ave_p
       end do
