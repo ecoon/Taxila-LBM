@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 March 2011
 !!!       on:            16:33:56 MDT
-!!!     last modified:   14 September 2011
-!!!       at:            15:15:50 PDT
+!!!     last modified:   19 October 2011
+!!!       at:            10:07:17 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -68,7 +68,8 @@ contains
     PetscInt deriv_order
     PetscErrorCode ierr
 
-    if ((deriv_order.eq.4).or.(deriv_order.eq.8).or.(deriv_order.eq.10)) then
+    if ((deriv_order.eq.0).or.(deriv_order.eq.4).or. &
+         (deriv_order.eq.8).or.(deriv_order.eq.10)) then
        disc%deriv_order = deriv_order
     else
        SETERRQ(1, 1, 'Invalid derivative order', ierr)       
