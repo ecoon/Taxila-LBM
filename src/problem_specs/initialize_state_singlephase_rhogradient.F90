@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
-!!!     last modified:   14 September 2011
-!!!       at:            12:41:02 PDT
+!!!     last modified:   21 October 2011
+!!!       at:            18:16:35 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -80,7 +80,7 @@
 
     PetscScalar :: xp3_ave_p, xm3_ave_p, t
     PetscBool flag
-    PetscInt i
+    PetscInt i,one
     PetscInt direction
 
     ! initialize state
@@ -135,7 +135,8 @@
     
     ! set state at equilibrium       
     nowalls = 0.
-    call DiscretizationEquilf(dist%disc, rho, u, nowalls, fi, 1, components(1)%relax, dist)    
+    one = 1
+    call DiscretizationEquilf(dist%disc, rho, u, nowalls, fi, one, components(1)%relax, dist)    
     return
   end subroutine initialize_state_d3
 
@@ -170,7 +171,7 @@
 
     PetscScalar :: xp3_ave_p, xm3_ave_p, t
     PetscBool flag
-    PetscInt i
+    PetscInt i,one
     PetscInt direction
 
     ! initialize state
@@ -213,6 +214,7 @@
 
     ! set state at equilibrium       
     nowalls = 0.
-    call DiscretizationEquilf(dist%disc, rho, u, nowalls, fi, 1, components(1)%relax, dist)    
+    one = 1
+    call DiscretizationEquilf(dist%disc, rho, u, nowalls, fi, one, components(1)%relax, dist)    
     return
   end subroutine initialize_state_d2
