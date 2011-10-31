@@ -200,25 +200,11 @@
 
          if ((.not.lbm%options%steadystate).or. &
               (lbm%options%steadystate_rampup_steps > 0)) then
-            call PetscLogEventBegin(logger%event_moments,ierr)
-            call FlowUpdateMoments(lbm%flow, lbm%walls%walls_a)
-            call PetscLogEventEnd(logger%event_moments,ierr)
-            call PetscLogEventBegin(logger%event_diagnostics,ierr)
-            call FlowUpdateDiagnostics(lbm%flow, lbm%walls%walls_a)
-            call PetscLogEventEnd(logger%event_diagnostics,ierr)
-         end if
-         if (.not.supress_output) then
-            call PetscLogEventBegin(logger%event_output,ierr)
-            call FlowOutputDiagnostics(lbm%flow, lbm%walls%walls_a, lbm%io)
-            call PetscLogEventEnd(logger%event_output,ierr)
+           call FlowFiInit(lbm%flow, lbm%walls)
          end if
 
          if (associated(lbm%transport)) then
-            call TransportUpdateMoments(lbm%transport, lbm%walls%walls_a)
-            call TransportUpdateDiagnostics(lbm%transport, lbm%walls%walls_a)
-            if (.not.supress_output) then
-               call TransportOutputDiagnostics(lbm%transport, lbm%walls%walls_a, lbm%io)
-            end if
+           call TransportFiInit(lbm%transport, lbm%walls)
          end if
 
          if (.not.supress_output) then
@@ -234,16 +220,30 @@
          ! just get arrays
          call FlowGetArrays(lbm%flow, ierr)
          if (associated(lbm%transport)) then
-            call TransportGetArrays(lbm%transport, ierr)
+           call TransportGetArrays(lbm%transport, ierr)
          end if
       endif
-      call IOIncrementCounter(lbm%io)
 
-      ! start the io
-      call DistributionCommunicateFiBegin(lbm%flow%distribution)
-      if (associated(lbm%transport)) then
-        call DistributionCommunicateFiBegin(lbm%transport%distribution)
+      call FlowUpdateMoments(lbm%flow, lbm%walls)
+      if (.not.supress_output) then
+        call PetscLogEventBegin(logger%event_diagnostics,ierr)
+        call FlowUpdateDiagnostics(lbm%flow, lbm%walls)
+        call PetscLogEventEnd(logger%event_diagnostics,ierr)
+
+        call PetscLogEventBegin(logger%event_output,ierr)
+        call FlowOutputDiagnostics(lbm%flow, lbm%io)
+        call PetscLogEventEnd(logger%event_output,ierr)
       end if
+
+      if (associated(lbm%transport)) then
+        call TransportUpdateMoments(lbm%transport, lbm%walls)
+        call TransportUpdateDiagnostics(lbm%transport, lbm%walls)
+        if (.not.supress_output) then
+          call TransportOutputDiagnostics(lbm%transport, lbm%io)
+        end if
+      end if
+
+      call IOIncrementCounter(lbm%io)
     end subroutine LBMInit2
 
     subroutine LBMRun1(lbm, istep, kstep)
@@ -270,40 +270,55 @@
       timername = trim(lbm%name)//'Simulation'
       timer1 => TimingCreate(lbm%comm, timername)
       do lcv_step = istep+1,kstep
+         ! collision
          call PetscLogStagePop(ierr)
-         call PetscLogStagePush(logger%stage(STREAM_STAGE), ierr)
-
-
-         ! streaming
-         ! move to end
+         call PetscLogStagePush(logger%stage(COLLISION_STAGE), ierr)
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
+            call FlowCollision(lbm%flow, lbm%walls)
+         end if
+
+         if (associated(lbm%transport)) then
+            if ((.not.lbm%options%steadystate).or. &
+                 (lcv_step < lbm%options%steadystate_rampup_steps)) then
+               call PetscLogEventBegin(logger%event_diagnostics,ierr)
+               call FlowUpdateDiagnostics(lbm%flow, lbm%walls)
+               call PetscLogEventEnd(logger%event_diagnostics,ierr)
+            end if
+            call PetscLogEventBegin(logger%event_collision_tran,ierr)
+            call TransportCollision(lbm%transport, lbm%walls, lbm%flow)
+            call PetscLogEventEnd(logger%event_collision_tran,ierr)
+         end if
+
+         ! streaming
+         if ((.not.lbm%options%steadystate).or. &
+              (lcv_step < lbm%options%steadystate_rampup_steps)) then
+            call DistributionCommunicateFi(lbm%flow%distribution)
             call PetscLogEventBegin(logger%event_stream_flow,ierr)
-            call DistributionCommunicateFiEnd(lbm%flow%distribution)
             call FlowStream(lbm%flow)
             call PetscLogEventEnd(logger%event_stream_flow,ierr)
          end if
 
          if (associated(lbm%transport)) then
+            call DistributionCommunicateFi(lbm%transport%distribution)
             call PetscLogEventBegin(logger%event_stream_tran,ierr)
-            call DistributionCommunicateFiEnd(lbm%transport%distribution)
             call TransportStream(lbm%transport)
             call PetscLogEventEnd(logger%event_stream_tran,ierr)
          end if
 
          call PetscLogStagePop(ierr)
          call PetscLogStagePush(logger%stage(BC_STAGE), ierr)
-         ! internal fluid-solid boundary conditions
+         ! internal bounceback
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
             call PetscLogEventBegin(logger%event_bc_bounceback,ierr)
-            call FlowBounceback(lbm%flow, lbm%walls%walls_a)
+            call FlowBounceback(lbm%flow, lbm%walls)
             call PetscLogEventEnd(logger%event_bc_bounceback,ierr)
          end if
 
          if (associated(lbm%transport)) then
             call PetscLogEventBegin(logger%event_bc_tranwallreact,ierr)
-            call TransportReactWithWalls(lbm%transport, lbm%walls%walls_a)
+            call TransportReactWithWalls(lbm%transport, lbm%walls)
             call PetscLogEventEnd(logger%event_bc_tranwallreact,ierr)
          end if
 
@@ -311,61 +326,29 @@
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
             call PetscLogEventBegin(logger%event_bc_flow,ierr)
-            call FlowApplyBCs(lbm%flow, lbm%walls%walls_a)
+            call FlowApplyBCs(lbm%flow, lbm%walls)
             call PetscLogEventEnd(logger%event_bc_flow,ierr)
          end if
 
          if (associated(lbm%transport)) then
             call PetscLogEventBegin(logger%event_bc_tran,ierr)
-            call TransportApplyBCs(lbm%transport, lbm%walls%walls_a)
+            call TransportApplyBCs(lbm%transport, lbm%walls)
             call PetscLogEventEnd(logger%event_bc_tran,ierr)
          end if
 
          ! update moments for rho, psi
-         call PetscLogStagePop(ierr)
          call PetscLogStagePush(logger%stage(FORCING_STAGE), ierr)
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
             call PetscLogEventBegin(logger%event_moments,ierr)
-            call DistributionCalcDensity(lbm%flow%distribution, lbm%walls%walls_a)
-            call DistributionCommunicateDensityBegin(lbm%flow%distribution)
-            call DistributionCalcFlux(lbm%flow%distribution, lbm%walls%walls_a)
+            call FlowUpdateMoments(lbm%flow, lbm%walls)
             call PetscLogEventEnd(logger%event_moments,ierr)
          end if
 
          if (associated(lbm%transport)) then
             call PetscLogEventBegin(logger%event_moments,ierr)
-            call TransportUpdateMoments(lbm%transport, lbm%walls%walls_a)
+            call TransportUpdateMoments(lbm%transport, lbm%walls)
             call PetscLogEventEnd(logger%event_moments,ierr)
-         end if
-
-         ! add in momentum forcing terms
-         if ((.not.lbm%options%steadystate).or. &
-              (lcv_step < lbm%options%steadystate_rampup_steps)) then
-            call DistributionCommunicateDensityEnd(lbm%flow%distribution)
-            call FlowCalcForces(lbm%flow, lbm%walls)
-            call BCZeroForces(lbm%flow%bc, lbm%flow%forces, lbm%flow%distribution)
-         end if
-         ! reaction?
-
-         ! collision
-         call PetscLogStagePop(ierr)
-         call PetscLogStagePush(logger%stage(COLLISION_STAGE), ierr)
-         if ((.not.lbm%options%steadystate).or. &
-              (lcv_step < lbm%options%steadystate_rampup_steps)) then
-            call FlowCollision(lbm%flow, lbm%walls%walls_a)
-         end if
-
-         if (associated(lbm%transport)) then
-            if ((.not.lbm%options%steadystate).or. &
-                 (lcv_step < lbm%options%steadystate_rampup_steps)) then
-               call PetscLogEventBegin(logger%event_diagnostics,ierr)
-               call FlowUpdateDiagnostics(lbm%flow, lbm%walls%walls_a)
-               call PetscLogEventEnd(logger%event_diagnostics,ierr)
-            end if
-            call PetscLogEventBegin(logger%event_collision_tran,ierr)
-            call TransportCollision(lbm%transport, lbm%walls%walls_a, lbm%flow)
-            call PetscLogEventEnd(logger%event_collision_tran,ierr)
          end if
 
          ! check for output
@@ -390,27 +373,7 @@
             call LBMOutput(lbm, lcv_step)
             call PetscLogEventEnd(logger%event_output,ierr)
          endif
-
-         ! communicate, update fi
-         call PetscLogStagePop(ierr)
-         call PetscLogStagePush(logger%stage(COMMUNICATION_STAGE), ierr)
-         if ((.not.lbm%options%steadystate).or. &
-              (lcv_step < lbm%options%steadystate_rampup_steps)) then
-            call PetscLogEventBegin(logger%event_communicate_fi,ierr)
-            call DistributionCommunicateFiBegin(lbm%flow%distribution)
-            call PetscLogEventEnd(logger%event_communicate_fi,ierr)
-         end if
-
-         if (associated(lbm%transport)) then
-            call PetscLogEventBegin(logger%event_communicate_fi,ierr)
-            call DistributionCommunicateFiBegin(lbm%transport%distribution)
-            call PetscLogEventEnd(logger%event_communicate_fi,ierr)
-         end if
       end do
-      call DistributionCommunicateFiEnd(lbm%flow%distribution)
-      if (associated(lbm%transport)) then
-        call DistributionCommunicateFiEnd(lbm%transport%distribution)
-      end if
 
       timerunits = 'timestep'
       call TimingEndPerUnit(timer1, (kstep-istep+1), timerunits, supress_output)
@@ -427,13 +390,13 @@
       endif
       if ((.not.lbm%options%steadystate).or. &
            (istep < lbm%options%steadystate_rampup_steps)) then
-         call FlowUpdateDiagnostics(lbm%flow, lbm%walls%walls_a)
-         call FlowOutputDiagnostics(lbm%flow, lbm%walls%walls_a, lbm%io)
+         call FlowUpdateDiagnostics(lbm%flow, lbm%walls)
+         call FlowOutputDiagnostics(lbm%flow, lbm%io)
       end if
       
       if (associated(lbm%transport)) then
-         call TransportUpdateDiagnostics(lbm%transport, lbm%walls%walls_a)
-         call TransportOutputDiagnostics(lbm%transport, lbm%walls%walls_a, lbm%io)
+         call TransportUpdateDiagnostics(lbm%transport, lbm%walls)
+         call TransportOutputDiagnostics(lbm%transport, lbm%io)
       end if
       call IOIncrementCounter(lbm%io)
     end subroutine LBMOutput
@@ -444,9 +407,8 @@
       PetscErrorCode ierr
 
       call FlowGetArrays(lbm%flow, ierr)
-      call init_subroutine(lbm%flow%distribution%fi_a, lbm%flow%distribution%rho_a, &
-           lbm%flow%distribution%flux, lbm%walls%walls_a, lbm%flow%distribution, &
-           lbm%flow%components, lbm%options)
+      call init_subroutine(lbm%flow%distribution%rho_a, lbm%flow%distribution%flux, &
+           lbm%walls%walls_a, lbm%flow%distribution, lbm%flow%components, lbm%options)
       call FlowRestoreArrays(lbm%flow, ierr)
     end subroutine LBMInitializeState_Flow
 
@@ -457,16 +419,15 @@
 
       ! flow init
       call FlowGetArrays(lbm%flow, ierr)
-      call flow_subroutine(lbm%flow%distribution%fi_a, lbm%flow%distribution%rho_a, &
-           lbm%flow%distribution%flux, lbm%walls%walls_a, lbm%flow%distribution, &
-           lbm%flow%components, lbm%options)
+      call flow_subroutine(lbm%flow%distribution%rho_a, lbm%flow%distribution%flux, &
+           lbm%walls%walls_a, lbm%flow%distribution, lbm%flow%components, lbm%options)
       call FlowRestoreArrays(lbm%flow, ierr)
 
       ! transport init
       call TransportGetArrays(lbm%transport, ierr)
-      call trans_subroutine(lbm%transport%distribution%fi_a, &
-           lbm%transport%distribution%rho_a, lbm%transport%distribution%flux, &
-           lbm%walls%walls_a, lbm%transport%distribution, lbm%transport%species, lbm%options)
+      call trans_subroutine(lbm%transport%distribution%rho_a, &
+           lbm%transport%distribution%flux, lbm%walls%walls_a, &
+           lbm%transport%distribution, lbm%transport%species, lbm%options)
       call TransportRestoreArrays(lbm%transport, ierr)
     end subroutine LBMInitializeState_FlowTransport
 
