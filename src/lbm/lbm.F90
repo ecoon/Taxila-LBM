@@ -272,7 +272,10 @@
       do lcv_step = istep+1,kstep
          call PetscLogStagePop(ierr)
          call PetscLogStagePush(logger%stage(STREAM_STAGE), ierr)
+
+
          ! streaming
+         ! move to end
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
             call PetscLogEventBegin(logger%event_stream_flow,ierr)
