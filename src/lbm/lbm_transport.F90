@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         04 April 2011
 !!!       on:            14:35:39 MDT
-!!!     last modified:   18 October 2011
-!!!       at:            10:43:32 MDT
+!!!     last modified:   31 October 2011
+!!!       at:            16:04:36 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -24,6 +24,7 @@ module LBM_Transport_module
   use LBM_Grid_module
   use LBM_Distribution_Function_type_module
   use LBM_Distribution_Function_module
+  use LBM_Walls_module
   use LBM_BC_module
   implicit none
 
@@ -65,6 +66,7 @@ module LBM_Transport_module
        TransportUpdateMoments, &
        TransportStream, &
        TransportReactWithWalls, &
+       TransportFiInit, &
        TransportCollision, &
        TransportApplyBCs, &
        TransportUpdateDiagnostics, &
@@ -339,23 +341,38 @@ contains
 
   subroutine TransportUpdateMoments(transport, walls)
     type(transport_type) transport
+    type(walls_type) walls
 
-    PetscScalar,dimension(1:transport%grid%info%rgxyzl):: walls
-    call DistributionCalcDensity(transport%distribution, walls)
-    call DistributionCalcFlux(transport%distribution, walls)
+    call DistributionCalcDensity(transport%distribution, walls%walls_a)
+    call DistributionCalcFlux(transport%distribution, walls%walls_a)
   end subroutine TransportUpdateMoments
+
+  subroutine TransportFiInit(transport, walls)
+    type(transport_type) transport
+    type(walls_type) walls
+    
+    call TransportUpdateFeq(transport, walls%walls_a)
+    call TransportFiInit_(transport, transport%distribution%fi_a)
+  end subroutine TransportFiInit
+
+  subroutine TransportFiInit_(transport, fi)
+    type(transport_type) transport
+    PetscScalar,dimension(transport%nspecies, &
+         0:transport%disc%b,transport%distribution%info%gxyzl):: fi
+
+    fi = transport%fi_eq
+  end subroutine TransportFiInit_
 
   subroutine TransportUpdateDiagnostics(transport, walls)
     type(transport_type) transport
-    PetscScalar,dimension(1:transport%grid%info%rgxyzl):: walls
+    type(walls_type) walls
     ! nothing to do
   end subroutine TransportUpdateDiagnostics
 
-  subroutine TransportOutputDiagnostics(transport, walls, io)
+  subroutine TransportOutputDiagnostics(transport, io)
     use LBM_IO_module
     type(transport_type) transport
     type(io_type) io
-    PetscScalar,dimension(1:transport%grid%info%rgxyzl):: walls
     PetscErrorCode ierr
 
     if (transport%io_fi) then
@@ -391,23 +408,41 @@ contains
     call DistributionStream(transport%distribution)
   end subroutine TransportStream
 
+  subroutine TransportUpdateFeq(transport, walls)
+    use LBM_Logging_module
+    type(transport_type) transport
+    PetscScalar,dimension(transport%grid%info%rgxyzl):: walls
+
+    PetscInt m
+    PetscErrorCode ierr
+
+    call PetscLogEventBegin(logger%event_collision_feq,ierr)
+    do m=1,transport%distribution%s
+      call DiscretizationEquilf(transport%disc, transport%distribution%rho_a, &
+           transport%distribution%flux, walls, transport%fi_eq, m, &
+           transport%species(m)%relax, transport%distribution)
+    end do
+    call PetscLogEventEnd(logger%event_collision_feq,ierr)
+  end subroutine TransportUpdateFeq
+
+
   subroutine TransportCollision(transport, walls, flow)
     use LBM_Flow_module
     type(transport_type) transport
     type(flow_type) flow
-    PetscScalar,dimension(transport%grid%info%rgxyzl):: walls
+    type(walls_type) walls
     PetscErrorCode ierr
 
+    call TransportUpdateFeq(transport, walls%walls_a)
     call DMDAVecGetArrayF90(flow%grid%da(NFLOWDOF),flow%velt_g,flow%velt_a,ierr)
-
     select case(transport%ndims)
     case(2)
        call TransportCollisionD2(transport, transport%distribution%fi_a, &
-            transport%distribution%rho_a, flow%velt_a, walls, transport%fi_eq, &
+            transport%distribution%rho_a, flow%velt_a, walls%walls_a, transport%fi_eq, &
             transport%distribution)
     case(3)
        call TransportCollisionD3(transport, transport%distribution%fi_a, &
-            transport%distribution%rho_a, flow%velt_a, walls, transport%fi_eq, &
+            transport%distribution%rho_a, flow%velt_a, walls%walls_a, transport%fi_eq, &
             transport%distribution)
     end select
     call DMDAVecRestoreArrayF90(flow%grid%da(NFLOWDOF),flow%velt_g,flow%velt_a,ierr)
@@ -427,16 +462,19 @@ contains
     PetscScalar,dimension(1:dist%info%ndims, dist%info%xs:dist%info%xe, &
          dist%info%ys:dist%info%ye, dist%info%zs:dist%info%ze):: u
 
-    PetscInt m
-    PetscScalar,dimension(dist%info%ndims,dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: ue
+    PetscInt m,i,j,k
 
-    ue(:,dist%info%xs:dist%info%xe,dist%info%ys:dist%info%ye,dist%info%zs:dist%info%ze) = u
-    do m=1,dist%s
-       call DiscretizationEquilf(transport%disc, rho, ue, walls, &
-            fi_eq, m, transport%species(m)%relax, dist)
-       call RelaxationCollide(transport%species(m)%relax, fi, &
-            fi_eq, walls, m, dist)
+    do k=dist%info%zs,dist%info%ze
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+    if (walls(i,j,k).eq.0) then
+      do m=1,dist%s
+        call RelaxationCollide(transport%species(m)%relax, fi(:,:,i,j,k), &
+            fi_eq(:,:,i,j,k), m, dist)
+      end do
+    end if
+    end do
+    end do
     end do
   end subroutine TransportCollisionD3
 
@@ -453,35 +491,36 @@ contains
     PetscScalar,dimension(1:dist%info%ndims, &
          dist%info%xs:dist%info%xe, dist%info%ys:dist%info%ye):: u
 
-    PetscInt m
-    PetscScalar,dimension(dist%info%ndims,dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: ue
+    PetscInt m,i,j
 
-    ue(:,dist%info%xs:dist%info%xe,dist%info%ys:dist%info%ye) = u
-    do m=1,dist%s
-       call DiscretizationEquilf(transport%disc, rho, ue, walls, &
-            fi_eq, m, transport%species(m)%relax, dist)
-       call RelaxationCollide(transport%species(m)%relax, fi, fi_eq, &
-            walls, m, dist)
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+    if (walls(i,j) > 0) then
+      do m=1,dist%s
+        call RelaxationCollide(transport%species(m)%relax, fi(:,:,i,j), fi_eq(:,:,i,j), &
+             m, dist)
+      end do
+    end if
+    end do
     end do
   end subroutine TransportCollisionD2
 
   ! bounceback if nonreactive walls, otherwise call reaction algorithm
   subroutine TransportReactWithWalls(transport, walls)
     type(transport_type) transport
-    PetscScalar,dimension(transport%grid%info%rgxyzl):: walls
+    type(walls_type) walls
     
     if (transport%reactive_matrix) then
        select case(transport%ndims)
        case(2)
           call TransportReactWithWallsD2(transport, transport%distribution%fi_a, &
-               transport%distribution%rho_a, walls, transport%distribution)
+               transport%distribution%rho_a, walls%walls_a, transport%distribution)
        case(3)
           call TransportReactWithWallsD3(transport, transport%distribution%fi_a, &
-               transport%distribution%rho_a, walls, transport%distribution)
+               transport%distribution%rho_a, walls%walls_a, transport%distribution)
        end select
     else 
-       call DistributionBounceback(transport%distribution, walls)
+       call DistributionBounceback(transport%distribution, walls%walls_a)
     end if
   end subroutine TransportReactWithWalls
 
@@ -547,8 +586,8 @@ contains
     
   subroutine TransportApplyBCs(transport, walls)
     type(transport_type) transport
-    PetscScalar,dimension(transport%grid%info%rgxyzl):: walls
-    call BCApply(transport%bc, walls, transport%distribution)
+    type(walls_type) walls
+    call BCApply(transport%bc, walls%walls_a, transport%distribution)
   end subroutine TransportApplyBCs
 end module LBM_Transport_module
   
