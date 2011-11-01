@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         22 June 2011
 !!!       on:            09:37:52 MDT
-!!!     last modified:   17 August 2011
-!!!       at:            11:52:37 MDT
+!!!     last modified:   01 November 2011
+!!!       at:            15:43:00 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -23,11 +23,10 @@ module LBM_Logging_module
   PetscInt, parameter, public :: INIT_STAGE = 1
   PetscInt, parameter, public :: STREAM_STAGE = 2
   PetscInt, parameter, public :: BC_STAGE = 3
-  PetscInt, parameter, public :: FORCING_STAGE = 4
+  PetscInt, parameter, public :: MOMENTS_STAGE = 4
   PetscInt, parameter, public :: COLLISION_STAGE = 5
   PetscInt, parameter, public :: OUTPUT_STAGE = 6
-  PetscInt, parameter, public :: COMMUNICATION_STAGE = 7
-  PetscInt, parameter, public :: DESTROY_STAGE = 8
+  PetscInt, parameter, public :: DESTROY_STAGE = 7
   
   type, public :: log_type
     PetscLogStage :: stage(10)
@@ -42,7 +41,8 @@ module LBM_Logging_module
     PetscLogEvent :: event_init_bcsetup
     PetscLogEvent :: event_init_icsetup
 
-    PetscLogEvent :: event_moments
+    PetscLogEvent :: event_tran_moments
+    PetscLogEvent :: event_flow_moments
     PetscLogEvent :: event_diagnostics
 
     PetscLogEvent :: event_stream_flow
@@ -58,7 +58,6 @@ module LBM_Logging_module
     PetscLogEvent :: event_forcing_body
 
     PetscLogEvent :: event_collision_flow
-    PetscLogEvent :: event_collision_precalc
     PetscLogEvent :: event_collision_feq
     PetscLogEvent :: event_collision_relax
     PetscLogEvent :: event_collision_tran
@@ -85,12 +84,10 @@ contains
     if (.not.associated(logger)) then
       allocate(logger)
       call PetscLogStageRegister('LBM Init Stage', logger%stage(INIT_STAGE), ierr)
+      call PetscLogStageRegister('Collision Stage', logger%stage(COLLISION_STAGE), ierr)
       call PetscLogStageRegister('Streaming Stage', logger%stage(STREAM_STAGE), ierr)
       call PetscLogStageRegister('BC Stage', logger%stage(BC_STAGE), ierr)
-      call PetscLogStageRegister('Forcing Stage', logger%stage(FORCING_STAGE), ierr)
-      call PetscLogStageRegister('Collision Stage', logger%stage(COLLISION_STAGE), ierr)
-      call PetscLogStageRegister('Comm Stage', &
-           logger%stage(COMMUNICATION_STAGE), ierr)
+      call PetscLogStageRegister('Moments Stage', logger%stage(MOMENTS_STAGE), ierr)
       call PetscLogStageRegister('LBM Out Stage', logger%stage(OUTPUT_STAGE), ierr)
       call PetscLogStageRegister('Destroy Stage', logger%stage(DESTROY_STAGE), ierr)
       
@@ -113,8 +110,10 @@ contains
       call PetscLogEventRegister('Init ICs', logger%class_lbm, &
            logger%event_init_icsetup, ierr)
       
-      call PetscLogEventRegister('Update Moments', logger%class_lbm, &
-         logger%event_moments, ierr)
+      call PetscLogEventRegister('Update Flow Moments', logger%class_lbm, &
+         logger%event_flow_moments, ierr)
+      call PetscLogEventRegister('Update Transport Moments', logger%class_lbm, &
+         logger%event_tran_moments, ierr)
       call PetscLogEventRegister('Update Soln', logger%class_lbm, &
            logger%event_diagnostics, ierr)
       
@@ -141,8 +140,6 @@ contains
       
       call PetscLogEventRegister('Collision Flow', logger%class_lbm, &
            logger%event_collision_flow, ierr)
-      call PetscLogEventRegister('Collision PreCalc', logger%class_lbm, &
-           logger%event_collision_precalc, ierr)
       call PetscLogEventRegister('Collision Feq', logger%class_lbm, &
            logger%event_collision_feq, ierr)
       call PetscLogEventRegister('Collision Relax', logger%class_lbm, &

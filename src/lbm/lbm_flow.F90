@@ -6,7 +6,7 @@
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
 !!!     last modified:   01 November 2011
-!!!       at:            12:44:18 MDT
+!!!       at:            15:40:10 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -541,33 +541,13 @@ contains
     type(flow_type) flow
     type(walls_type) walls
 
-    print*, 'pre-update:'
-    call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
-         flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
     call DistributionCalcDensity(flow%distribution, walls%walls_a)
-
-    print*, 'density done:'
-    call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
-         flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
-
     call DistributionCommunicateDensityBegin(flow%distribution)
     call DistributionCalcFlux(flow%distribution, walls%walls_a)
     call DistributionCommunicateDensityEnd(flow%distribution)
-    print*, 'flux done:'
-    call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
-         flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
-
     call FlowCalcForces(flow, walls)
     call BCZeroForces(flow%bc, flow%forces, flow%distribution)
-    print*, 'forces done:'
-    call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
-         flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
-
     call FlowUpdateU(flow, walls%walls_a)
-    print*, 'U done:'
-    call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
-         flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
-
   end subroutine FlowUpdateMoments
 
   subroutine FlowUpdateU(flow, walls)
@@ -585,7 +565,6 @@ contains
   end subroutine FlowUpdateU
 
   subroutine FlowUpdateUD3(flow, rho, u, forces, walls, dist)
-    use LBM_Logging_module
     type(flow_type) flow
     type(distribution_type) dist ! just for convenience
     PetscScalar,dimension(flow%ncomponents, &
@@ -608,12 +587,6 @@ contains
     do i=flow%grid%info%xs,flow%grid%info%xe
       if (walls(i,j,k).eq.0) then
         do m=1,flow%ncomponents
-          if (rho(m,i,j,k) <= 1.e-5) then
-            print*, 'zero rho:', m,i,j,k
-            print*, '  rho:', rho(m,i,j,k)
-            print*, '  forces:', forces(m,:,i,j,k)
-            print*, '  u:', u(m,:,i,j,k)
-          end if
           u(m,:,i,j,k) = (u(m,:,i,j,k) + .5*forces(m,:,i,j,k))/rho(m,i,j,k)
         end do
       end if
@@ -623,7 +596,6 @@ contains
   end subroutine FlowUpdateUD3
 
   subroutine FlowUpdateUD2(flow, rho, u, forces, walls, dist)
-    use LBM_Logging_module
     type(flow_type) flow
     type(distribution_type) dist ! just for convenience
     PetscScalar,dimension(1:dist%s,dist%info%rgxs:dist%info%rgxe, &
@@ -639,12 +611,6 @@ contains
     do i=flow%grid%info%xs,flow%grid%info%xe
       if (walls(i,j).eq.0) then
         do m=1,flow%ncomponents
-          if (rho(m,i,j) <= 1.e-5) then
-            print*, 'zero rho:', m,i,j
-            print*, '  rho:', rho(m,i,j)
-            print*, '  forces:', forces(m,:,i,j)
-            print*, '  u:', u(m,:,i,j)
-          end if
           u(m,:,i,j) = (u(m,:,i,j) + .5*forces(m,:,i,j))/rho(m,i,j)
         end do
       end if
@@ -816,11 +782,6 @@ contains
     if (walls(i,j).eq.0) then
        rhot(i,j) = sum(rho(:,i,j)*mm,1)
        do d=1,flow%ndims
-          if (rhot(i,j) <= 1.e-5) then
-            print*, 'zero rho:', m,i,j
-            print*, '  rho:', rho(m,i,j)
-            print*, '  rhot:', rhot(i,j)
-          end if
           velt(d,i,j) = sum(u(:,d,i,j)*mm(:)*rho(:,i,j))/rhot(i,j)
        end do
        prs(i,j) = rhot(i,j)/3.
@@ -888,20 +849,17 @@ contains
   end subroutine FlowBounceback
 
   subroutine FlowUpdateFeq(flow, walls)
-    use LBM_Logging_module
     type(flow_type) flow
     PetscScalar,dimension(flow%grid%info%rgxyzl):: walls
 
     PetscInt m
     PetscErrorCode ierr
 
-    call PetscLogEventBegin(logger%event_collision_feq,ierr)
     do m=1,flow%distribution%s
       call DiscretizationEquilf(flow%disc, flow%distribution%rho_a, &
            flow%distribution%flux, walls, flow%fi_eq, m, flow%components(m)%relax, &
            flow%distribution)
     end do
-    call PetscLogEventEnd(logger%event_collision_feq,ierr)
   end subroutine FlowUpdateFeq
 
   subroutine FlowFiBarEqPrefactor(flow, rho, u, forces, prefactor, dist)
@@ -937,7 +895,6 @@ contains
    end subroutine FlowFiBarInit
 
   subroutine FlowFeqBarD3(flow, fi_eq_bar, rho, u, forces, walls, fi_eq, dist)
-    use LBM_Logging_module
     type(flow_type) flow
     type(distribution_type) dist ! just for convenience
     PetscScalar,dimension(flow%ncomponents, 0:flow%disc%b,dist%info%gxs:dist%info%gxe, &
@@ -967,7 +924,6 @@ contains
   end subroutine FlowFeqBarD3
 
   subroutine FlowFeqBarD2(flow, fi_eq_bar, rho, u, forces, walls, fi_eq, dist)
-    use LBM_Logging_module
     type(flow_type) flow
     type(distribution_type) dist ! just for convenience
     PetscScalar,dimension(flow%ncomponents, 0:flow%disc%b,dist%info%gxs:dist%info%gxe, &
@@ -1005,25 +961,24 @@ contains
     PetscScalar,dimension(1:flow%grid%info%rgxyzl):: tmp_no_walls
     tmp_no_walls = 0.
 
-    ! print*, 'pre-init:'
-    ! call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
-    !      flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
-
     call DistributionCommunicateDensity(flow%distribution)
-    call FlowCalcForces(flow, walls) ! not sure if this is ok or not!  Does this need no-walls as well?
+    call FlowCalcForces(flow, walls) ! not sure if this is ok or not!  
+                                     ! Does this need no-walls as well?
     call FlowUpdateFeq(flow, tmp_no_walls)
     call FlowFiBarInit(flow, tmp_no_walls)
-    ! print*, 'post-init:'
-    ! call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
-    !      flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
   end subroutine FlowFiInit
 
   subroutine FlowCollision(flow, walls)
+    use LBM_Logging_module
     type(flow_type) flow
     type(walls_type) walls
+    PetscErrorCode ierr
 
+    call PetscLogEventBegin(logger%event_collision_feq,ierr)
     call FlowUpdateFeq(flow, walls%walls_a)
+    call PetscLogEventEnd(logger%event_collision_feq,ierr)
 
+    call PetscLogEventBegin(logger%event_collision_relax,ierr)
     select case(flow%ndims)
     case(2)
        call FlowCollisionD2(flow, flow%distribution%fi_a, flow%distribution%rho_a, &
@@ -1034,10 +989,10 @@ contains
             flow%distribution%flux, flow%forces, walls%walls_a, flow%fi_eq, &
             flow%distribution)
     end select
+    call PetscLogEventEnd(logger%event_collision_relax,ierr)
   end subroutine FlowCollision
 
   subroutine FlowCollisionD3(flow, fi, rho, u, forces, walls, fi_eq, dist)
-    use LBM_Logging_module
     type(flow_type) flow
     type(distribution_type) dist ! just for convenience
     PetscScalar,dimension(flow%ncomponents, 0:flow%disc%b,dist%info%gxs:dist%info%gxe, &
@@ -1054,7 +1009,6 @@ contains
     PetscScalar,dimension(1:dist%s,0:flow%disc%b):: fi_eq_bar
     PetscErrorCode ierr
 
-    call PetscLogEventBegin(logger%event_collision_relax,ierr)
     do k=dist%info%zs,dist%info%ze
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
@@ -1071,11 +1025,9 @@ contains
     end do
     end do
     end do
-    call PetscLogEventEnd(logger%event_collision_relax,ierr)
   end subroutine FlowCollisionD3
 
   subroutine FlowCollisionD2(flow, fi, rho, u, forces, walls, fi_eq, dist)
-    use LBM_Logging_module
     type(flow_type) flow
     type(distribution_type) dist ! just for convenience
     PetscScalar,dimension(flow%ncomponents, 0:flow%disc%b,dist%info%gxs:dist%info%gxe, &
@@ -1095,7 +1047,6 @@ contains
     PetscScalar,dimension(1:dist%s) :: mm
     PetscErrorCode ierr
 
-    call PetscLogEventBegin(logger%event_collision_relax,ierr)
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
     if (walls(i,j).eq.0) then
@@ -1110,7 +1061,6 @@ contains
     end if
     end do
     end do
-    call PetscLogEventEnd(logger%event_collision_relax,ierr)
   end subroutine FlowCollisionD2
 
   subroutine FlowApplyBCs(flow, walls)
