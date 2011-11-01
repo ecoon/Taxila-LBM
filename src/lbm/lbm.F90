@@ -226,13 +226,8 @@
 
       call FlowUpdateMoments(lbm%flow, lbm%walls)
       if (.not.supress_output) then
-        call PetscLogEventBegin(logger%event_diagnostics,ierr)
         call FlowUpdateDiagnostics(lbm%flow, lbm%walls)
-        call PetscLogEventEnd(logger%event_diagnostics,ierr)
-
-        call PetscLogEventBegin(logger%event_output,ierr)
         call FlowOutputDiagnostics(lbm%flow, lbm%io)
-        call PetscLogEventEnd(logger%event_output,ierr)
       end if
 
       if (associated(lbm%transport)) then
@@ -275,7 +270,9 @@
          call PetscLogStagePush(logger%stage(COLLISION_STAGE), ierr)
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
+            call PetscLogEventBegin(logger%event_collision_flow, ierr)
             call FlowCollision(lbm%flow, lbm%walls)
+            call PetscLogEventEnd(logger%event_collision_flow, ierr)
          end if
 
          if (associated(lbm%transport)) then
@@ -291,9 +288,14 @@
          end if
 
          ! streaming
+         call PetscLogStagePop(ierr)
+         call PetscLogStagePush(logger%stage(STREAM_STAGE), ierr)
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
+            call PetscLogEventBegin(logger%event_communicate_fi, ierr)
             call DistributionCommunicateFi(lbm%flow%distribution)
+            call PetscLogEventEnd(logger%event_communicate_fi, ierr)
+
             call PetscLogEventBegin(logger%event_stream_flow,ierr)
             call FlowStream(lbm%flow)
             call PetscLogEventEnd(logger%event_stream_flow,ierr)
@@ -337,18 +339,19 @@
          end if
 
          ! update moments for rho, psi
-         call PetscLogStagePush(logger%stage(FORCING_STAGE), ierr)
+         call PetscLogStagePop(ierr)
+         call PetscLogStagePush(logger%stage(MOMENTS_STAGE), ierr)
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
-            call PetscLogEventBegin(logger%event_moments,ierr)
+            call PetscLogEventBegin(logger%event_flow_moments,ierr)
             call FlowUpdateMoments(lbm%flow, lbm%walls)
-            call PetscLogEventEnd(logger%event_moments,ierr)
+            call PetscLogEventEnd(logger%event_flow_moments,ierr)
          end if
 
          if (associated(lbm%transport)) then
-            call PetscLogEventBegin(logger%event_moments,ierr)
+            call PetscLogEventBegin(logger%event_tran_moments,ierr)
             call TransportUpdateMoments(lbm%transport, lbm%walls)
-            call PetscLogEventEnd(logger%event_moments,ierr)
+            call PetscLogEventEnd(logger%event_tran_moments,ierr)
          end if
 
          ! check for output
