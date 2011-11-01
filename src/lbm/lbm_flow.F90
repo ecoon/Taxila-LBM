@@ -6,7 +6,7 @@
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
 !!!     last modified:   01 November 2011
-!!!       at:            11:38:14 MDT
+!!!       at:            12:44:18 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -541,32 +541,32 @@ contains
     type(flow_type) flow
     type(walls_type) walls
 
-    ! print*, 'pre-update:'
-    ! call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
-    !      flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
+    print*, 'pre-update:'
+    call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
+         flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
     call DistributionCalcDensity(flow%distribution, walls%walls_a)
 
-    ! print*, 'density done:'
-    ! call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
-    !      flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
+    print*, 'density done:'
+    call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
+         flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
 
     call DistributionCommunicateDensityBegin(flow%distribution)
     call DistributionCalcFlux(flow%distribution, walls%walls_a)
     call DistributionCommunicateDensityEnd(flow%distribution)
-    ! print*, 'flux done:'
-    ! call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
-    !      flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
+    print*, 'flux done:'
+    call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
+         flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
 
     call FlowCalcForces(flow, walls)
     call BCZeroForces(flow%bc, flow%forces, flow%distribution)
-    ! print*, 'forces done:'
-    ! call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
-    !      flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
+    print*, 'forces done:'
+    call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
+         flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
 
     call FlowUpdateU(flow, walls%walls_a)
-    ! print*, 'U done:'
-    ! call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
-    !      flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
+    print*, 'U done:'
+    call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
+         flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
 
   end subroutine FlowUpdateMoments
 
@@ -959,7 +959,7 @@ contains
     if (walls(i,j,k).eq.0) then
       call FlowFiBarEqPrefactor(flow, rho(:,i,j,k), u(:,:,i,j,k), forces(:,:,i,j,k), &
            prefactor, dist)
-      fi_eq_bar(:,:,i,j,k) = (1. + 0.5*prefactor)*fi_eq(:,:,i,j,k)
+      fi_eq_bar(:,:,i,j,k) = (1. - 0.5*prefactor)*fi_eq(:,:,i,j,k)
     end if
     end do
     end do
@@ -988,7 +988,7 @@ contains
     if (walls(i,j).eq.0) then
       call FlowFiBarEqPrefactor(flow, rho(:,i,j), u(:,:,i,j), forces(:,:,i,j), &
            prefactor, dist)
-      fi_eq_bar(:,:,i,j) = (1. + 0.5*prefactor)*fi_eq(:,:,i,j)
+      fi_eq_bar(:,:,i,j) = (1. - 0.5*prefactor)*fi_eq(:,:,i,j)
     end if
     end do
     end do
@@ -1061,7 +1061,7 @@ contains
     if (walls(i,j,k).eq.0) then
       call FlowFiBarEqPrefactor(flow, rho(:,i,j,k), u(:,:,i,j,k), forces(:,:,i,j,k), &
            prefactor, dist)
-      fi_eq_bar = (1 + .5*prefactor(:,:))*fi_eq(:,:,i,j,k)
+      fi_eq_bar = (1. - .5*prefactor(:,:))*fi_eq(:,:,i,j,k)
 
       do m=1,dist%s
         call RelaxationCollide(flow%components(m)%relax, fi(:,:,i,j,k), fi_eq_bar, m, dist)
@@ -1101,7 +1101,7 @@ contains
     if (walls(i,j).eq.0) then
       call FlowFiBarEqPrefactor(flow, rho(:,i,j), u(:,:,i,j), forces(:,:,i,j), &
            prefactor, dist)
-      fi_eq_bar = (1 + .5*prefactor(:,:))*fi_eq(:,:,i,j)
+      fi_eq_bar = (1. - .5*prefactor(:,:))*fi_eq(:,:,i,j)
 
       do m=1,dist%s
         call RelaxationCollide(flow%components(m)%relax, fi(:,:,i,j), fi_eq_bar, m, dist)
@@ -1135,34 +1135,30 @@ contains
 
     print*, 'step:', istep
     print*, '---------------------'
-    i=1
-    j=1
-    print*, 'walls:', walls(i,j)
-    print*, 'bc inwall:'
-    print*, 'fi(1,:):', fi(1,:,i,j)
-    print*, 'rho(1,x):', rho(:,i,j)
-    print*, 'u(1,x):', u(1,:,i,j)
-    print*, 'forces(1,x):', forces(1,:,i,j)
-    print*, '---------------------'
-    i=1
-    j=2
+    i=37
+    j=37
     print*, 'walls:', walls(i,j)
     print*, 'outer:'
-    print*, 'fi(1,:):', fi(1,:,i,j)
-    print*, 'rho(1,x):', rho(:,i,j)
-    print*, 'u(1,x):', u(1,:,i,j)
-    print*, 'forces(1,x):', forces(1,:,i,j)
+    print*, '  fi(1,:):', fi(1,:,i,j)
+    print*, '  rho(1,x):', rho(1,i,j)
+    print*, '  u(1,x):', u(1,:,i,j)
+    print*, '  forces(1,x):', forces(1,:,i,j)
+    print*, 'inner:'
+    print*, '  fi(2,:):', fi(2,:,i,j)
+    print*, '  rho(2,x):', rho(2,i,j)
+    print*, '  u(1,x):', u(2,:,i,j)
+    print*, '  forces(1,x):', forces(2,:,i,j)
     print*, '---------------------'
 
-    i=1
-    j=100
-    print*, 'inner:'
-    print*, 'walls:', walls(i,j)
-    print*, 'outer:'
-    print*, 'fi(1,:):', fi(1,:,i,j)
-    print*, 'rho(1,x):', rho(:,i,j)
-    print*, 'u(1,x):', u(1,:,i,j)
-    print*, 'forces(1,x):', forces(1,:,i,j)
+    ! i=1
+    ! j=100
+    ! print*, 'inner:'
+    ! print*, 'walls:', walls(i,j)
+    ! print*, 'outer:'
+    ! print*, 'fi(1,:):', fi(1,:,i,j)
+    ! print*, 'rho(1,x):', rho(:,i,j)
+    ! print*, 'u(1,x):', u(1,:,i,j)
+    ! print*, 'forces(1,x):', forces(1,:,i,j)
     print*, '========================'
   end subroutine print_a_few
 end module LBM_Flow_module
