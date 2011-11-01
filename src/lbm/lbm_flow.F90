@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
-!!!     last modified:   31 October 2011
-!!!       at:            15:58:08 MDT
+!!!     last modified:   01 November 2011
+!!!       at:            11:38:14 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -540,13 +540,34 @@ contains
   subroutine FlowUpdateMoments(flow, walls)
     type(flow_type) flow
     type(walls_type) walls
+
+    ! print*, 'pre-update:'
+    ! call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
+    !      flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
     call DistributionCalcDensity(flow%distribution, walls%walls_a)
+
+    ! print*, 'density done:'
+    ! call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
+    !      flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
+
     call DistributionCommunicateDensityBegin(flow%distribution)
     call DistributionCalcFlux(flow%distribution, walls%walls_a)
     call DistributionCommunicateDensityEnd(flow%distribution)
+    ! print*, 'flux done:'
+    ! call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
+    !      flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
+
     call FlowCalcForces(flow, walls)
     call BCZeroForces(flow%bc, flow%forces, flow%distribution)
+    ! print*, 'forces done:'
+    ! call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
+    !      flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
+
     call FlowUpdateU(flow, walls%walls_a)
+    ! print*, 'U done:'
+    ! call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
+    !      flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
+
   end subroutine FlowUpdateMoments
 
   subroutine FlowUpdateU(flow, walls)
@@ -587,6 +608,12 @@ contains
     do i=flow%grid%info%xs,flow%grid%info%xe
       if (walls(i,j,k).eq.0) then
         do m=1,flow%ncomponents
+          if (rho(m,i,j,k) <= 1.e-5) then
+            print*, 'zero rho:', m,i,j,k
+            print*, '  rho:', rho(m,i,j,k)
+            print*, '  forces:', forces(m,:,i,j,k)
+            print*, '  u:', u(m,:,i,j,k)
+          end if
           u(m,:,i,j,k) = (u(m,:,i,j,k) + .5*forces(m,:,i,j,k))/rho(m,i,j,k)
         end do
       end if
@@ -612,6 +639,12 @@ contains
     do i=flow%grid%info%xs,flow%grid%info%xe
       if (walls(i,j).eq.0) then
         do m=1,flow%ncomponents
+          if (rho(m,i,j) <= 1.e-5) then
+            print*, 'zero rho:', m,i,j
+            print*, '  rho:', rho(m,i,j)
+            print*, '  forces:', forces(m,:,i,j)
+            print*, '  u:', u(m,:,i,j)
+          end if
           u(m,:,i,j) = (u(m,:,i,j) + .5*forces(m,:,i,j))/rho(m,i,j)
         end do
       end if
@@ -783,6 +816,11 @@ contains
     if (walls(i,j).eq.0) then
        rhot(i,j) = sum(rho(:,i,j)*mm,1)
        do d=1,flow%ndims
+          if (rhot(i,j) <= 1.e-5) then
+            print*, 'zero rho:', m,i,j
+            print*, '  rho:', rho(m,i,j)
+            print*, '  rhot:', rhot(i,j)
+          end if
           velt(d,i,j) = sum(u(:,d,i,j)*mm(:)*rho(:,i,j))/rhot(i,j)
        end do
        prs(i,j) = rhot(i,j)/3.
@@ -959,11 +997,25 @@ contains
   subroutine FlowFiInit(flow, walls)
     type(flow_type) flow
     type(walls_type) walls
+    
+    ! Note that the initialization process is calculated without walls.
+    ! This is because we must fake that a bounceback has occured in a
+    ! previous step.  Wall nodes, which should hold the to-be-bounced 
+    ! back fi, will instead have zeros.  
+    PetscScalar,dimension(1:flow%grid%info%rgxyzl):: tmp_no_walls
+    tmp_no_walls = 0.
+
+    ! print*, 'pre-init:'
+    ! call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
+    !      flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
 
     call DistributionCommunicateDensity(flow%distribution)
-    call FlowCalcForces(flow, walls)
-    call FlowUpdateFeq(flow, walls%walls_a)
-    call FlowFiBarInit(flow, walls%walls_a)
+    call FlowCalcForces(flow, walls) ! not sure if this is ok or not!  Does this need no-walls as well?
+    call FlowUpdateFeq(flow, tmp_no_walls)
+    call FlowFiBarInit(flow, tmp_no_walls)
+    ! print*, 'post-init:'
+    ! call print_a_few(flow%distribution%fi_a, flow%distribution%rho_a, &
+    !      flow%distribution%flux, flow%forces, walls%walls_a, flow%distribution, 0)
   end subroutine FlowFiInit
 
   subroutine FlowCollision(flow, walls)
@@ -1068,45 +1120,49 @@ contains
     call BCApply(flow%bc, walls%walls_a, flow%distribution)
   end subroutine FlowApplyBCs
 
-  subroutine print_a_few(fi, u, forces, dist,istep)
+  subroutine print_a_few(fi, rho, u, forces, walls, dist, istep)
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s,0:dist%b, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
+         dist%info%gys:dist%info%gye):: fi
     PetscScalar,dimension(1:dist%s,1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: u,forces
+         dist%info%gys:dist%info%gye):: u,forces
+    PetscScalar,dimension(1:dist%s, dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: rho
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
 
-    PetscInt j,k,istep
+    PetscInt i,j,istep
 
     print*, 'step:', istep
     print*, '---------------------'
-    j=63
-    k=19
+    i=1
+    j=1
+    print*, 'walls:', walls(i,j)
+    print*, 'bc inwall:'
+    print*, 'fi(1,:):', fi(1,:,i,j)
+    print*, 'rho(1,x):', rho(:,i,j)
+    print*, 'u(1,x):', u(1,:,i,j)
+    print*, 'forces(1,x):', forces(1,:,i,j)
+    print*, '---------------------'
+    i=1
+    j=2
+    print*, 'walls:', walls(i,j)
     print*, 'outer:'
-    print*, 'fi(1,:):', fi(1,:,1,j,k)
-    print*, 'fi(2,:):', fi(2,:,1,j,k)
-    ! print*, 'fi(1,0):', fi(1,0,1,j,k)
-    ! print*, 'fi(1,5):', fi(1,5,1,j,k)
-    ! print*, 'fi(2,0):', fi(2,0,1,j,k)
-    ! print*, 'fi(2,5):', fi(2,5,1,j,k)
-    print*, 'u(1,z):', u(1,3,1,j,k)
-    print*, 'u(2,z):', u(2,3,1,j,k)
-    print*, 'forces(1,z):', forces(1,3,1,j,k)
-    print*, 'forces(2,z):', forces(2,3,1,j,k)
+    print*, 'fi(1,:):', fi(1,:,i,j)
+    print*, 'rho(1,x):', rho(:,i,j)
+    print*, 'u(1,x):', u(1,:,i,j)
+    print*, 'forces(1,x):', forces(1,:,i,j)
     print*, '---------------------'
 
-    j=63
-    k=20
+    i=1
+    j=100
     print*, 'inner:'
-    print*, 'fi(1,:):', fi(1,:,1,j,k)
-    print*, 'fi(2,:):', fi(2,:,1,j,k)
-    ! print*, 'fi(1,0):', fi(1,0,1,j,k)
-    ! print*, 'fi(1,5):', fi(1,5,1,j,k)
-    ! print*, 'fi(2,0):', fi(2,0,1,j,k)
-    ! print*, 'fi(2,5):', fi(2,5,1,j,k)
-    print*, 'u(1,z):', u(1,3,1,j,k)
-    print*, 'u(2,z):', u(2,3,1,j,k)
-    print*, 'forces(1,z):', forces(1,3,1,j,k)
-    print*, 'forces(2,z):', forces(2,3,1,j,k)
+    print*, 'walls:', walls(i,j)
+    print*, 'outer:'
+    print*, 'fi(1,:):', fi(1,:,i,j)
+    print*, 'rho(1,x):', rho(:,i,j)
+    print*, 'u(1,x):', u(1,:,i,j)
+    print*, 'forces(1,x):', forces(1,:,i,j)
     print*, '========================'
   end subroutine print_a_few
 end module LBM_Flow_module
