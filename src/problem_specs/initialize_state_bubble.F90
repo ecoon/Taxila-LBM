@@ -5,8 +5,8 @@
 !!!     version:
 !!!     created:         14 January 2011
 !!!       on:            17:27:04 MST
-!!!     last modified:   14 September 2011
-!!!       at:            16:03:18 PDT
+!!!     last modified:   31 October 2011
+!!!       at:            15:49:52 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!
@@ -16,7 +16,7 @@
 #include "finclude/petscvecdef.h"
 #include "finclude/petscdmdef.h"
   
-  subroutine initialize_state(fi, rho, u, walls, dist, components, options)
+  subroutine initialize_state(rho, u, walls, dist, components, options)
     use petsc
     use LBM_Distribution_Function_type_module
     use LBM_Component_module
@@ -28,20 +28,19 @@
     type(distribution_type) dist
     type(component_type) components(dist%s)
     type(options_type) options
-    PetscScalar,dimension(dist%s,0:dist%b,dist%info%gxyzl) :: fi
     PetscScalar,dimension(dist%s,dist%info%rgxyzl) :: rho
     PetscScalar,dimension(dist%s, 1:dist%info%ndims, dist%info%gxyzl):: u
     PetscScalar,dimension(dist%info%rgxyzl):: walls
 
     select case(dist%info%ndims)
     case (2) 
-      call initialize_state_d2(fi, rho, u, walls, dist, components, options)
+      call initialize_state_d2(rho, u, walls, dist, components, options)
     case (3) 
-      call initialize_state_d3(fi, rho, u, walls, dist, components, options)
+      call initialize_state_d3(rho, u, walls, dist, components, options)
     end select
   end subroutine initialize_state
 
-  subroutine initialize_state_d3(fi, rho, u, walls, dist, components, options)
+  subroutine initialize_state_d3(rho, u, walls, dist, components, options)
     use petsc
     use LBM_Distribution_Function_type_module
     use LBM_Component_module
@@ -54,10 +53,6 @@
     type(component_type) components(dist%s)
     type(options_type) options
 
-    PetscScalar,dimension(dist%s,0:dist%b, &
-         dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, &
-         dist%info%gzs:dist%info%gze):: fi
     PetscScalar,dimension(dist%s, &
          dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye, &
@@ -97,7 +92,6 @@
     call PetscOptionsGetRealArray(options%my_prefix, '-rho_outer', rho2, nmax, flag, ierr)
 
     ! initialize state
-    fi = 0.
     u = 0.
     rho = 0.
 
@@ -131,16 +125,10 @@
     enddo
     enddo
     enddo
-
-    ! set state at equilibrium       
-    do m=1,dist%s
-       call DiscretizationEquilf(dist%disc, rho, u, &
-            walls, fi, m, components(m)%relax, dist)    
-    end do
     return
   end subroutine initialize_state_d3
 
-  subroutine initialize_state_d2(fi, rho, u, walls, dist, components, options)
+  subroutine initialize_state_d2(rho, u, walls, dist, components, options)
     use petsc
     use LBM_Distribution_Function_type_module
     use LBM_Component_module
@@ -153,9 +141,6 @@
     type(component_type) components(dist%s)
     type(options_type) options
 
-    PetscScalar,dimension(dist%s,0:dist%b, &
-         dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: fi
     PetscScalar,dimension(dist%s, &
          dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye):: rho
@@ -192,7 +177,6 @@
     call PetscOptionsGetRealArray(options%my_prefix, '-rho_outer', rho2, nmax, flag, ierr)
 
     ! initialize state
-    fi=0.0
     u=0.0
 
     !---duct with nonwetting bubble in middle ----------
@@ -219,11 +203,5 @@
       end if
     enddo
     enddo
-
-    ! set state at equilibrium       
-    do m=1,dist%s
-      call DiscretizationEquilf(dist%disc, rho, u, &
-           walls, fi, m, components(m)%relax, dist)    
-    end do
     return
   end subroutine initialize_state_d2
