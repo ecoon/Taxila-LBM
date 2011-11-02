@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            15:15:25 MDT
-!!!     last modified:   18 October 2011
-!!!       at:            13:48:12 MDT
+!!!     last modified:   31 October 2011
+!!!       at:            15:23:36 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -172,154 +172,54 @@ contains
     call PetscBagSetName(relax%bag, TRIM(options%my_prefix)//relax%name, "", ierr)
   end subroutine RelaxationSetFromOptions
 
-  subroutine RelaxationCollide(relax, fi, fi_eq, walls, m, dist)
-    type(distribution_type) dist
-    PetscScalar,dimension(dist%s, 0:dist%b, 1:dist%info%gxyzl):: fi
-    PetscScalar,dimension(dist%s, 0:dist%b, 1:dist%info%gxyzl):: fi_eq
-    PetscScalar,dimension(1:dist%info%rgxyzl):: walls
-    PetscInt m
+  subroutine RelaxationCollide(relax, fi, fi_eq, m, dist)
     type(relaxation_type) relax
+    type(distribution_type) dist
+    PetscScalar,dimension(dist%s, 0:dist%b):: fi
+    PetscScalar,dimension(dist%s, 0:dist%b):: fi_eq
+    PetscInt m
     PetscErrorCode ierr
 
-    select case(dist%info%ndims)
-    case(3)
-       select case(relax%mode)
-       case(RELAXATION_MODE_MRT)
-          call RelaxationCollideMRTD3(relax, fi, fi_eq, walls, m, dist)
-       case(RELAXATION_MODE_SRT)
-          call RelaxationCollideSRTD3(relax, fi, fi_eq, walls, m, dist)
-       case DEFAULT
-          SETERRQ(1, 1, 'invalid relaxation mode in LBM', ierr)
-       end select
-    case(2)
-       select case(relax%mode)
-       case(RELAXATION_MODE_MRT)
-          call RelaxationCollideMRTD2(relax, fi, fi_eq, walls, m, dist)
-       case(RELAXATION_MODE_SRT)
-          call RelaxationCollideSRTD2(relax, fi, fi_eq, walls, m, dist)
-       case DEFAULT
-          SETERRQ(1, 1, 'invalid relaxation mode in LBM', ierr)
-       end select
+    select case(relax%mode)
+    case(RELAXATION_MODE_MRT)
+      call RelaxationCollideMRT(relax, fi, fi_eq, m, dist)
+    case(RELAXATION_MODE_SRT)
+      call RelaxationCollideSRT(relax, fi, fi_eq, m, dist)
     case DEFAULT
-       SETERRQ(1, 1, 'invalid discretization in LBM', ierr)
+      SETERRQ(1, 1, 'invalid relaxation mode in LBM', ierr)
     end select
   end subroutine RelaxationCollide
 
-  subroutine RelaxationCollideSRTD3(relax, fi, fi_eq, walls, m, dist)
+  subroutine RelaxationCollideSRT(relax, fi, fi_eq, m, dist)
     ! input variables
-    type(distribution_type) dist
-    PetscScalar,dimension(dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
-    PetscScalar,dimension(dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi_eq
-    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
-         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
     type(relaxation_type) relax
+    type(distribution_type) dist
+    PetscScalar,dimension(dist%s, 0:dist%b):: fi, fi_eq
     PetscInt m
 
-    ! local variables
-    PetscInt i,j,k                  ! loop variables
-
-    do k=dist%info%zs,dist%info%ze
-    do j=dist%info%ys,dist%info%ye
-    do i=dist%info%xs,dist%info%xe
-       if(walls(i,j,k).eq.0) then
-          fi(m,:,i,j,k) = fi(m,:,i,j,k) - (fi(m,:,i,j,k)-fi_eq(m,:,i,j,k))/relax%tau
-       endif
-    enddo
-    enddo
-    enddo
+    fi(m,:) = fi(m,:) - (fi(m,:)-fi_eq(m,:))/relax%tau
     return
-  end subroutine RelaxationCollideSRTD3
+  end subroutine RelaxationCollideSRT
 
-  subroutine RelaxationCollideSRTD2(relax, fi, fi_eq, walls, m, dist)
+  subroutine RelaxationCollideMRT(relax, fi, fi_eq, m, dist)
     ! input variables
-    type(distribution_type) dist
-    PetscScalar,dimension(dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: fi
-    PetscScalar,dimension(dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: fi_eq
-    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
-         dist%info%rgys:dist%info%rgye):: walls
     type(relaxation_type) relax
+    type(distribution_type) dist
+    PetscScalar,dimension(dist%s, 0:dist%b):: fi, fi_eq
     PetscInt m
 
     ! local variables
-    PetscInt i,j,k                  ! loop variables
-
-    do j=dist%info%ys,dist%info%ye
-    do i=dist%info%xs,dist%info%xe
-       if(walls(i,j).eq.0) then
-          fi(m,:,i,j) = fi(m,:,i,j) - (fi(m,:,i,j)-fi_eq(m,:,i,j))/relax%tau
-       endif
-    enddo
-    enddo
-    return
-  end subroutine RelaxationCollideSRTD2
-
-  subroutine RelaxationCollideMRTD3(relax, fi, fi_eq, walls, m, dist)
-    ! input variables
-    type(distribution_type) dist
-    PetscScalar,dimension(dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
-    PetscScalar,dimension(dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi_eq
-    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
-         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
-    type(relaxation_type) relax
-    PetscInt m
-
-    ! local variables
-    PetscInt i,j,k,n                  ! loop variables
-    PetscScalar :: mdiff
-    PetscScalar :: d_fi(0:dist%b)
-    
-    do k=dist%info%zs,dist%info%ze
-    do j=dist%info%ys,dist%info%ye
-    do i=dist%info%xs,dist%info%xe
-       if(walls(i,j,k).eq.0) then
-          d_fi = fi(m,:,i,j,k)-fi_eq(m,:,i,j,k)
-          do n=0,dist%b
-             mdiff = sum(dist%disc%mt_mrt(:,n)*d_fi,1)
-             fi(m,:,i,j,k) = fi(m,:,i,j,k) - &
-                (relax%tau_mrt(n)*(mdiff))/dist%disc%mmt_mrt(n)*dist%disc%mt_mrt(:,n)
-          enddo
-       endif
-    enddo
-    enddo
-    enddo
-  end subroutine RelaxationCollideMRTD3
-
-  subroutine RelaxationCollideMRTD2(relax, fi, fi_eq, walls, m, dist)
-    ! input variables
-    type(distribution_type) dist
-    PetscScalar,dimension(dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: fi
-    PetscScalar,dimension(dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: fi_eq
-    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
-         dist%info%rgys:dist%info%rgye):: walls
-    type(relaxation_type) relax
-    PetscInt m
-
-    ! local variables
-    PetscInt i,j,n                  ! loop variables
+    PetscInt n                  ! loop variables
     PetscScalar :: mdiff
     PetscScalar :: d_fi(0:dist%b)
    
-    do j=dist%info%ys,dist%info%ye
-    do i=dist%info%xs,dist%info%xe
-       if(walls(i,j).eq.0) then
-          d_fi = fi(m,:,i,j)-fi_eq(m,:,i,j)
-          do n=0,dist%b
-             mdiff = sum(dist%disc%mt_mrt(:,n)*d_fi,1)
-             fi(m,:,i,j) = fi(m,:,i,j) - &
-                  relax%tau_mrt(n)*mdiff/dist%disc%mmt_mrt(n)*dist%disc%mt_mrt(:,n)
-          enddo
-       endif
+    d_fi = fi(m,:)-fi_eq(m,:)
+    do n=0,dist%b
+      mdiff = sum(dist%disc%mt_mrt(:,n)*d_fi,1)
+      fi(m,:) = fi(m,:) - &
+           relax%tau_mrt(n)*mdiff/dist%disc%mmt_mrt(n)*dist%disc%mt_mrt(:,n)
     enddo
-    enddo
-  end subroutine RelaxationCollideMRTD2
+  end subroutine RelaxationCollideMRT
 end module LBM_Relaxation_module
 
     

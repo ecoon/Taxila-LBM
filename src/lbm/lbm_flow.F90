@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
-!!!     last modified:   18 October 2011
-!!!       at:            13:44:37 MDT
+!!!     last modified:   01 November 2011
+!!!       at:            15:40:10 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -26,6 +26,7 @@ module LBM_Flow_module
   use LBM_Grid_module
   use LBM_Distribution_Function_type_module
   use LBM_Distribution_Function_module
+  use LBM_Walls_module
   use LBM_BC_module
   implicit none
 
@@ -85,12 +86,12 @@ module LBM_Flow_module
        FlowRestoreArrays, &
        FlowUpdateMoments, &
        FlowUpdateDiagnostics, &
-       FlowCalcForces, &
        FlowStream, &
        FlowBounceback, &
        FlowCollision, &
        FlowApplyBCs, &
        FlowOutputDiagnostics, &
+       FlowFiInit, &
        print_a_few
 
 contains
@@ -538,16 +539,89 @@ contains
 
   subroutine FlowUpdateMoments(flow, walls)
     type(flow_type) flow
-    PetscScalar,dimension(1:flow%grid%info%rgxyzl):: walls
-    call DistributionCalcDensity(flow%distribution, walls)
-    call DistributionCalcFlux(flow%distribution, walls)
+    type(walls_type) walls
+
+    call DistributionCalcDensity(flow%distribution, walls%walls_a)
+    call DistributionCommunicateDensityBegin(flow%distribution)
+    call DistributionCalcFlux(flow%distribution, walls%walls_a)
+    call DistributionCommunicateDensityEnd(flow%distribution)
+    call FlowCalcForces(flow, walls)
+    call BCZeroForces(flow%bc, flow%forces, flow%distribution)
+    call FlowUpdateU(flow, walls%walls_a)
   end subroutine FlowUpdateMoments
 
-  subroutine FlowOutputDiagnostics(flow, walls, io)
+  subroutine FlowUpdateU(flow, walls)
+    type(flow_type) flow
+    PetscScalar,dimension(1:flow%grid%info%rgxyzl):: walls
+
+    select case(flow%ndims)
+    case(2)
+       call FlowUpdateUD2(flow, flow%distribution%rho_a, &
+            flow%distribution%flux, flow%forces, walls, flow%distribution)
+    case(3)
+       call FlowUpdateUD3(flow, flow%distribution%rho_a, &
+            flow%distribution%flux, flow%forces, walls, flow%distribution)
+    end select
+  end subroutine FlowUpdateU
+
+  subroutine FlowUpdateUD3(flow, rho, u, forces, walls, dist)
+    type(flow_type) flow
+    type(distribution_type) dist ! just for convenience
+    PetscScalar,dimension(flow%ncomponents, &
+         dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, &
+         dist%info%rgzs:dist%info%rgze):: rho
+    PetscScalar,dimension(flow%ncomponents, flow%ndims, &
+         dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, &
+         dist%info%gzs:dist%info%gze):: u,forces
+
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, &
+         dist%info%rgzs:dist%info%rgze):: walls
+
+    PetscInt i,j,k,m
+
+    do k=flow%grid%info%zs,flow%grid%info%ze
+    do j=flow%grid%info%ys,flow%grid%info%ye
+    do i=flow%grid%info%xs,flow%grid%info%xe
+      if (walls(i,j,k).eq.0) then
+        do m=1,flow%ncomponents
+          u(m,:,i,j,k) = (u(m,:,i,j,k) + .5*forces(m,:,i,j,k))/rho(m,i,j,k)
+        end do
+      end if
+    end do
+    end do
+    end do
+  end subroutine FlowUpdateUD3
+
+  subroutine FlowUpdateUD2(flow, rho, u, forces, walls, dist)
+    type(flow_type) flow
+    type(distribution_type) dist ! just for convenience
+    PetscScalar,dimension(1:dist%s,dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: rho
+    PetscScalar,dimension(1:dist%s,1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: u,forces
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
+
+    PetscInt i,j,m
+
+    do j=flow%grid%info%ys,flow%grid%info%ye
+    do i=flow%grid%info%xs,flow%grid%info%xe
+      if (walls(i,j).eq.0) then
+        do m=1,flow%ncomponents
+          u(m,:,i,j) = (u(m,:,i,j) + .5*forces(m,:,i,j))/rho(m,i,j)
+        end do
+      end if
+    end do
+    end do
+  end subroutine FlowUpdateUD2
+
+  subroutine FlowOutputDiagnostics(flow, io)
     use LBM_IO_module
     type(flow_type) flow
     type(io_type) io
-    PetscScalar,dimension(1:flow%grid%info%rgxyzl):: walls
     PetscErrorCode ierr
 
     if (flow%io_fi) then
@@ -587,7 +661,7 @@ contains
 
   subroutine FlowUpdateDiagnostics(flow, walls)
     type(flow_type) flow
-    PetscScalar,dimension(1:flow%grid%info%rgxyzl):: walls
+    type(walls_type) walls
     PetscErrorCode ierr
     
     PetscInt m
@@ -607,21 +681,21 @@ contains
     case(2)
       if (flow%use_nonideal_eos) then
         call FlowUpdateDiagnosticsD2(flow, flow%distribution%rho_a, flow%psi_of_rho, &
-             flow%distribution%flux, flow%forces, walls, flow%rhot_a, &
+             flow%distribution%flux, flow%forces, walls%walls_a, flow%rhot_a, &
              flow%prs_a, flow%velt_a)
       else
         call FlowUpdateDiagnosticsD2(flow, flow%distribution%rho_a, flow%distribution%rho_a, &
-             flow%distribution%flux, flow%forces, walls, flow%rhot_a, &
+             flow%distribution%flux, flow%forces, walls%walls_a, flow%rhot_a, &
              flow%prs_a, flow%velt_a)
       end if
     case(3)
       if (flow%use_nonideal_eos) then
         call FlowUpdateDiagnosticsD3(flow, flow%distribution%rho_a, flow%psi_of_rho, &
-             flow%distribution%flux, flow%forces, walls, flow%rhot_a, &
+             flow%distribution%flux, flow%forces, walls%walls_a, flow%rhot_a, &
              flow%prs_a, flow%velt_a)
       else
         call FlowUpdateDiagnosticsD3(flow, flow%distribution%rho_a, flow%distribution%rho_a, &
-             flow%distribution%flux, flow%forces, walls, flow%rhot_a, &
+             flow%distribution%flux, flow%forces, walls%walls_a, flow%rhot_a, &
              flow%prs_a, flow%velt_a)
       end if
     end select
@@ -631,7 +705,7 @@ contains
 
   end subroutine FlowUpdateDiagnostics
 
-  subroutine FlowUpdateDiagnosticsD3(flow, rho, psi, vel, forces, walls, rhot, prs, velt)
+  subroutine FlowUpdateDiagnosticsD3(flow, rho, psi, u, forces, walls, rhot, prs, velt)
     type(flow_type) flow
     PetscScalar,dimension(flow%grid%info%rgxs:flow%grid%info%rgxe, &
          flow%grid%info%rgys:flow%grid%info%rgye, &
@@ -643,7 +717,7 @@ contains
     PetscScalar,dimension(flow%ncomponents, flow%ndims, &
          flow%grid%info%gxs:flow%grid%info%gxe, &
          flow%grid%info%gys:flow%grid%info%gye, &
-         flow%grid%info%gzs:flow%grid%info%gze):: vel,forces
+         flow%grid%info%gzs:flow%grid%info%gze):: u,forces
     PetscScalar,dimension(flow%grid%info%xs:flow%grid%info%xe, &
          flow%grid%info%ys:flow%grid%info%ye, &
          flow%grid%info%zs:flow%grid%info%ze):: rhot,prs
@@ -665,16 +739,11 @@ contains
     if (walls(i,j,k).eq.0) then
        rhot(i,j,k) = sum(rho(:,i,j,k)*mm,1)
        do d=1,flow%ndims
-          velt(d,i,j,k) = (sum(vel(:,d,i,j,k)*mm,1) + 0.5*sum(forces(:,d,i,j,k),1))/rhot(i,j,k)
+          velt(d,i,j,k) = sum(u(:,d,i,j,k)*mm(:)*rho(:,i,j,k))/rhot(i,j,k)
        end do
        prs(i,j,k) = rhot(i,j,k)/3.
        if (flow%use_nonideal_eos .or. (flow%ncomponents > 1)) then
           do m=1,flow%ncomponents
-            ! In Qinjun's original code the pressure was calculated as:
-            ! prs(i,j) = prs(i,j) + 3*rho(m,i,j)*sum(rho(:,i,j)*flow%components(m)%gf,1)
-            ! However, with the HOD for fluid-fluid the new gf is 1/6 of the old gf, so
-            ! I have accounted for it in the new pressure calculation.  This equation
-            ! has been verified by Laplace's law for viscosity ratios of 1 and 5. 
              prs(i,j,k) = prs(i,j,k) + flow%disc%c_0/2.*psi(m,i,j,k) &
                   *sum(flow%components(m)%gf*psi(:,i,j,k),1)
           end do
@@ -685,7 +754,7 @@ contains
     end do
   end subroutine FlowUpdateDiagnosticsD3
 
-  subroutine FlowUpdateDiagnosticsD2(flow, rho, psi, vel, forces, walls, rhot, prs, velt)
+  subroutine FlowUpdateDiagnosticsD2(flow, rho, psi, u, forces, walls, rhot, prs, velt)
     type(flow_type) flow
     PetscScalar,dimension(flow%grid%info%rgxs:flow%grid%info%rgxe, &
          flow%grid%info%rgys:flow%grid%info%rgye):: walls
@@ -694,7 +763,7 @@ contains
          flow%grid%info%rgys:flow%grid%info%rgye):: rho, psi
     PetscScalar,dimension(flow%ncomponents, flow%ndims, &
          flow%grid%info%gxs:flow%grid%info%gxe, &
-         flow%grid%info%gys:flow%grid%info%gye):: vel,forces
+         flow%grid%info%gys:flow%grid%info%gye):: u,forces
     PetscScalar,dimension(flow%grid%info%xs:flow%grid%info%xe, &
          flow%grid%info%ys:flow%grid%info%ye):: rhot,prs
     PetscScalar,dimension(flow%ndims, &
@@ -707,22 +776,18 @@ contains
     do m=1,flow%ncomponents
        mm(m) = flow%components(m)%mm
     end do
+
     do j=flow%grid%info%ys,flow%grid%info%ye
     do i=flow%grid%info%xs,flow%grid%info%xe
     if (walls(i,j).eq.0) then
        rhot(i,j) = sum(rho(:,i,j)*mm,1)
        do d=1,flow%ndims
-          velt(d,i,j) = (sum(vel(:,d,i,j)*mm,1) + 0.5*sum(forces(:,d,i,j),1))/rhot(i,j)
+          velt(d,i,j) = sum(u(:,d,i,j)*mm(:)*rho(:,i,j))/rhot(i,j)
        end do
        prs(i,j) = rhot(i,j)/3.
        if (flow%use_nonideal_eos .or. (flow%ncomponents > 1)) then
           do m=1,flow%ncomponents
-            ! In Qinjun's original code the pressure was calculated as:
-            ! prs(i,j) = prs(i,j) + 1.5*rho(m,i,j)*sum(rho(:,i,j)*flow%components(m)%gf,1)
-            ! However, with the hod for fluid-fluid the new gf is 1/3 of the old gf, so
-            ! I have accounted for it in the new pressure calculation.  This equation
-            ! has been verified by Laplace's law for viscosity ratios of 1 and 5.        
-            prs(i,j) = prs(i,j) + flow%disc%c_0/2.*psi(m,i,j) &
+             prs(i,j) = prs(i,j) + flow%disc%c_0/2.*psi(m,i,j) &
                   *sum(flow%components(m)%gf*psi(:,i,j),1)
           end do
        end if
@@ -732,7 +797,6 @@ contains
   end subroutine FlowUpdateDiagnosticsD2
 
   subroutine FlowCalcForces(flow, walls)
-    use LBM_Walls_module
     use LBM_Forcing_module
     use LBM_Logging_module
     type(flow_type) flow
@@ -780,25 +844,155 @@ contains
 
   subroutine FlowBounceback(flow, walls)
     type(flow_type) flow
-    PetscScalar,dimension(flow%grid%info%rgxyzl):: walls
-    call DistributionBounceback(flow%distribution, walls)
+    type(walls_type) walls
+    call DistributionBounceback(flow%distribution, walls%walls_a)
   end subroutine FlowBounceback
 
-  subroutine FlowCollision(flow, walls)
+  subroutine FlowUpdateFeq(flow, walls)
     type(flow_type) flow
     PetscScalar,dimension(flow%grid%info%rgxyzl):: walls
+
+    PetscInt m
+    PetscErrorCode ierr
+
+    do m=1,flow%distribution%s
+      call DiscretizationEquilf(flow%disc, flow%distribution%rho_a, &
+           flow%distribution%flux, walls, flow%fi_eq, m, flow%components(m)%relax, &
+           flow%distribution)
+    end do
+  end subroutine FlowUpdateFeq
+
+  subroutine FlowFiBarEqPrefactor(flow, rho, u, forces, prefactor, dist)
+    type(flow_type) flow
+    type(distribution_type) dist ! just for convenience
+    PetscScalar,dimension(1:dist%s):: rho
+    PetscScalar,dimension(1:dist%s,1:dist%info%ndims):: u,forces
+    PetscScalar,dimension(1:dist%s,0:flow%disc%b):: prefactor
+
+    PetscInt m,n
+
+    do n=0,flow%disc%b
+      do m=1,dist%s
+        prefactor(m,n) = sum(forces(m,:)*(flow%disc%ci(n,:)-u(m,:))) / &
+             (rho(m)*flow%components(m)%relax%c_s2)
+      end do
+    end do
+  end subroutine FlowFiBarEqPrefactor
+
+
+  subroutine FlowFiBarInit(flow, walls)
+    type(flow_type) flow
+    PetscScalar,dimension(flow%grid%info%rgxyzl):: walls
+
+    select case(flow%ndims)
+    case(2)
+       call FlowFeqBarD2(flow, flow%distribution%fi_a, flow%distribution%rho_a, &
+            flow%distribution%flux, flow%forces, walls, flow%fi_eq, flow%distribution)
+    case(3)
+       call FlowFeqBarD3(flow, flow%distribution%fi_a, flow%distribution%rho_a, &
+            flow%distribution%flux, flow%forces, walls, flow%fi_eq, flow%distribution)
+     end select
+   end subroutine FlowFiBarInit
+
+  subroutine FlowFeqBarD3(flow, fi_eq_bar, rho, u, forces, walls, fi_eq, dist)
+    type(flow_type) flow
+    type(distribution_type) dist ! just for convenience
+    PetscScalar,dimension(flow%ncomponents, 0:flow%disc%b,dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze)::fi_eq_bar, fi_eq
+    PetscScalar,dimension(1:dist%s,dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: rho
+    PetscScalar,dimension(1:dist%s,1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: u,forces
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
+
+    PetscScalar,dimension(1:dist%s,0:flow%disc%b):: prefactor
+    PetscInt i,j,k,m,n
+
+    ! \bar{f^eq} = (1 + dt/2 * (F*(e_i - u))/(rho*RT))*f^eq
+    do k=dist%info%zs,dist%info%ze
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+    if (walls(i,j,k).eq.0) then
+      call FlowFiBarEqPrefactor(flow, rho(:,i,j,k), u(:,:,i,j,k), forces(:,:,i,j,k), &
+           prefactor, dist)
+      fi_eq_bar(:,:,i,j,k) = (1. - 0.5*prefactor)*fi_eq(:,:,i,j,k)
+    end if
+    end do
+    end do
+    end do
+  end subroutine FlowFeqBarD3
+
+  subroutine FlowFeqBarD2(flow, fi_eq_bar, rho, u, forces, walls, fi_eq, dist)
+    type(flow_type) flow
+    type(distribution_type) dist ! just for convenience
+    PetscScalar,dimension(flow%ncomponents, 0:flow%disc%b,dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye)::fi_eq_bar, fi_eq
+    PetscScalar,dimension(1:dist%s,dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: rho
+    PetscScalar,dimension(1:dist%s,1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: u,forces
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
+
+    PetscScalar,dimension(1:dist%s,0:flow%disc%b):: prefactor
+    PetscInt i,j,m,n
+
+    ! \bar{f^eq} = (1 + dt/2 * (F*(e_i - u))/(rho*RT))*f^eq
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+    if (walls(i,j).eq.0) then
+      call FlowFiBarEqPrefactor(flow, rho(:,i,j), u(:,:,i,j), forces(:,:,i,j), &
+           prefactor, dist)
+      fi_eq_bar(:,:,i,j) = (1. - 0.5*prefactor)*fi_eq(:,:,i,j)
+    end if
+    end do
+    end do
+  end subroutine FlowFeqBarD2
+
+  subroutine FlowFiInit(flow, walls)
+    type(flow_type) flow
+    type(walls_type) walls
+    
+    ! Note that the initialization process is calculated without walls.
+    ! This is because we must fake that a bounceback has occured in a
+    ! previous step.  Wall nodes, which should hold the to-be-bounced 
+    ! back fi, will instead have zeros.  
+    PetscScalar,dimension(1:flow%grid%info%rgxyzl):: tmp_no_walls
+    tmp_no_walls = 0.
+
+    call DistributionCommunicateDensity(flow%distribution)
+    call FlowCalcForces(flow, walls) ! not sure if this is ok or not!  
+                                     ! Does this need no-walls as well?
+    call FlowUpdateFeq(flow, tmp_no_walls)
+    call FlowFiBarInit(flow, tmp_no_walls)
+  end subroutine FlowFiInit
+
+  subroutine FlowCollision(flow, walls)
+    use LBM_Logging_module
+    type(flow_type) flow
+    type(walls_type) walls
+    PetscErrorCode ierr
+
+    call PetscLogEventBegin(logger%event_collision_feq,ierr)
+    call FlowUpdateFeq(flow, walls%walls_a)
+    call PetscLogEventEnd(logger%event_collision_feq,ierr)
+
+    call PetscLogEventBegin(logger%event_collision_relax,ierr)
     select case(flow%ndims)
     case(2)
        call FlowCollisionD2(flow, flow%distribution%fi_a, flow%distribution%rho_a, &
-            flow%distribution%flux, flow%forces, walls, flow%fi_eq, flow%distribution)
+            flow%distribution%flux, flow%forces, walls%walls_a, flow%fi_eq, &
+            flow%distribution)
     case(3)
        call FlowCollisionD3(flow, flow%distribution%fi_a, flow%distribution%rho_a, &
-            flow%distribution%flux, flow%forces, walls, flow%fi_eq, flow%distribution)
+            flow%distribution%flux, flow%forces, walls%walls_a, flow%fi_eq, &
+            flow%distribution)
     end select
+    call PetscLogEventEnd(logger%event_collision_relax,ierr)
   end subroutine FlowCollision
 
   subroutine FlowCollisionD3(flow, fi, rho, u, forces, walls, fi_eq, dist)
-    use LBM_Logging_module
     type(flow_type) flow
     type(distribution_type) dist ! just for convenience
     PetscScalar,dimension(flow%ncomponents, 0:flow%disc%b,dist%info%gxs:dist%info%gxe, &
@@ -810,53 +1004,30 @@ contains
     PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
 
-    PetscScalar,dimension(dist%info%ndims,dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze ):: up
-    PetscScalar,dimension(dist%s,dist%info%ndims,dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: ue
-
     PetscInt m,i,j,k,d
-    PetscScalar,parameter:: eps=1.e-15 ! slightly larger than machine epsilon
-    PetscScalar,dimension(1:dist%s) :: mmot, mm
+    PetscScalar,dimension(1:dist%s,0:flow%disc%b):: prefactor
+    PetscScalar,dimension(1:dist%s,0:flow%disc%b):: fi_eq_bar
     PetscErrorCode ierr
-
-    call PetscLogEventBegin(logger%event_collision_precalc,ierr)
-    do m=1,dist%s
-       mmot(m) = flow%components(m)%mm/flow%components(m)%relax%tau
-       mm(m) = flow%components(m)%mm
-    end do
 
     do k=dist%info%zs,dist%info%ze
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
     if (walls(i,j,k).eq.0) then
-       do d=1,dist%info%ndims
-          up(d,i,j,k) = sum(u(:,d,i,j,k)*mmot,1)/sum(rho(:,i,j,k)*mmot,1)
-       end do
-       do m=1,dist%s
-          ue(m,:,i,j,k) = up(:,i,j,k) + forces(m,:,i,j,k)/(rho(m,i,j,k)*mmot(m)+eps)
-       end do
+      call FlowFiBarEqPrefactor(flow, rho(:,i,j,k), u(:,:,i,j,k), forces(:,:,i,j,k), &
+           prefactor, dist)
+      fi_eq_bar = (1. - .5*prefactor(:,:))*fi_eq(:,:,i,j,k)
+
+      do m=1,dist%s
+        call RelaxationCollide(flow%components(m)%relax, fi(:,:,i,j,k), fi_eq_bar, m, dist)
+      end do
+      fi(:,:,i,j,k) = fi(:,:,i,j,k) + prefactor(:,:)*fi_eq(:,:,i,j,k)
     end if
     end do
     end do
     end do
-    call PetscLogEventEnd(logger%event_collision_precalc,ierr)
-
-    do m=1,dist%s
-      call PetscLogEventBegin(logger%event_collision_feq,ierr)
-      call DiscretizationEquilf(flow%disc, rho, ue, &
-           walls, fi_eq, m, flow%components(m)%relax, dist)
-      call PetscLogEventEnd(logger%event_collision_feq,ierr)
-
-      call PetscLogEventBegin(logger%event_collision_relax,ierr)
-      call RelaxationCollide(flow%components(m)%relax, fi, fi_eq, &
-           walls, m, dist)
-      call PetscLogEventEnd(logger%event_collision_relax,ierr)
-    end do
   end subroutine FlowCollisionD3
 
   subroutine FlowCollisionD2(flow, fi, rho, u, forces, walls, fi_eq, dist)
-    use LBM_Logging_module
     type(flow_type) flow
     type(distribution_type) dist ! just for convenience
     PetscScalar,dimension(flow%ncomponents, 0:flow%disc%b,dist%info%gxs:dist%info%gxe, &
@@ -868,94 +1039,76 @@ contains
     PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye):: walls
 
-    PetscScalar,dimension(dist%info%ndims,dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye ):: up
-    PetscScalar,dimension(dist%s,dist%info%ndims,dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: ue
+    PetscScalar,dimension(1:dist%s,0:flow%disc%b):: prefactor
+    PetscScalar,dimension(1:dist%s,0:flow%disc%b):: fi_eq_bar
 
     PetscInt m,i,j,d
     PetscScalar,parameter:: eps=1.e-15 ! slightly larger than machine epsilon
-    PetscScalar,dimension(1:dist%s) :: mmot, mm
+    PetscScalar,dimension(1:dist%s) :: mm
     PetscErrorCode ierr
-
-    call PetscLogEventBegin(logger%event_collision_precalc,ierr)
-    do m=1,dist%s
-       mmot(m) = flow%components(m)%mm/flow%components(m)%relax%tau
-       mm(m) = flow%components(m)%mm
-    end do
 
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
     if (walls(i,j).eq.0) then
-       do d=1,dist%info%ndims
-          up(d,i,j) = sum(u(:,d,i,j)*mmot,1)/sum(rho(:,i,j)*mmot,1)
-       end do
-       do m=1,dist%s
-          ue(m,:,i,j) = up(:,i,j) + forces(m,:,i,j)/(rho(m,i,j)*mmot(m)+eps)
-       end do
+      call FlowFiBarEqPrefactor(flow, rho(:,i,j), u(:,:,i,j), forces(:,:,i,j), &
+           prefactor, dist)
+      fi_eq_bar = (1. - .5*prefactor(:,:))*fi_eq(:,:,i,j)
+
+      do m=1,dist%s
+        call RelaxationCollide(flow%components(m)%relax, fi(:,:,i,j), fi_eq_bar, m, dist)
+      end do
+      fi(:,:,i,j) = fi(:,:,i,j) + prefactor(:,:)*fi_eq(:,:,i,j)
     end if
     end do
-    end do
-    call PetscLogEventEnd(logger%event_collision_precalc,ierr)
-
-    do m=1,dist%s
-      call PetscLogEventBegin(logger%event_collision_feq,ierr)
-      call DiscretizationEquilf(flow%disc, rho, ue, walls, &
-           fi_eq, m, flow%components(m)%relax, dist)
-      call PetscLogEventEnd(logger%event_collision_feq,ierr)
-
-      call PetscLogEventBegin(logger%event_collision_relax,ierr)
-      call RelaxationCollide(flow%components(m)%relax, fi, fi_eq, &
-           walls, m, dist)
-      call PetscLogEventEnd(logger%event_collision_relax,ierr)
     end do
   end subroutine FlowCollisionD2
 
   subroutine FlowApplyBCs(flow, walls)
     type(flow_type) flow
-    PetscScalar,dimension(flow%grid%info%rgxyzl):: walls
-    call BCApply(flow%bc, walls, flow%distribution)
+    type(walls_type) walls
+
+    call BCApply(flow%bc, walls%walls_a, flow%distribution)
   end subroutine FlowApplyBCs
 
-  subroutine print_a_few(fi, u, forces, dist,istep)
+  subroutine print_a_few(fi, rho, u, forces, walls, dist, istep)
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s,0:dist%b, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
+         dist%info%gys:dist%info%gye):: fi
     PetscScalar,dimension(1:dist%s,1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: u,forces
+         dist%info%gys:dist%info%gye):: u,forces
+    PetscScalar,dimension(1:dist%s, dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: rho
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
 
-    PetscInt j,k,istep
+    PetscInt i,j,istep
 
     print*, 'step:', istep
     print*, '---------------------'
-    j=63
-    k=19
+    i=37
+    j=37
+    print*, 'walls:', walls(i,j)
     print*, 'outer:'
-    print*, 'fi(1,:):', fi(1,:,1,j,k)
-    print*, 'fi(2,:):', fi(2,:,1,j,k)
-    ! print*, 'fi(1,0):', fi(1,0,1,j,k)
-    ! print*, 'fi(1,5):', fi(1,5,1,j,k)
-    ! print*, 'fi(2,0):', fi(2,0,1,j,k)
-    ! print*, 'fi(2,5):', fi(2,5,1,j,k)
-    print*, 'u(1,z):', u(1,3,1,j,k)
-    print*, 'u(2,z):', u(2,3,1,j,k)
-    print*, 'forces(1,z):', forces(1,3,1,j,k)
-    print*, 'forces(2,z):', forces(2,3,1,j,k)
+    print*, '  fi(1,:):', fi(1,:,i,j)
+    print*, '  rho(1,x):', rho(1,i,j)
+    print*, '  u(1,x):', u(1,:,i,j)
+    print*, '  forces(1,x):', forces(1,:,i,j)
+    print*, 'inner:'
+    print*, '  fi(2,:):', fi(2,:,i,j)
+    print*, '  rho(2,x):', rho(2,i,j)
+    print*, '  u(1,x):', u(2,:,i,j)
+    print*, '  forces(1,x):', forces(2,:,i,j)
     print*, '---------------------'
 
-    j=63
-    k=20
-    print*, 'inner:'
-    print*, 'fi(1,:):', fi(1,:,1,j,k)
-    print*, 'fi(2,:):', fi(2,:,1,j,k)
-    ! print*, 'fi(1,0):', fi(1,0,1,j,k)
-    ! print*, 'fi(1,5):', fi(1,5,1,j,k)
-    ! print*, 'fi(2,0):', fi(2,0,1,j,k)
-    ! print*, 'fi(2,5):', fi(2,5,1,j,k)
-    print*, 'u(1,z):', u(1,3,1,j,k)
-    print*, 'u(2,z):', u(2,3,1,j,k)
-    print*, 'forces(1,z):', forces(1,3,1,j,k)
-    print*, 'forces(2,z):', forces(2,3,1,j,k)
+    ! i=1
+    ! j=100
+    ! print*, 'inner:'
+    ! print*, 'walls:', walls(i,j)
+    ! print*, 'outer:'
+    ! print*, 'fi(1,:):', fi(1,:,i,j)
+    ! print*, 'rho(1,x):', rho(:,i,j)
+    ! print*, 'u(1,x):', u(1,:,i,j)
+    ! print*, 'forces(1,x):', forces(1,:,i,j)
     print*, '========================'
   end subroutine print_a_few
 end module LBM_Flow_module

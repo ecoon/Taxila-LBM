@@ -944,7 +944,7 @@ contains
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           do m=1,dist%s
           do d=1,dist%info%ndims
-             forces(m,d,i,j,k) = -dist%disc%c_0*rho(m,i,j,k)* &
+             forces(m,d,i,j,k) = forces(m,d,i,j,k) - dist%disc%c_0*rho(m,i,j,k)* &
                   sum(components(m)%gf*(gradrho(:,d,i,j,k)/weightsum(d)),1)
           end do
           end do
@@ -1285,7 +1285,7 @@ contains
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           do m=1,dist%s
           do d=1,dist%info%ndims
-             forces(m,d,i,j) = -dist%disc%c_0*rho(m,i,j)* &
+             forces(m,d,i,j) = forces(m,d,i,j) - dist%disc%c_0*rho(m,i,j)* &
                   sum(components(m)%gf*(gradrho(:,d,i,j)/weightsum(d)),1)
           end do
           end do
