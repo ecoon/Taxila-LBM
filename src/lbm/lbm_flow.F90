@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
-!!!     last modified:   01 November 2011
-!!!       at:            15:40:10 MDT
+!!!     last modified:   07 November 2011
+!!!       at:            11:47:16 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -469,13 +469,12 @@ contains
         end if
       end do
     end if
-
     
     if (flow%grid%info%rank .eq. 0) then
        print*, 'Scale report from LBM:'
        print*, '  length scale [m]:', flow%grid%length_scale
        print*, '  time scale [s]:', flow%time_scale
-       print*, '  velocity scale [m]:', flow%velocity_scale
+       print*, '  velocity scale [m/s]:', flow%velocity_scale
        print*, '  mass scale [kg]:', flow%mass_scale
     end if
   end subroutine FlowSetPhysicalScales
@@ -547,24 +546,24 @@ contains
     call DistributionCommunicateDensityEnd(flow%distribution)
     call FlowCalcForces(flow, walls)
     call BCZeroForces(flow%bc, flow%forces, flow%distribution)
-    call FlowUpdateU(flow, walls%walls_a)
+    call FlowUpdateUE(flow, walls%walls_a)
   end subroutine FlowUpdateMoments
 
-  subroutine FlowUpdateU(flow, walls)
+  subroutine FlowUpdateUE(flow, walls)
     type(flow_type) flow
     PetscScalar,dimension(1:flow%grid%info%rgxyzl):: walls
 
     select case(flow%ndims)
     case(2)
-       call FlowUpdateUD2(flow, flow%distribution%rho_a, &
+       call FlowUpdateUED2(flow, flow%distribution%rho_a, &
             flow%distribution%flux, flow%forces, walls, flow%distribution)
     case(3)
-       call FlowUpdateUD3(flow, flow%distribution%rho_a, &
+       call FlowUpdateUED3(flow, flow%distribution%rho_a, &
             flow%distribution%flux, flow%forces, walls, flow%distribution)
     end select
-  end subroutine FlowUpdateU
+  end subroutine FlowUpdateUE
 
-  subroutine FlowUpdateUD3(flow, rho, u, forces, walls, dist)
+  subroutine FlowUpdateUED3(flow, rho, ue, forces, walls, dist)
     type(flow_type) flow
     type(distribution_type) dist ! just for convenience
     PetscScalar,dimension(flow%ncomponents, &
@@ -574,49 +573,73 @@ contains
     PetscScalar,dimension(flow%ncomponents, flow%ndims, &
          dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, &
-         dist%info%gzs:dist%info%gze):: u,forces
-
+         dist%info%gzs:dist%info%gze):: ue,forces
     PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye, &
          dist%info%rgzs:dist%info%rgze):: walls
 
-    PetscInt i,j,k,m
+    PetscScalar,dimension(flow%ndims, &
+         dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, &
+         dist%info%gzs:dist%info%gze):: up
+    PetscInt i,j,k,m,d
+    PetscScalar,dimension(1:dist%s) :: mmot
+
+    do m=1,dist%s
+       mmot(m) = flow%components(m)%mm/flow%components(m)%relax%tau
+    end do
 
     do k=flow%grid%info%zs,flow%grid%info%ze
     do j=flow%grid%info%ys,flow%grid%info%ye
     do i=flow%grid%info%xs,flow%grid%info%xe
       if (walls(i,j,k).eq.0) then
+        do d=1,dist%info%ndims
+          up(d,i,j,k) = sum(ue(:,d,i,j,k)*mmot,1)/sum(rho(:,i,j,k)*mmot,1)
+        end do
+
         do m=1,flow%ncomponents
-          u(m,:,i,j,k) = (u(m,:,i,j,k) + .5*forces(m,:,i,j,k))/rho(m,i,j,k)
+          ue(m,:,i,j,k) = up(:,i,j,k) + .5*forces(m,:,i,j,k)/rho(m,i,j,k)
         end do
       end if
     end do
     end do
     end do
-  end subroutine FlowUpdateUD3
+  end subroutine FlowUpdateUED3
 
-  subroutine FlowUpdateUD2(flow, rho, u, forces, walls, dist)
+  subroutine FlowUpdateUED2(flow, rho, ue, forces, walls, dist)
     type(flow_type) flow
     type(distribution_type) dist ! just for convenience
     PetscScalar,dimension(1:dist%s,dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye):: rho
     PetscScalar,dimension(1:dist%s,1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: u,forces
+         dist%info%gys:dist%info%gye):: ue,forces
     PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye):: walls
 
-    PetscInt i,j,m
+    PetscScalar,dimension(flow%ndims, &
+         dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: up
+    PetscInt i,j,m,d
+    PetscScalar,dimension(1:dist%s) :: mmot
+
+    do m=1,dist%s
+       mmot(m) = flow%components(m)%mm/flow%components(m)%relax%tau
+    end do
 
     do j=flow%grid%info%ys,flow%grid%info%ye
     do i=flow%grid%info%xs,flow%grid%info%xe
       if (walls(i,j).eq.0) then
+        do d=1,dist%info%ndims
+          up(d,i,j) = sum(ue(:,d,i,j)*mmot,1)/sum(rho(:,i,j)*mmot,1)
+        end do
+
         do m=1,flow%ncomponents
-          u(m,:,i,j) = (u(m,:,i,j) + .5*forces(m,:,i,j))/rho(m,i,j)
+          ue(m,:,i,j) = up(:,i,j) + .5*forces(m,:,i,j)/rho(m,i,j)
         end do
       end if
     end do
     end do
-  end subroutine FlowUpdateUD2
+  end subroutine FlowUpdateUED2
 
   subroutine FlowOutputDiagnostics(flow, io)
     use LBM_IO_module
@@ -663,8 +686,12 @@ contains
     type(flow_type) flow
     type(walls_type) walls
     PetscErrorCode ierr
-    
+
+    PetscScalar,dimension(flow%ncomponents, flow%ndims, &
+         flow%grid%info%gxyzl):: u
     PetscInt m
+
+    call DistributionCalcFlux(flow%distribution, walls%walls_a, u)
 
     call DMDAVecGetArrayF90(flow%grid%da(NFLOWDOF),flow%velt_g,flow%velt_a,ierr)
     call DMDAVecGetArrayF90(flow%grid%da(ONEDOF), flow%rhot_g, flow%rhot_a,ierr)
@@ -677,25 +704,26 @@ contains
       end do
     end if
 
+
     select case(flow%ndims)
     case(2)
       if (flow%use_nonideal_eos) then
         call FlowUpdateDiagnosticsD2(flow, flow%distribution%rho_a, flow%psi_of_rho, &
-             flow%distribution%flux, flow%forces, walls%walls_a, flow%rhot_a, &
+             u, flow%forces, walls%walls_a, flow%rhot_a, &
              flow%prs_a, flow%velt_a)
       else
         call FlowUpdateDiagnosticsD2(flow, flow%distribution%rho_a, flow%distribution%rho_a, &
-             flow%distribution%flux, flow%forces, walls%walls_a, flow%rhot_a, &
+             u, flow%forces, walls%walls_a, flow%rhot_a, &
              flow%prs_a, flow%velt_a)
       end if
     case(3)
       if (flow%use_nonideal_eos) then
         call FlowUpdateDiagnosticsD3(flow, flow%distribution%rho_a, flow%psi_of_rho, &
-             flow%distribution%flux, flow%forces, walls%walls_a, flow%rhot_a, &
+             u, flow%forces, walls%walls_a, flow%rhot_a, &
              flow%prs_a, flow%velt_a)
       else
         call FlowUpdateDiagnosticsD3(flow, flow%distribution%rho_a, flow%distribution%rho_a, &
-             flow%distribution%flux, flow%forces, walls%walls_a, flow%rhot_a, &
+             u, flow%forces, walls%walls_a, flow%rhot_a, &
              flow%prs_a, flow%velt_a)
       end if
     end select
@@ -738,9 +766,6 @@ contains
     do i=flow%grid%info%xs,flow%grid%info%xe
     if (walls(i,j,k).eq.0) then
        rhot(i,j,k) = sum(rho(:,i,j,k)*mm,1)
-       do d=1,flow%ndims
-          velt(d,i,j,k) = sum(u(:,d,i,j,k)*mm(:)*rho(:,i,j,k))/rhot(i,j,k)
-       end do
        prs(i,j,k) = rhot(i,j,k)/3.
        if (flow%use_nonideal_eos .or. (flow%ncomponents > 1)) then
           do m=1,flow%ncomponents
@@ -748,6 +773,14 @@ contains
                   *sum(flow%components(m)%gf*psi(:,i,j,k),1)
           end do
        end if
+
+       do m=1,flow%ncomponents
+         u(m,:,i,j,k) = u(m,:,i,j,k) + .5*forces(m,:,i,j,k)/rho(m,i,j,k)
+       end do
+
+       do d=1,flow%ndims
+         velt(d,i,j,k) = sum(u(:,d,i,j,k)*mm(:)*rho(:,i,j,k))/rhot(i,j,k)
+       end do
     end if
     end do
     end do
@@ -780,10 +813,8 @@ contains
     do j=flow%grid%info%ys,flow%grid%info%ye
     do i=flow%grid%info%xs,flow%grid%info%xe
     if (walls(i,j).eq.0) then
+
        rhot(i,j) = sum(rho(:,i,j)*mm,1)
-       do d=1,flow%ndims
-          velt(d,i,j) = sum(u(:,d,i,j)*mm(:)*rho(:,i,j))/rhot(i,j)
-       end do
        prs(i,j) = rhot(i,j)/3.
        if (flow%use_nonideal_eos .or. (flow%ncomponents > 1)) then
           do m=1,flow%ncomponents
@@ -791,6 +822,14 @@ contains
                   *sum(flow%components(m)%gf*psi(:,i,j),1)
           end do
        end if
+
+       do m=1,flow%ncomponents
+         u(m,:,i,j) = u(m,:,i,j) + .5*forces(m,:,i,j)/rho(m,i,j)
+       end do
+ 
+       do d=1,flow%ndims
+          velt(d,i,j) = sum(u(:,d,i,j)*mm(:)*rho(:,i,j))/rhot(i,j)
+       end do
     end if
     end do
     end do
@@ -878,7 +917,6 @@ contains
       end do
     end do
   end subroutine FlowFiBarEqPrefactor
-
 
   subroutine FlowFiBarInit(flow, walls)
     type(flow_type) flow
