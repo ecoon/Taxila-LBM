@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         28 March 2011
 !!!       on:            14:06:07 MDT
-!!!     last modified:   18 October 2011
-!!!       at:            13:41:47 MDT
+!!!     last modified:   07 November 2011
+!!!       at:            11:35:30 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -26,6 +26,16 @@ module LBM_Distribution_Function_module
 
   private
 #include "lbm_definitions.h"
+
+  interface DistributionCalcFlux
+    module procedure DistributionCalcFlux1
+    module procedure DistributionCalcFlux2
+  end interface
+
+  interface DistributionCalcDensity
+    module procedure DistributionCalcDensity1
+    module procedure DistributionCalcDensity2
+  end interface
 
   public:: DistributionCreate, &
        DistributionDestroy, &
@@ -221,19 +231,25 @@ contains
     call DMDAVecGetArrayF90(distribution%da_rho, distribution%rho, distribution%rho_a, ierr)
   end subroutine DistributionCommunicateDensityEnd
 
-  subroutine DistributionCalcDensity(distribution, walls)
+  subroutine DistributionCalcDensity1(distribution, walls)
+    type(distribution_type) distribution
+    PetscScalar,dimension(distribution%info%rgxyzl):: walls
+    
+    call DistributionCalcDensity2(distribution,walls,distribution%rho_a)
+  end subroutine DistributionCalcDensity1
+
+  subroutine DistributionCalcDensity2(distribution, walls, rho)
     type(distribution_type) distribution
     PetscScalar,dimension(1:distribution%info%rgxyzl):: walls
+    PetscScalar,dimension(distribution%s,distribution%info%rgxyzl):: rho
 
     select case(distribution%info%ndims)
     case(2)
-       call DistributionCalcDensityD2(distribution, distribution%fi_a, walls, &
-            distribution%rho_a)
+       call DistributionCalcDensityD2(distribution, distribution%fi_a, walls, rho)
     case(3)
-       call DistributionCalcDensityD3(distribution, distribution%fi_a, walls, & 
-            distribution%rho_a)
+       call DistributionCalcDensityD3(distribution, distribution%fi_a, walls, rho)
     end select
-  end  subroutine DistributionCalcDensity
+  end  subroutine DistributionCalcDensity2
 
   subroutine DistributionCalcDensityD2(distribution, fi, walls, rho)
     type(distribution_type) distribution
@@ -289,17 +305,26 @@ contains
     end do
   end  subroutine DistributionCalcDensityD3
 
-  subroutine DistributionCalcFlux(distribution, walls)
+  subroutine DistributionCalcFlux1(distribution, walls)
     type(distribution_type) distribution
     PetscScalar,dimension(distribution%info%rgxyzl):: walls
+    
+    call DistributionCalcFlux2(distribution,walls,distribution%flux)
+  end subroutine DistributionCalcFlux1
+
+  subroutine DistributionCalcFlux2(distribution, walls, flux)
+    type(distribution_type) distribution
+    PetscScalar,dimension(distribution%info%rgxyzl):: walls
+    PetscScalar,dimension(distribution%s, distribution%info%ndims, &
+         distribution%info%gxyzl):: flux
 
     select case(distribution%info%ndims)
     case(2)
-       call DistributionCalcFluxD2(distribution,distribution%fi_a,walls,distribution%flux)
+       call DistributionCalcFluxD2(distribution,distribution%fi_a,walls,flux)
     case(3)
-       call DistributionCalcFluxD3(distribution,distribution%fi_a,walls,distribution%flux)
+       call DistributionCalcFluxD3(distribution,distribution%fi_a,walls,flux)
     end select
-  end  subroutine DistributionCalcFlux
+  end  subroutine DistributionCalcFlux2
 
   subroutine DistributionCalcFluxD3(distribution, fi, walls, u)
     type(distribution_type) distribution
