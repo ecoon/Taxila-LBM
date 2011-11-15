@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         21 June 2011
 !!!       on:            10:07:45 MDT
-!!!     last modified:   18 October 2011
-!!!       at:            10:41:23 MDT
+!!!     last modified:   14 November 2011
+!!!       at:            18:22:56 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -161,6 +161,13 @@ contains
     else
       call DMDAVecGetArrayF90(walls%grid%da(ONEDOF), walls%walls, walls%walls_a, ierr)
       call initialize_walls(walls%walls_a, walls%filename, walls%grid%info)
+      call DMDAVecRestoreArrayF90(walls%grid%da(ONEDOF), walls%walls, &
+           walls%walls_a, ierr)
+      call DMLocalToGlobalBegin(walls%grid%da(ONEDOF), walls%walls, INSERT_VALUES, &
+           walls%walls_g, ierr)
+      call DMLocalToGlobalEnd(walls%grid%da(ONEDOF), walls%walls, INSERT_VALUES, &
+           walls%walls_g, ierr)
+      call DMDAVecGetArrayF90(walls%grid%da(ONEDOF), walls%walls, walls%walls_a, ierr)
       call WallsSetGhostNodes(walls, walls%walls_a)
     end if
   end subroutine WallsSetUp
