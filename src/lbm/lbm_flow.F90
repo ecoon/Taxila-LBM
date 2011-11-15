@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
-!!!     last modified:   07 November 2011
-!!!       at:            11:47:16 MST
+!!!     last modified:   14 November 2011
+!!!       at:            12:18:20 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -73,6 +73,7 @@ module LBM_Flow_module
      PetscScalar velocity_scale
      PetscScalar time_scale
      PetscScalar mass_scale
+     PetscScalar null_pressure ! the value assigned to wall cells for pressure
   end type flow_type
 
   public :: FlowCreate, &
@@ -134,6 +135,11 @@ contains
     flow%use_nonideal_eos = PETSC_FALSE
     flow%fluidsolid_forces = PETSC_FALSE
     nullify(flow%gvt)
+
+    flow%velocity_scale = 1.
+    flow%time_scale = 1.
+    flow%mass_scale = 1.
+    flow%null_pressure = 0.
   end function FlowCreate
 
   subroutine FlowDestroy(flow, ierr)
@@ -382,6 +388,9 @@ contains
     call PetscOptionsGetBool(options%my_prefix, '-output_flow_rhot', flow%io_rhot, flag, ierr)
     if (help) call PetscPrintf(options%comm, "  -output_flow_prs <TRUE>: output pressure\n", ierr)
     call PetscOptionsGetBool(options%my_prefix, '-output_flow_prs', flow%io_prs, flag, ierr)
+    if (help) call PetscPrintf(options%comm, "  -null_pressure <0.>: pressure within a wall cell\n", ierr)
+    flow%null_pressure = 0.
+    call PetscOptionsGetReal(options%my_prefix, '-null_pressure', flow%null_pressure, flag, ierr)
   end subroutine FlowSetFromOptions
 
   subroutine FlowSetGrid(flow, grid)
@@ -781,6 +790,8 @@ contains
        do d=1,flow%ndims
          velt(d,i,j,k) = sum(u(:,d,i,j,k)*mm(:)*rho(:,i,j,k))/rhot(i,j,k)
        end do
+    else
+      prs(i,j,k) = flow%null_pressure
     end if
     end do
     end do
@@ -830,6 +841,8 @@ contains
        do d=1,flow%ndims
           velt(d,i,j) = sum(u(:,d,i,j)*mm(:)*rho(:,i,j))/rhot(i,j)
        end do
+    else
+      prs(i,j) = flow%null_pressure
     end if
     end do
     end do
