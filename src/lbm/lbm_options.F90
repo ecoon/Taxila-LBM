@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         09 December 2010
 !!!       on:            14:16:32 MST
-!!!     last modified:   18 October 2011
-!!!       at:            10:33:02 MDT
+!!!     last modified:   15 November 2011
+!!!       at:            16:31:11 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -77,7 +77,7 @@
       options%ntimes = 1
       options%npasses = 1
       options%kprint = 0
-      options%kwrite = 1
+      options%kwrite = -1
       options%restart = PETSC_FALSE
       options%restart_counter = -1
       options%istep = 0
