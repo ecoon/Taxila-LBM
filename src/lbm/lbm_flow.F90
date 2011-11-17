@@ -5,8 +5,8 @@
 !!!     version:         
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
-!!!     last modified:   14 November 2011
-!!!       at:            12:18:20 MST
+!!!     last modified:   17 November 2011
+!!!       at:            12:01:18 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -602,12 +602,14 @@ contains
     do j=flow%grid%info%ys,flow%grid%info%ye
     do i=flow%grid%info%xs,flow%grid%info%xe
       if (walls(i,j,k).eq.0) then
+        ue(:,:,i,j,k) = ue(:,:,i,j,k) + .5*forces(:,:,i,j,k)
+
         do d=1,dist%info%ndims
           up(d,i,j,k) = sum(ue(:,d,i,j,k)*mmot,1)/sum(rho(:,i,j,k)*mmot,1)
         end do
 
         do m=1,flow%ncomponents
-          ue(m,:,i,j,k) = up(:,i,j,k) + .5*forces(m,:,i,j,k)/rho(m,i,j,k)
+          ue(m,:,i,j,k) = up(:,i,j,k)
         end do
       end if
     end do
@@ -638,12 +640,14 @@ contains
     do j=flow%grid%info%ys,flow%grid%info%ye
     do i=flow%grid%info%xs,flow%grid%info%xe
       if (walls(i,j).eq.0) then
+        ue(:,:,i,j) = ue(:,:,i,j) + .5*forces(:,:,i,j)
+
         do d=1,dist%info%ndims
           up(d,i,j) = sum(ue(:,d,i,j)*mmot,1)/sum(rho(:,i,j)*mmot,1)
         end do
 
         do m=1,flow%ncomponents
-          ue(m,:,i,j) = up(:,i,j) + .5*forces(m,:,i,j)/rho(m,i,j)
+          ue(m,:,i,j) = up(:,i,j)
         end do
       end if
     end do
