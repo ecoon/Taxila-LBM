@@ -6,7 +6,7 @@
 !!!     created:         17 March 2011
 !!!       on:            17:58:06 MDT
 !!!     last modified:   17 November 2011
-!!!       at:            12:01:18 MST
+!!!       at:            12:03:10 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
 !!!  
@@ -788,11 +788,11 @@ contains
        end if
 
        do m=1,flow%ncomponents
-         u(m,:,i,j,k) = u(m,:,i,j,k) + .5*forces(m,:,i,j,k)/rho(m,i,j,k)
+         u(m,:,i,j,k) = u(m,:,i,j,k) + .5*forces(m,:,i,j,k)
        end do
 
        do d=1,flow%ndims
-         velt(d,i,j,k) = sum(u(:,d,i,j,k)*mm(:)*rho(:,i,j,k))/rhot(i,j,k)
+         velt(d,i,j,k) = sum(u(:,d,i,j,k)*mm(:))/rhot(i,j,k)
        end do
     else
       prs(i,j,k) = flow%null_pressure
@@ -839,11 +839,11 @@ contains
        end if
 
        do m=1,flow%ncomponents
-         u(m,:,i,j) = u(m,:,i,j) + .5*forces(m,:,i,j)/rho(m,i,j)
+         u(m,:,i,j) = u(m,:,i,j) + .5*forces(m,:,i,j)
        end do
  
        do d=1,flow%ndims
-          velt(d,i,j) = sum(u(:,d,i,j)*mm(:)*rho(:,i,j))/rhot(i,j)
+          velt(d,i,j) = sum(u(:,d,i,j)*mm(:))/rhot(i,j)
        end do
     else
       prs(i,j) = flow%null_pressure
