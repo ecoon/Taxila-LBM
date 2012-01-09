@@ -113,11 +113,11 @@ contains
     flow%velt_g = 0
     flow%prs_g = 0
     flow%rhot_g = 0
-    
+
     nullify(flow%velt_a)
     nullify(flow%prs_a)
     nullify(flow%rhot_a)
-    
+
     nullify(flow%vel_eq)
     nullify(flow%forces)
     nullify(flow%fi_eq)
@@ -1008,16 +1008,16 @@ contains
   subroutine FlowFiInit(flow, walls)
     type(flow_type) flow
     type(walls_type) walls
-    
+
     ! Note that the initialization process is calculated without walls.
     ! This is because we must fake that a bounceback has occured in a
-    ! previous step.  Wall nodes, which should hold the to-be-bounced 
-    ! back fi, will instead have zeros.  
+    ! previous step.  Wall nodes, which should hold the to-be-bounced
+    ! back fi, will instead have zeros.
     PetscScalar,dimension(1:flow%grid%info%rgxyzl):: tmp_no_walls
     tmp_no_walls = 0.
 
     call DistributionCommunicateDensity(flow%distribution)
-    call FlowCalcForces(flow, walls) ! not sure if this is ok or not!  
+    call FlowCalcForces(flow, walls) ! not sure if this is ok or not!
                                      ! Does this need no-walls as well?
     call FlowUpdateFeq(flow, tmp_no_walls)
     call FlowFiBarInit(flow, tmp_no_walls)

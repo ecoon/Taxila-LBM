@@ -24,14 +24,14 @@ program MAIN
   use LBM_module
   implicit none
 #include "lbm_definitions.h"
-  
+
   PetscInt istep
   PetscInt ntimes, npasses
   PetscInt kwrite, kprint
   PetscErrorCode ierr
   character(len=MAXSTRINGLENGTH) infile
   character(len=MAXWORDLENGTH) prefix
-  
+
   external initialize_bcs
   external initialize_bcs_transport
   external initialize_state
@@ -39,8 +39,8 @@ program MAIN
   external initialize_walls
   type(lbm_type),pointer:: lbm
   type(options_type),pointer:: options
-  
-  
+
+
   ! --- setup environment
   call getarg(1, infile)
   call PetscInitialize(infile, ierr)
@@ -82,20 +82,20 @@ program MAIN
      else
         call LBMInitializeState(lbm, initialize_state)
      end if
-     
+
      if (options%steadystate_hasfile) then
         call LBMLoadSteadyStateFlow(lbm, options%steadystate_flow_file)
      end if
      istep=0
   endif
   call PetscLogEventEnd(logger%event_init_icsetup,ierr)
-  
+
   ! start lbm
   if (lbm%grid%info%rank.eq.0) then
      write(*,*) 'calling lbm from inital step', istep, 'to final step', &
           options%ntimes*options%npasses
   end if
-  
+
   call LBMInit(lbm, istep, options%supress_ic_output)
   call LBMRun(lbm, istep, options%ntimes*options%npasses)
   call PetscLogStagePop(ierr)

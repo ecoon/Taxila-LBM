@@ -16,7 +16,7 @@
 #include "finclude/petscsysdef.h"
 #include "finclude/petscvecdef.h"
 #include "finclude/petscdmdef.h"
-  
+
   module LBM_module
     use petsc
     use Timing_module
@@ -44,14 +44,14 @@
        type(transport_type),pointer :: transport
        type(io_type),pointer :: io
 
-       character(len=MAXWORDLENGTH) name       
+       character(len=MAXWORDLENGTH) name
     end type lbm_type
 
     interface LBMInitializeState
        module procedure LBMInitializeState_Flow
        module procedure LBMInitializeState_FlowTransport
     end interface
-    
+
     interface LBMInit
        module procedure LBMInit1
        module procedure LBMInit2
@@ -107,9 +107,9 @@
       return
     end subroutine LBMDestroy
 
-    subroutine LBMSetName(lbm, name) 
-      type(lbm_type) lbm 
-      character(len=MAXWORDLENGTH):: name       
+    subroutine LBMSetName(lbm, name)
+      type(lbm_type) lbm
+      character(len=MAXWORDLENGTH):: name
       lbm%name = name
     end subroutine LBMSetName
 
@@ -125,7 +125,7 @@
 
       call WallsSetGrid(lbm%walls, lbm%grid)
       call WallsSetFromOptions(lbm%walls, options, ierr);CHKERRQ(ierr)
-      
+
       call FlowSetGrid(lbm%flow, lbm%grid)
       call FlowSetFromOptions(lbm%flow, options, ierr);CHKERRQ(ierr)
       call FlowSetPhysicalScales(lbm%flow,ierr);CHKERRQ(ierr)
@@ -171,7 +171,7 @@
       end if
       return
     end subroutine LBMSetUp
-    
+
     subroutine LBMInit1(lbm, istep)
       type(lbm_type) lbm
       PetscInt istep
@@ -383,7 +383,7 @@
       call TimingDestroy(timer1)
       return
     end subroutine LBMRun2
-    
+
     subroutine LBMOutput(lbm, istep)
       type(lbm_type) lbm
       PetscInt istep
@@ -396,7 +396,7 @@
          call FlowUpdateDiagnostics(lbm%flow, lbm%walls)
          call FlowOutputDiagnostics(lbm%flow, lbm%io)
       end if
-      
+
       if (associated(lbm%transport)) then
          call TransportUpdateDiagnostics(lbm%transport, lbm%walls)
          call TransportOutputDiagnostics(lbm%transport, lbm%io)
@@ -438,7 +438,7 @@
     subroutine LBMGetCorners(lbm, corners)
       type(lbm_type) lbm
       PetscScalar,dimension(3,2):: corners
-      
+
       corners = lbm%grid%info%corners
     end subroutine LBMGetCorners
 
@@ -477,16 +477,16 @@
          write(*,*) 'reading step', istep, 'from file', lbm%io%counter
       endif
       call IOLoad(lbm%io, lbm%flow%distribution%fi_g, 'fi')
-      
+
       call DMGlobalToLocalBegin(lbm%grid%da(NCOMPONENTXBDOF), lbm%flow%distribution%fi_g, &
            INSERT_VALUES, lbm%flow%distribution%fi, ierr)
       call DMGlobalToLocalEnd(lbm%grid%da(NCOMPONENTXBDOF), lbm%flow%distribution%fi_g, &
            INSERT_VALUES, lbm%flow%distribution%fi, ierr)
       return
     end subroutine LBMInitializeStateRestarted
-    
+
     subroutine LBMLoadSteadyStateFlow(lbm, filename)
-      type(lbm_type) lbm 
+      type(lbm_type) lbm
       character(len=MAXSTRINGLENGTH) filename
       PetscViewer viewer
       PetscErrorCode ierr
