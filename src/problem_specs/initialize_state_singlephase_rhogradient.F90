@@ -2,14 +2,14 @@
 !!!  Fortran-90-file
 !!!     author:          Ethan T. Coon
 !!!     filename:        initialize_state.F90
-!!!     version:         
+!!!     version:
 !!!     created:         14 January 2011
 !!!       on:            18:21:06 MST
 !!!     last modified:   31 October 2011
 !!!       at:            15:53:59 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
-!!!  
+!!!
 !!! ====================================================================
 #define PETSC_USE_FORTRAN_MODULES 1
 #include "finclude/petscsysdef.h"
@@ -36,9 +36,9 @@
     PetscScalar,dimension(dist%info%rgxyzl):: walls
 
     select case(dist%info%ndims)
-    case (2) 
+    case (2)
       call initialize_state_d2(rho, u, walls, dist, components, options)
-    case (3) 
+    case (3)
       call initialize_state_d3(rho, u, walls, dist, components, options)
     end select
   end subroutine initialize_state
@@ -96,7 +96,7 @@
       call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_xm_component1', xm3_ave_p, &
            flag, ierr)
       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value for xm_component1', ierr)
-      
+
       do i=dist%info%xs,dist%info%xe
         t = dble(i-1)/dble(dist%info%NX-1)
         rho(1,i,:,:) = (1-t)*xm3_ave_p + t*xp3_ave_p
@@ -108,7 +108,7 @@
       call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_ym_component1', xm3_ave_p, &
            flag, ierr)
       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value for ym_component1', ierr)
-      
+
       do i=dist%info%ys,dist%info%ye
         t = dble(i-1)/dble(dist%info%NY-1)
         rho(1,:,i,:) = (1-t)*xm3_ave_p + t*xp3_ave_p
@@ -120,7 +120,7 @@
       call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_zm_component1', xm3_ave_p, &
            flag, ierr)
       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value for zm_component1', ierr)
-      
+
       do i=dist%info%zs,dist%info%ze
         t = dble(i-1)/dble(dist%info%NZ-1)
         rho(1,:,:,i) = (1-t)*xm3_ave_p + t*xp3_ave_p
@@ -178,7 +178,7 @@
       call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_xm_component1', xm3_ave_p, &
            flag, ierr)
       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value for xm_component1', ierr)
-      
+
       do i=dist%info%xs,dist%info%xe
         t = dble(i-1)/dble(dist%info%NX-1)
         rho(1,i,:) = (1-t)*xm3_ave_p + t*xp3_ave_p
@@ -190,7 +190,7 @@
       call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_ym_component1', xm3_ave_p, &
            flag, ierr)
       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value for ym_component1', ierr)
-      
+
       do i=dist%info%ys,dist%info%ye
         t = dble(i-1)/dble(dist%info%NY-1)
         rho(1,:,i) = (1-t)*xm3_ave_p + t*xp3_ave_p

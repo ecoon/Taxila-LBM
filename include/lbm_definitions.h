@@ -92,3 +92,11 @@
   PetscScalar, parameter :: TWO_S = 2.
   PetscScalar, parameter :: THREE_S = 3.
   PetscScalar, parameter :: NEG_NINENINENINE_S = -999.
+
+  ! walls enum for special values
+  PetscInt,parameter :: WALL_PORESPACE = 0. ! note this is not used frequently, most places have wall(i,j,k).eq.0
+  PetscInt,parameter :: WALL_GHOST = 999.
+  PetscInt,parameter :: WALL_NORMAL_X = 900. ! this wall allows for no-stick condition for a wall oriented with x-normal
+  PetscInt,parameter :: WALL_NORMAL_Y = 901. ! this wall allows for no-stick condition for a wall oriented with y-normal
+  PetscInt,parameter :: WALL_NORMAL_Z = 902. ! this wall allows for no-stick condition for a wall oriented with z-normal
+                                             ! anything else will get the no-slip bounceback condition

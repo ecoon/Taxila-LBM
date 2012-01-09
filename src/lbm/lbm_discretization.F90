@@ -2,14 +2,14 @@
 !!!  Fortran-90-file
 !!!     author:          Ethan T. Coon
 !!!     filename:        lbm_discretization.F90
-!!!     version:         
+!!!     version:
 !!!     created:         14 March 2011
 !!!       on:            16:33:56 MDT
 !!!     last modified:   19 October 2011
 !!!       at:            10:07:17 MDT
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
-!!!  
+!!!
 !!! ====================================================================
 #define PETSC_USE_FORTRAN_MODULES 1
 #include "finclude/petscsysdef.h"
@@ -21,7 +21,7 @@ module LBM_Discretization_module
   use LBM_Discretization_D3Q19_module
   use LBM_Discretization_D2Q9_module
   implicit none
-  
+
   private
 #include "lbm_definitions.h"
 
@@ -58,11 +58,14 @@ contains
     if (associated(disc%ci)) deallocate(disc%ci)
     if (associated(disc%weights)) deallocate(disc%weights)
     if (associated(disc%opposites)) deallocate(disc%opposites)
+    if (associated(disc%reflect_x)) deallocate(disc%reflect_x)
+    if (associated(disc%reflect_y)) deallocate(disc%reflect_y)
+    if (associated(disc%reflect_z)) deallocate(disc%reflect_z)
     if (associated(disc%mt_mrt)) deallocate(disc%mt_mrt)
     if (associated(disc%mmt_mrt)) deallocate(disc%mmt_mrt)
     if (associated(disc%ffw)) deallocate(disc%ffw)
   end subroutine DiscretizationDestroy
-  
+
   subroutine DiscretizationSetDerivOrder(disc, deriv_order)
     type(discretization_type) disc
     PetscInt deriv_order
@@ -72,7 +75,7 @@ contains
          (deriv_order.eq.8).or.(deriv_order.eq.10)) then
        disc%deriv_order = deriv_order
     else
-       SETERRQ(1, 1, 'Invalid derivative order', ierr)       
+       SETERRQ(1, 1, 'Invalid derivative order', ierr)
     end if
   end subroutine DiscretizationSetDerivOrder
 
@@ -101,7 +104,7 @@ contains
     type(discretization_type) disc
     type(relaxation_type) relax
     PetscErrorCode ierr
-    
+
     select case(disc%name)
     case(D3Q19_DISCRETIZATION)
        call DiscretizationSetUpRelax_D3Q19(disc, relax)
@@ -132,7 +135,7 @@ contains
        call DiscretizationEquilf_D3Q19(disc, rho, u, walls, feq, m, relax, dist)
     case(D2Q9_DISCRETIZATION)
        call DiscretizationEquilf_D2Q9(disc, rho, u, walls, feq, m, relax, dist)
-    case DEFAULT 
+    case DEFAULT
        SETERRQ(1,1,'invalid discretization in LBM',ierr)
     end select
   end subroutine DiscretizationEquilf
@@ -149,7 +152,7 @@ contains
        call DiscSetLocalDirections_D3Q19(disc, boundary, directions, cardinals)
     case(D2Q9_DISCRETIZATION)
        call DiscSetLocalDirections_D2Q9(disc, boundary, directions, cardinals)
-    case DEFAULT 
+    case DEFAULT
        SETERRQ(1,1,'invalid discretization in LBM',ierr)
     end select
   end subroutine DiscSetLocalDirections
@@ -168,7 +171,7 @@ contains
        call DiscApplyBCDirichletToBoundary_D3Q19(disc, fi, vals, directions, dist)
     case(D2Q9_DISCRETIZATION)
        call DiscApplyBCDirichletToBoundary_D2Q9(disc, fi, vals, directions, dist)
-    case DEFAULT 
+    case DEFAULT
        SETERRQ(1,1,'invalid discretization in LBM',ierr)
     end select
   end subroutine DiscApplyBCDirichletToBoundary
@@ -190,7 +193,7 @@ contains
     case(D2Q9_DISCRETIZATION)
        call DiscApplyBCFluxToBoundary_D2Q9(disc, fi, vals, directions, cardinals, &
             dist)
-    case DEFAULT 
+    case DEFAULT
        SETERRQ(1,1,'invalid discretization in LBM',ierr)
     end select
   end subroutine DiscApplyBCFluxToBoundary
@@ -213,7 +216,7 @@ contains
     case(D2Q9_DISCRETIZATION)
        call DiscApplyBCVelocityToBoundary_D2Q9(disc, fi, vals, directions, cardinals, &
             dist)
-    case DEFAULT 
+    case DEFAULT
        SETERRQ(1,1,'invalid discretization in LBM',ierr)
     end select
   end subroutine DiscApplyBCVelocityToBoundary
