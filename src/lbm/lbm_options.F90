@@ -2,14 +2,14 @@
 !!!  Fortran-90-file
 !!!     author:          Ethan T. Coon
 !!!     filename:        options.F90
-!!!     version:         
+!!!     version:
 !!!     created:         09 December 2010
 !!!       on:            14:16:32 MST
 !!!     last modified:   15 November 2011
 !!!       at:            16:31:11 MST
 !!!     URL:             http://www.ldeo.columbia.edu/~ecoon/
 !!!     email:           ecoon _at_ lanl.gov
-!!!  
+!!!
 !!! ====================================================================
 #define PETSC_USE_FORTRAN_MODULES 1
 #include "finclude/petscsysdef.h"
@@ -180,7 +180,7 @@
       call PetscOptionsGetBool(options%my_prefix, '-flow_use_nonideal_eos', &
            options%flow_use_nonideal_eos, flag, ierr)
 
-      ! walls 
+      ! walls
       if (help) call PetscPrintf(options%comm, &
            "  -nminerals <1>: number of minerals\n", ierr)
       call PetscOptionsGetInt(options%my_prefix,'-nminerals', options%nminerals,flag,ierr)

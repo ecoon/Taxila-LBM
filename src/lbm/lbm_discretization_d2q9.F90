@@ -57,9 +57,11 @@ contains
     disc%b = discretization_directions
     allocate(disc%ci(0:disc%b,1:disc%ndims))
     allocate(disc%weights(0:disc%b))
-    allocate(disc%opposites(0:disc%b))
-    allocate(disc%mt_mrt(0:disc%b,0:disc%b))         ! transpose of M
-    allocate(disc%mmt_mrt(0:disc%b))                 ! diagonal M dot MT matrix
+    allocate(disc%opposites(0:disc%b))              ! direction reflected in all directions
+    allocate(disc%reflect_x(0:disc%b))              ! direction reflected in x-direction
+    allocate(disc%reflect_y(0:disc%b))              ! direction reflected in y-direction
+    allocate(disc%mt_mrt(0:disc%b,0:disc%b))        ! transpose of M
+    allocate(disc%mmt_mrt(0:disc%b))                ! diagonal M dot MT matrix
     allocate(disc%ffw(1:4*disc%deriv_order))        ! slightly larger than needed in all cases
 
     disc%opposites(ORIGIN) = ORIGIN
@@ -71,6 +73,26 @@ contains
     disc%opposites(SOUTHWEST) = NORTHEAST
     disc%opposites(SOUTHEAST) = NORTHWEST
     disc%opposites(NORTHWEST) = SOUTHEAST
+
+    disc%reflect_x(ORIGIN) = ORIGIN
+    disc%reflect_x(EAST) = WEST
+    disc%reflect_x(WEST) = EAST
+    disc%reflect_x(NORTH) = NORTH
+    disc%reflect_x(SOUTH) = SOUTH
+    disc%reflect_x(NORTHEAST) = NORTHWEST
+    disc%reflect_x(SOUTHWEST) = SOUTHEAST
+    disc%reflect_x(SOUTHEAST) = SOUTHWEST
+    disc%reflect_x(NORTHWEST) = NORTHEAST
+
+    disc%reflect_y(ORIGIN) = ORIGIN
+    disc%reflect_y(EAST) = EAST
+    disc%reflect_y(WEST) = WEST
+    disc%reflect_y(NORTH) = SOUTH
+    disc%reflect_y(SOUTH) = NORTH
+    disc%reflect_y(NORTHEAST) = SOUTHEAST
+    disc%reflect_y(SOUTHWEST) = NORTHWEST
+    disc%reflect_y(SOUTHEAST) = NORTHEAST
+    disc%reflect_y(NORTHWEST) = SOUTHWEST
 
     disc%ci(:,X_DIRECTION) = (/ 0, 1, 0,-1, 0, 1,-1,-1, 1/)
     disc%ci(:,Y_DIRECTION) = (/ 0, 0, 1, 0,-1, 1, 1,-1,-1/)

@@ -188,16 +188,16 @@ contains
     type(info_type) info
     PetscScalar,dimension(info%rgxs:info%rgxe,info%rgys:info%rgye):: data
     if ((info%xs.eq.1).and.(.not.info%periodic(X_DIRECTION))) then
-      data(info%rgxs:info%xs-1,:) = 999.
+      data(info%rgxs:info%xs-1,:) = WALL_GHOST
     end if
     if ((info%xe.eq.info%NX).and.(.not.info%periodic(X_DIRECTION))) then
-      data(info%xe+1:info%rgxe,:) = 999.
+      data(info%xe+1:info%rgxe,:) = WALL_GHOST
     end if
     if ((info%ys.eq.1).and.(.not.info%periodic(Y_DIRECTION))) then
-      data(:,info%rgys:info%ys-1) = 999.
+      data(:,info%rgys:info%ys-1) = WALL_GHOST
     end if
     if ((info%ye.eq.info%NY).and.(.not.info%periodic(Y_DIRECTION))) then
-      data(:,info%ye+1:info%rgye) = 999.
+      data(:,info%ye+1:info%rgye) = WALL_GHOST
     end if
   end subroutine WallsSetGhostNodesD2
   
@@ -207,22 +207,22 @@ contains
     PetscScalar,dimension(info%rgxs:info%rgxe,info%rgys:info%rgye, &
          info%rgzs:info%rgze):: data
     if ((info%xs.eq.1).and.(.not.info%periodic(X_DIRECTION))) then
-      data(info%rgxs:info%xs-1,:,:) = 999.
+      data(info%rgxs:info%xs-1,:,:) = WALL_GHOST
     end if
     if ((info%xe.eq.info%NX).and.(.not.info%periodic(X_DIRECTION))) then
-      data(info%xe+1:info%rgxe,:,:) = 999.
+      data(info%xe+1:info%rgxe,:,:) = WALL_GHOST
     end if
     if ((info%ys.eq.1).and.(.not.info%periodic(Y_DIRECTION))) then
-      data(:,info%rgys:info%ys-1,:) = 999.
+      data(:,info%rgys:info%ys-1,:) = WALL_GHOST
     end if
     if ((info%ye.eq.info%NY).and.(.not.info%periodic(Y_DIRECTION))) then
-      data(:,info%ye+1:info%rgye,:) = 999.
+      data(:,info%ye+1:info%rgye,:) = WALL_GHOST
     end if
     if ((info%zs.eq.1).and.(.not.info%periodic(Z_DIRECTION))) then
-      data(:,:,info%rgzs:info%zs-1) = 999.
+      data(:,:,info%rgzs:info%zs-1) = WALL_GHOST
     end if
     if ((info%ze.eq.info%NZ).and.(.not.info%periodic(Z_DIRECTION))) then
-      data(:,:,info%ze+1:info%rgze) = 999.
+      data(:,:,info%ze+1:info%rgze) = WALL_GHOST
     end if
   end subroutine WallsSetGhostNodesD3
 
