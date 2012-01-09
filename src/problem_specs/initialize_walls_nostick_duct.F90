@@ -50,11 +50,11 @@
 
     walls=0
 
-    if (info%ys.eq.1) walls(:,1,:)=1
-    if (info%ye.eq.info%NY) walls(:,info%NY,:)=1
+    if (info%ys.eq.1) walls(:,1,:) = WALL_NORMAL_Y
+    if (info%ye.eq.info%NY) walls(:,info%NY,:) = WALL_NORMAL_Y
 
-    if (info%zs.eq.1) walls(:,:,1)=1
-    if (info%ze.eq.info%NZ) walls(:,:,info%NZ)=1
+    if (info%zs.eq.1) walls(:,:,1) = WALL_NORMAL_Z
+    if (info%ze.eq.info%NZ) walls(:,:,info%NZ) = WALL_NORMAL_Z
     return
   end subroutine initialize_walls_d3
 
@@ -72,7 +72,7 @@
 
     walls=0
 
-    if (info%ys.eq.1) walls(:,1)=1
-    if (info%ye.eq.info%NY) walls(:,info%NY)=1
+    if (info%ys.eq.1) walls(:,1) = WALL_NORMAL_Y
+    if (info%ye.eq.info%NY) walls(:,info%NY) = WALL_NORMAL_Y
     return
   end subroutine initialize_walls_d2

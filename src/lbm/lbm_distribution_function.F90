@@ -509,9 +509,19 @@ contains
     do k=dist%info%zs,dist%info%ze
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
-    if (walls(i,j,k) > 0) then
-       call DistributionBouncebackSite(dist, fi(:,:,i,j,k))
-    end if
+      if (walls(i,j,k).eq.WALL_NORMAL_X) then
+        call DistributionBouncebackSite(dist, fi(:,:,i,j,k), &
+             dist%disc%reflect_x)
+      else if (walls(i,j,k).eq.WALL_NORMAL_Y) then
+        call DistributionBouncebackSite(dist, fi(:,:,i,j,k), &
+             dist%disc%reflect_y)
+      else if (walls(i,j,k).eq.WALL_NORMAL_Z) then
+        call DistributionBouncebackSite(dist, fi(:,:,i,j,k), &
+             dist%disc%reflect_z)
+      else if (walls(i,j,k) > 0) then
+       call DistributionBouncebackSite(dist, fi(:,:,i,j,k), &
+            dist%disc%opposites)
+      end if
     end do
     end do
     end do
@@ -530,21 +540,29 @@ contains
 
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
-    if (walls(i,j) > 0) then
-       call DistributionBouncebackSite(dist, fi(:,:,i,j))
-    end if
+      if (walls(i,j).eq.WALL_NORMAL_X) then
+        call DistributionBouncebackSite(dist, fi(:,:,i,j), &
+             dist%disc%reflect_x)
+      else if (walls(i,j).eq.WALL_NORMAL_Y) then
+        call DistributionBouncebackSite(dist, fi(:,:,i,j), &
+             dist%disc%reflect_y)
+      else if (walls(i,j) > 0) then
+        call DistributionBouncebackSite(dist, fi(:,:,i,j), &
+             dist%disc%opposites)
+      end if
     end do
     end do
   end subroutine DistributionBouncebackD2
 
-  subroutine DistributionBouncebackSite(dist, fi)
+  subroutine DistributionBouncebackSite(dist, fi, remap)
     type(distribution_type) dist
     PetscScalar,dimension(dist%s,0:dist%b):: fi
     PetscScalar,dimension(dist%s,0:dist%b):: tmp
+    PetscInt,dimension(0:dist%b):: remap
     PetscInt n
 
     do n=0,dist%b
-       tmp(:,n) = fi(:,dist%disc%opposites(n))
+       tmp(:,n) = fi(:,remap(n))
     end do
     fi(:,:) = tmp
   end subroutine DistributionBouncebackSite
@@ -557,7 +575,7 @@ contains
          distribution%info%rgxs:distribution%info%rgxe, &
          distribution%info%rgys:distribution%info%rgye, &
          distribution%info%rgzs:distribution%info%rgze):: out
-    
+
     PetscInt n
     do n=0,distribution%b
        out(n,distribution%info%xs:distribution%info%xe, &
