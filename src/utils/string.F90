@@ -21,49 +21,93 @@ module String_module
             StringAdjustl, &
             StringNull
 
+  interface StringCompare
+    module procedure StringCompare1
+    module procedure StringCompare2
+  end interface
+
+  interface StringCompareIgnoreCase
+    module procedure StringCompareIgnoreCase1
+    module procedure StringCompareIgnoreCase2
+  end interface
+
 contains
 
 ! ************************************************************************** !
 !
-! StringCompare: compares two strings
+! StringCompare1: compares two strings
 ! author: Glenn Hammond
 ! date: 11/10/08
 !
 ! ************************************************************************** !
-PetscBool function StringCompare(string1,string2,n)
+PetscBool function StringCompare1(string1,string2,n)
 
   implicit none
 
-  integer :: i, n
+  PetscInt :: i, n
   character(len=n) :: string1, string2
   
   do i=1,n
     if (string1(i:i) /= string2(i:i)) then
-      StringCompare = PETSC_FALSE
+      StringCompare1 = PETSC_FALSE
       return
     endif
   enddo
 
-  StringCompare = PETSC_TRUE
+  StringCompare1 = PETSC_TRUE
   return
 
-end function StringCompare
+end function StringCompare1
 
 ! ************************************************************************** !
 !
-! StringCompare: compares two strings
+! StringCompare2: compares two strings
+! author: Glenn Hammond
+! date: 10/25/11
+!
+! ************************************************************************** !
+PetscBool function StringCompare2(string1,string2)
+
+  implicit none
+
+  PetscInt :: i, length1, length2
+  character(len=*) :: string1, string2
+  
+  length1 = len_trim(string1)
+  length2 = len_trim(string2)
+  if (length1 /= length2) then
+    StringCompare2 = PETSC_FALSE
+    return
+  endif
+
+  do i=1,length1
+    if (string1(i:i) /= string2(i:i)) then
+      StringCompare2 = PETSC_FALSE
+      return
+    endif
+  enddo
+
+  StringCompare2 = PETSC_TRUE
+  return
+
+end function StringCompare2
+
+! ************************************************************************** !
+!
+! StringCompareIgnoreCase1: compares two strings
 ! author: Glenn Hammond
 ! date: 11/10/08
 !
 ! ************************************************************************** !
-PetscBool function StringCompareIgnoreCase(string1,string2,n)
+function StringCompareIgnoreCase1(string1,string2,n)
 
   implicit none
 
-  integer :: i, n
+  PetscInt :: i, n
   character(len=n) :: string1, string2
   
   character(len=n) :: upper1, upper2
+  PetscBool :: StringCompareIgnoreCase1
   
   upper1 = string1
   upper2 = string2
@@ -73,15 +117,57 @@ PetscBool function StringCompareIgnoreCase(string1,string2,n)
   
   do i=1,n
     if (upper1(i:i) /= upper2(i:i)) then
-      StringCompareIgnoreCase = PETSC_FALSE
+      StringCompareIgnoreCase1 = PETSC_FALSE
       return
     endif
   enddo
 
-  StringCompareIgnoreCase = PETSC_TRUE
+  StringCompareIgnoreCase1 = PETSC_TRUE
   return
 
-end function StringCompareIgnoreCase
+end function StringCompareIgnoreCase1
+
+! ************************************************************************** !
+!
+! StringCompare: compares two strings
+! author: Glenn Hammond
+! date: 11/10/08
+!
+! ************************************************************************** !
+function StringCompareIgnoreCase2(string1,string2)
+
+  implicit none
+
+  PetscInt :: i, length1, length2
+  character(len=*) :: string1, string2
+  
+  character(len=MAXSTRINGLENGTH) :: upper1, upper2
+  PetscBool :: StringCompareIgnoreCase2
+  
+  length1 = len_trim(string1)
+  length2 = len_trim(string2)
+  if (length1 /= length2) then
+    StringCompareIgnoreCase2 = PETSC_FALSE
+    return
+  endif
+
+  upper1 = string1
+  upper2 = string2
+  
+  call StringToUpper(upper1)
+  call StringToUpper(upper2)
+  
+  do i=1,length1
+    if (upper1(i:i) /= upper2(i:i)) then
+      StringCompareIgnoreCase2 = PETSC_FALSE
+      return
+    endif
+  enddo
+
+  StringCompareIgnoreCase2 = PETSC_TRUE
+  return
+
+end function StringCompareIgnoreCase2
 
 ! ************************************************************************** !
 !
@@ -94,7 +180,7 @@ subroutine StringToUpper(string)
       
   implicit none
 
-  integer :: i
+  PetscInt :: i
   character(len=*) :: string
 
   do i=1,len_trim(string)
@@ -116,7 +202,7 @@ subroutine StringToLower(string)
       
   implicit none
 
-  integer :: i
+  PetscInt :: i
   character(len=*) :: string
 
   do i=1,len_trim(string)
@@ -139,7 +225,7 @@ subroutine StringReadQuotedWord(string, name, return_blank_error, ierr)
 
   implicit none
 
-  integer :: i, begins, ends, realends, length
+  PetscInt :: i, begins, ends, realends, length
   PetscBool :: return_blank_error ! Return an error for a blank line
                                 ! Therefore, a blank line is not acceptable.
   character(len=*) :: string
@@ -238,8 +324,8 @@ subroutine StringAdjustl(string)
 
   character(len=*) :: string
   
-  integer :: i
-  integer :: string_length
+  PetscInt :: i
+  PetscInt :: string_length
   character(len=1) :: tab
 
   ! We have to manually convert any leading tabs into spaces, as the 
@@ -272,7 +358,7 @@ function StringNull(string)
   character(len=*) :: string
 
   PetscBool :: StringNull
-  integer :: length
+  PetscInt :: length
 
   length = len_trim(adjustl(string))
   if (length > 0) then
