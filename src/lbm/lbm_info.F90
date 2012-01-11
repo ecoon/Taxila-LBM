@@ -239,8 +239,6 @@ contains
     end if
     info%corners => info%data%corners
 
-    call PetscBagView(info%bag, PETSC_VIEWER_STDOUT_WORLD, ierr)
-
     ! nullify z-things for a 2D DA
     if (info%ndims.eq.2) then
        info%zs = PETSC_NULL_INTEGER
