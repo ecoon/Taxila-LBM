@@ -132,6 +132,8 @@ contains
     ! create the bag
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
     sizeofdata = (NMAX_COMPONENTS)*sizeofscalar
+    sizeofdata = sizeofdata + sizeofscalar
+
     call PetscBagCreate(mineral%comm, sizeofdata, mineral%bag, ierr)
     call PetscBagSetName(mineral%bag, TRIM(options%my_prefix)//mineral%name, "", ierr)
     call PetscBagGetData(mineral%bag, mineral%data, ierr)

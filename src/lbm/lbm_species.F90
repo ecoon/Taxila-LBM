@@ -152,6 +152,7 @@ contains
     ! create the bag
     call PetscDataTypeGetSize(PETSC_INT, sizeofint, ierr)
     sizeofdata = sizeofint
+    sizeofdata = sizeofdata + sizeofint
     call PetscBagCreate(specie%comm, sizeofdata, specie%bag, ierr)
     call PetscBagSetName(specie%bag, TRIM(options%my_prefix)//trim(specie%name), "", ierr)
     call PetscBagGetData(specie%bag, specie%data, ierr)
