@@ -180,6 +180,7 @@ contains
     ! create the bag
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
     sizeofdata = (4+NMAX_COMPONENTS)*sizeofscalar
+    sizeofdata = sizeofdata + sizeofscalar
     call PetscBagCreate(component%comm, sizeofdata, component%bag, ierr)
     call PetscBagSetName(component%bag, TRIM(options%my_prefix)//component%name, "", ierr)
     call PetscBagGetData(component%bag, component%data, ierr)

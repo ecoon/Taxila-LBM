@@ -142,6 +142,8 @@ contains
     ! create the bag
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
     sizeofdata = 6*sizeofscalar 
+    sizeofdata = sizeofdata + sizeofscalar
+
     call PetscBagCreate(relax%comm, sizeofdata, relax%bag, ierr)
     call PetscBagGetData(relax%bag, relax%data, ierr)
 
