@@ -152,7 +152,15 @@ contains
     call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
     call PetscDataTypeGetSize(PETSC_BOOL, sizeofbool, ierr)
     call PetscDataTypeGetSize(PETSC_INT, sizeofint, ierr)
+
     sizeofdata = 3*2*sizeofscalar + 3*sizeofbool + 6*sizeofint
+    ! For some reason valgrind is throwing an error with this size.
+    ! It's clearly correct, and this dates back to older PETSc, so I'm
+    ! not exactly sure what's wrong.  For now, we'll do the safe thing
+    ! of just tacking on a bit of extra memory.  It seems to only be
+    ! this bag? (the only one with two arrays?)
+    sizeofdata = sizeofdata + sizeofscalar
+
     call PetscBagCreate(info%comm, sizeofdata, info%bag, ierr)
     call PetscBagSetName(info%bag, TRIM(options%my_prefix)//info%name, "", ierr)
 
@@ -230,7 +238,9 @@ contains
             trim(options%my_prefix)//'z_end', 'upper z coordinate [m]', ierr)
     end if
     info%corners => info%data%corners
-      
+
+    call PetscBagView(info%bag, PETSC_VIEWER_STDOUT_WORLD, ierr)
+
     ! nullify z-things for a 2D DA
     if (info%ndims.eq.2) then
        info%zs = PETSC_NULL_INTEGER

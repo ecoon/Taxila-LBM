@@ -48,7 +48,15 @@ contains
     disc%ndims = -1
     disc%b = -1
     disc%c_0 = 0
+    nullify(disc%ci)
     nullify(disc%weights)
+    nullify(disc%opposites)
+    nullify(disc%reflect_x)
+    nullify(disc%reflect_y)
+    nullify(disc%reflect_z)
+    nullify(disc%mt_mrt)
+    nullify(disc%mmt_mrt)
+    nullify(disc%ffw)
   end function DiscretizationCreate
 
   subroutine DiscretizationDestroy(disc, ierr)
