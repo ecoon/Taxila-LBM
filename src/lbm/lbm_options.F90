@@ -67,6 +67,7 @@
          OptionsSetPrefix, &
          OptionsView, &
          OptionsGroupHeader, &
+         OptionsGroupBreak, &
          OptionsGroupFooter, &
          OptionsGetBool, &
          OptionsGetInt, &
@@ -149,6 +150,7 @@
 
       call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", options%print_help, ierr)
       call OptionsGroupHeader(options, "Simulation Options", ierr)
+      call OptionsGroupBreak(options, "Simulation Options", ierr)
 
       ! options for timestepping and steady state solutions
       call OptionsGroupHeader(options, " Timestepping Control Options", ierr)
@@ -324,10 +326,16 @@
       type(options_type) options
       character(len=*):: group
       PetscErrorCode ierr
+      PetscInt namelen
+      character(73) :: dashes = "-------------------------------------------------------------------------"
 
       if (options%print_help) then
-         call PetscPrintf(options%comm, trim(group), ierr)
-         call PetscPrintf(options%comm, " -------------------------\n", ierr)
+        namelen = len_trim(group)
+        call PetscPrintf(options%comm, "----- ", ierr)
+        call PetscPrintf(options%comm, trim(group), ierr)
+        if ((73-namelen) > 0) then
+          call PetscPrintf(options%comm, " "//dashes(1:73-namelen)//"\n", ierr)
+        end if
       end if
     end subroutine OptionsGroupHeader
 
@@ -336,11 +344,22 @@
       character(len=*):: group
       PetscErrorCode ierr
 
+      character(79) :: dashes = "-------------------------------------------------------------------------------"
       if (options%print_help) then
-        call PetscPrintf(options%comm, "------------------------- ", ierr)
-        call PetscPrintf(options%comm, trim(group)//" \n", ierr)
+        call PetscPrintf(options%comm, dashes//"\n", ierr)
       end if
     end subroutine OptionsGroupFooter
+
+    subroutine OptionsGroupBreak(options, group, ierr)
+      type(options_type) options
+      character(len=*):: group
+      PetscErrorCode ierr
+
+      character(79) :: dashes = "-------------------------------------------------------------------------------"
+      if (options%print_help) then
+        call PetscPrintf(options%comm, dashes//"\n", ierr)
+      end if
+    end subroutine OptionsGroupBreak
 
     subroutine OptionsGetBool(options, name, help, val, flag, ierr)
       type(options_type) options
