@@ -443,10 +443,7 @@ contains
           if (abs(flow%components(lcv)%relax%tau - 1.) < eps) then
              ! tau not specified, so set it
              flow%components(lcv)%relax%tau = consistent_tau
-             if (flow%grid%info%rank .eq. 0) then
-                print*, '  Setting component', TRIM(flow%components(lcv)%name), 'tau = ', &
-                     consistent_tau
-             end if
+
           else if (abs(flow%components(lcv)%relax%tau - consistent_tau) > eps) then
              SETERRQ(PETSC_COMM_WORLD, 1, 'Viscosities and relaxation times specified '// &
                   'for components are not consistent.', ierr)
@@ -465,10 +462,7 @@ contains
           if (abs(flow%components(lcv)%mm - 1.) < eps) then
              ! mm not specified, so set it
              flow%components(lcv)%mm = consistent_mm
-             if (flow%grid%info%rank .eq. 0) then
-                print*, '  Setting molecular mass', TRIM(flow%components(lcv)%name), 'mm = ', &
-                     consistent_mm
-             end if
+
           else if (abs(flow%components(lcv)%mm - consistent_mm) > eps) then
              SETERRQ(PETSC_COMM_WORLD, 1, 'Densities and molecular masses specified '// &
                   'for components are not consistent.', ierr)

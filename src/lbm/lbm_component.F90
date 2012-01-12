@@ -13,11 +13,9 @@
 !!! ====================================================================
 #define PETSC_USE_FORTRAN_MODULES 1
 #include "finclude/petscsysdef.h"
-#include "finclude/petscbagdef.h"
 
 module LBM_Component_module
   use petsc
-  use LBM_Component_Bag_Data_type_module
   use LBM_Relaxation_module
   use LBM_EOS_module
   implicit none
@@ -27,35 +25,20 @@ module LBM_Component_module
 
   type, public :: component_type
      MPI_Comm comm
+     character(len=MAXWORDLENGTH):: name
      ! sizes and identifiers (set pre-bag)
      PetscInt s
      PetscInt id
      PetscScalar time_scale
-     
-     ! bagged parameters
-     PetscScalar,pointer :: mm ! molecular mass
-     PetscScalar,pointer :: viscosity ! kinematic viscoscity, in m^2/s
-     PetscScalar,pointer :: density ! reference density, in kg/m^3
+
+     PetscScalar mm ! molecular mass
+     PetscScalar viscosity ! kinematic viscoscity, in m^2/s
+     PetscScalar density ! reference density, in kg/m^3
      PetscScalar,pointer,dimension(:) :: gf ! component-component force coefs
 
-     ! dependent parameters, for equilf and collision
      type(relaxation_type),pointer:: relax
      type(eos_type),pointer :: eos
-
-     ! bag 
-     character(len=MAXWORDLENGTH):: name
-     type(component_bag_data_type),pointer:: data
-     PetscBag bag
   end type component_type
-
-  interface PetscBagGetData
-     subroutine PetscBagGetData(bag, data, ierr)
-       use LBM_Component_Bag_Data_type_module
-       PetscBag bag
-       type(component_bag_data_type),pointer :: data
-       PetscErrorCode ierr
-     end subroutine PetscBagGetData
-  end interface
 
   interface ComponentCreate
      module procedure ComponentCreateOne
@@ -90,7 +73,6 @@ contains
     character(len=MAXWORDLENGTH):: name
     PetscInt lcv
     allocate(components(1:n))
-    name = ''
 
     do lcv=1,n
        acomponent => components(lcv)
@@ -105,20 +87,20 @@ contains
 
   subroutine ComponentInitialize(component)
     type(component_type) component
+    component%name = ''
     component%s = -1
     component%id = 0
     component%time_scale = 0
 
-    nullify(component%mm)
+    component%mm = 1.d0
+    component%density = -999.d0
+    component%viscosity = -999.d0
     nullify(component%gf)
     nullify(component%relax)
     nullify(component%eos)
 
-    component%name = ''
-    nullify(component%data)
-    component%bag = 0
   end subroutine ComponentInitialize
-  
+
   subroutine ComponentSetSizes(component, s, b)
     type(component_type) :: component
     PetscInt s,b
@@ -152,69 +134,51 @@ contains
     type(options_type) options
     PetscErrorCode ierr
 
-    character(len=MAXWORDLENGTH):: name
-    PetscSizeT sizeofint, sizeofscalar, sizeofbool, sizeofdata
     PetscInt lcv
-    character(len=MAXWORDLENGTH):: paramname
-    PetscBool help, flag
-    write(paramname, '(I1)') component%id
-    
-    ! set the component name from options
-    name = ''
-    call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
-    if (help) call PetscPrintf(options%comm, "-component"//trim(paramname)// &
-         "_name=<component"//trim(paramname)// &
-         ">: name the component -- for use with parameter options\n", ierr)
-    call PetscOptionsGetString(options%my_prefix, "-component"//trim(paramname)//"_name", &
-         name, flag, ierr)
-    if (flag) then
-      call ComponentSetName(component, name)
-    end if
+    PetscBool flag
+    character(len=MAXWORDLENGTH):: idstring
+    write(idstring, '(I1)') component%id
 
+    ! set the component name from options
+    call OptionsGetString(options, "-"//trim(component%name)//"_name", &
+         "name the component", component%name, flag, ierr)
+    call OptionsGroupHeader(options, " "//trim(component%name)//" Options", ierr)
+
+    call RelaxationSetName(component%relax, component%name)
     call RelaxationSetMode(component%relax, options%flow_relaxation_mode)
     call RelaxationSetFromOptions(component%relax, options, ierr)
+
     if (associated(component%eos)) then
+      call EOSSetName(component%eos, component%name)
       call EOSSetFromOptions(component%eos, options, ierr)
     end if
 
-    ! create the bag
-    call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
-    sizeofdata = (4+NMAX_COMPONENTS)*sizeofscalar
-    sizeofdata = sizeofdata + sizeofscalar
-    call PetscBagCreate(component%comm, sizeofdata, component%bag, ierr)
-    call PetscBagSetName(component%bag, TRIM(options%my_prefix)//component%name, "", ierr)
-    call PetscBagGetData(component%bag, component%data, ierr)
-
-    call PetscBagRegisterScalar(component%bag, component%data%mm, ONE_S, &
-         trim(options%my_prefix)//'mm_'//trim(component%name), 'molecular mass', ierr)
-    component%mm => component%data%mm
-
-    call PetscBagRegisterScalar(component%bag, component%data%viscosity, NEG_NINENINENINE_S, &
-         trim(options%my_prefix)//'viscosity_'//trim(component%name), 'kinematic viscosity [m^2/s], defaults to ND value', &
-         ierr)
-    component%viscosity => component%data%viscosity
-
-    call PetscBagRegisterScalar(component%bag, component%data%density, NEG_NINENINENINE_S, &
-         trim(options%my_prefix)//'density_'//trim(component%name), &
-         'density [kg/m^3], defaults to ND value', ierr)
-    component%density => component%data%density
-
+    call OptionsGetReal(options, "-mm_"//trim(component%name), &
+         "molecular mass", component%mm, flag, ierr)
     component%relax%d_k = 1. - 2./(3.*component%mm) ! d_k = 1/3 for mm=1
 
-    do lcv=1,component%s
-       write(paramname, '(I1, I1)') component%id, lcv
-       call PetscBagRegisterScalar(component%bag, component%data%gf(lcv), ZERO_S, &
-            trim(options%my_prefix)//'g_'//trim(paramname), 'component-component interaction potential coefficient', ierr)
-    end do
-    component%gf => component%data%gf(1:options%ncomponents)
+    call OptionsGetReal(options, "-viscosity_"//trim(component%name), &
+         "kinematic viscosity, defaults to nondimensional value", &
+         component%viscosity, flag, ierr)
+    call OptionsGetReal(options, "-density_"//trim(component%name), &
+         "density scale, defaults to nondimensional value", component%density, flag, ierr)
 
+    allocate(component%gf(component%s))
+    do lcv=1,component%s
+       write(idstring, '(I1, I1)') component%id, lcv
+       call OptionsGetReal(options, "-g_"//trim(idstring), &
+            "component-component interaction potential coefficient", component%gf(lcv), &
+            flag, ierr)
+    end do
+
+    call OptionsGroupFooter(options, " "//trim(component%name)//" Options", ierr)
   end subroutine ComponentSetFromOptions
 
   subroutine ComponentDestroy(component, ierr)
     type(component_type) component
     PetscErrorCode ierr
+    if (associated(component%gf)) deallocate(component%gf)
     if (associated(component%relax)) call RelaxationDestroy(component%relax, ierr)
     if (associated(component%eos)) call EOSDestroy(component%eos, ierr)
-    if (component%bag /= 0) call PetscBagDestroy(component%bag, ierr)
   end subroutine ComponentDestroy
 end module LBM_Component_module

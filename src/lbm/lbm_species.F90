@@ -13,11 +13,9 @@
 !!! ====================================================================
 #define PETSC_USE_FORTRAN_MODULES 1
 #include "finclude/petscsysdef.h"
-#include "finclude/petscbagdef.h"
 
 module LBM_Specie_module
   use petsc
-  use LBM_Specie_Bag_Data_type_module
   use LBM_Relaxation_module
   implicit none
 
@@ -26,30 +24,13 @@ module LBM_Specie_module
 
   type, public :: specie_type
      MPI_Comm comm
-     ! sizes and identifiers (set pre-bag)
+     character(len=MAXWORDLENGTH):: name
      PetscInt s
      PetscInt id
 
-     ! bagged parameters
-     PetscInt,pointer:: component
-
-     ! dependent parameters
+     PetscInt component
      type(relaxation_type),pointer:: relax
-
-     ! bag 
-     character(len=MAXWORDLENGTH):: name
-     type(specie_bag_data_type),pointer:: data
-     PetscBag bag
   end type specie_type
-
-  interface PetscBagGetData
-     subroutine PetscBagGetData(bag, data, ierr)
-       use LBM_Specie_Bag_Data_type_module
-       PetscBag bag
-       type(specie_bag_data_type),pointer :: data
-       PetscErrorCode ierr
-     end subroutine PetscBagGetData
-  end interface
 
   interface SpecieCreate
      module procedure SpecieCreateOne
@@ -75,7 +56,7 @@ contains
     name = 'specie1'
     call SpecieSetName(specie, name)
   end function SpecieCreateOne
- 
+
   function SpecieCreateN(comm, n) result(species)
     MPI_Comm comm
     PetscInt n
@@ -102,11 +83,10 @@ contains
     specie%s = -1
     specie%id = 0
     specie%name = ''
-    nullify(specie%data)
     nullify(specie%relax)
-    specie%bag = 0
+    specie%component = -1
   end subroutine SpecieInitialize
-  
+
   subroutine SpecieSetSizes(specie, s, b)
     type(specie_type) :: specie
     PetscInt s,b
@@ -117,7 +97,6 @@ contains
   subroutine SpecieSetName(specie, name)
     type(specie_type) specie
     character(len=MAXWORDLENGTH):: name
-    
     specie%name = name
     call RelaxationSetName(specie%relax, name)
   end subroutine SpecieSetName
@@ -133,43 +112,29 @@ contains
     use LBM_Options_module
     type(specie_type) specie
     type(options_type) options
+    PetscBool flag
     PetscErrorCode ierr
 
-    PetscSizeT sizeofint, sizeofscalar, sizeofbool, sizeofdata
-    PetscInt lcv
-    character(len=MAXWORDLENGTH):: paramname
-    PetscBool help, flag
-    write(paramname, '(I1)') specie%id
-    
+    character(len=MAXWORDLENGTH):: idstring
+    write(idstring, '(I1)') specie%id
+
     ! set the species name from options
-    call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
-    if (help) call PetscPrintf(options%comm, "-specie"//trim(paramname)//"_name=<specie"// &
-         trim(paramname)//">: name the specie -- for use with parameter options\n", ierr)
-    call PetscOptionsGetString(options%my_prefix, "-specie"//trim(paramname)//"_name", &
-         specie%name, flag, ierr)
+    call OptionsGetString(options, "-"//trim(specie%name)//"_name", &
+         "name the chemical specie", specie%name, flag, ierr)
+    call OptionsGroupHeader(options, " "//trim(specie%name)//" Options", ierr)
     call RelaxationSetName(specie%relax, specie%name)
 
-    ! create the bag
-    call PetscDataTypeGetSize(PETSC_INT, sizeofint, ierr)
-    sizeofdata = sizeofint
-    sizeofdata = sizeofdata + sizeofint
-    call PetscBagCreate(specie%comm, sizeofdata, specie%bag, ierr)
-    call PetscBagSetName(specie%bag, TRIM(options%my_prefix)//trim(specie%name), "", ierr)
-    call PetscBagGetData(specie%bag, specie%data, ierr)
-
-    ! register data
-    call PetscBagRegisterInt(specie%bag, specie%data%component, ONE_I, &
-         trim(options%my_prefix)//'component_'//trim(specie%name), &
-         'Component of which specie is a component', ierr)
-    specie%component => specie%data%component
+    call OptionsGetInt(options, "-component_"//trim(specie%name), &
+         "Component id in which specie exists", specie%component, flag, ierr)
 
     call RelaxationSetMode(specie%relax, options%transport_relaxation_mode)
     call RelaxationSetFromOptions(specie%relax, options, ierr)
+    call OptionsGroupFooter(options, " "//trim(specie%name)//" Options", ierr)
   end subroutine SpecieSetFromOptions
 
   subroutine SpecieDestroy(specie, ierr)
     type(specie_type) specie
     PetscErrorCode ierr
-    if (specie%bag /= 0) call PetscBagDestroy(specie%bag, ierr)
+    if (associated(specie%relax)) call RelaxationDestroy(specie%relax, ierr)
   end subroutine SpecieDestroy
 end module LBM_Specie_module
