@@ -254,8 +254,6 @@
              name, flag, ierr)
       end if
 
-      print*, 'ndims:', options%ndims
-      print*, 'disc:', name
       test_discretization = 'd3q19'
       if (StringCompareIgnoreCase(name, test_discretization, 6)) then
          options%flow_disc = D3Q19_DISCRETIZATION
