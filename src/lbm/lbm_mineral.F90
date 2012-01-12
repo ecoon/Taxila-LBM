@@ -110,6 +110,7 @@ contains
 
     ! register data
     allocate(mineral%gw(options%ncomponents))
+    mineral%gw(:) = 0.d0
     do lcv=1,options%ncomponents
       write(idstring, '(I1)') lcv
       call PetscOptionsGetString(options%my_prefix, "-component"//trim(idstring)//"_name", &

@@ -66,6 +66,7 @@ contains
     type(distribution_type),pointer:: distribution
     allocate(distribution)
     distribution%comm = comm
+    distribution%name = ''
     distribution%s = -1
     distribution%b = -1
     nullify(distribution%info)
