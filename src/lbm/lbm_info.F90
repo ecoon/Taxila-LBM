@@ -130,6 +130,7 @@ contains
     info%periodic = PETSC_FALSE
 
     ! get options
+    call OptionsGroupHeader(options, " Grid Info Options", ierr)
     ! -- grid size
     call OptionsGetInt(options, "-NX", "grid size in X", info%NX, flag, ierr)
     call OptionsGetInt(options, "-NY", "grid size in Y", info%NY, flag, ierr)

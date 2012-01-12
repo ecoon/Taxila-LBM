@@ -102,6 +102,7 @@ contains
 
     allocate(flow)
     flow%comm = comm
+    flow%name = ''
     flow%ncomponents = -1
     flow%ndims = -1
     nullify(flow%components)
