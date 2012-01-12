@@ -55,7 +55,6 @@ UTILS = timing.o \
 	string.o
 
 MODULES = lbm_logging.o \
-	lbm_bag_types.o \
 	lbm_options.o \
 	lbm_io.o \
 	lbm_info.o \
