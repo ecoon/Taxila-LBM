@@ -14,27 +14,24 @@
 
 #define PETSC_USE_FORTRAN_MODULES 1
 #include "finclude/petscsysdef.h"
-#include "finclude/petscbagdef.h"
 
 module LBM_Info_module
   use petsc
-  use LBM_Info_Bag_Data_type_module
   implicit none
 
   private
 #include "lbm_definitions.h"
-  
+
   type, public:: info_type
      MPI_Comm comm
      PetscInt ndims
 
-     ! bagged params
-     PetscInt,pointer:: NX,NY,NZ
+     PetscInt NX,NY,NZ
      PetscBool,pointer,dimension(:) :: periodic
      PetscScalar,pointer,dimension(:,:) :: corners
-     PetscInt,pointer:: stencil_size_rho
-     PetscInt,pointer:: stencil_size
-     PetscInt,pointer:: stencil_type
+     PetscInt stencil_size_rho
+     PetscInt stencil_size
+     PetscInt stencil_type
 
      ! dependent parameters
      PetscInt xs,xe,xl,gxs,gxe,gxl,rgxs,rgxe,rgxl
@@ -45,21 +42,7 @@ module LBM_Info_module
      PetscMPIInt rank, nprocs
      PetscReal,pointer,dimension(:) :: gridsize
      PetscInt,pointer,dimension(:):: ownership_x,ownership_y,ownership_z
-
-     ! bag
-     character(len=MAXWORDLENGTH):: name
-     type(info_bag_data_type),pointer:: data
-     PetscBag bag
   end type info_type
-
-  interface PetscBagGetData
-     subroutine PetscBagGetData(bag, data, ierr)
-       use LBM_Info_Bag_Data_type_module
-       PetscBag bag
-       type(info_bag_data_type),pointer:: data
-       PetscErrorCode ierr
-     end subroutine PetscBagGetData
-  end interface
 
   public :: InfoCreate, &
        InfoDestroy, &
@@ -72,15 +55,14 @@ contains
     type(info_type),pointer:: info
     allocate(info)
     info%comm = comm
-    info%name = 'grid'
 
     ! intialize
-    nullify(info%NX)
-    nullify(info%NY)
-    nullify(info%NZ)
-    nullify(info%stencil_size_rho)
-    nullify(info%stencil_size)
-    nullify(info%stencil_type)
+    info%NX = -1
+    info%NY = -1
+    info%NZ = -1
+    info%stencil_size_rho = -1
+    info%stencil_size = 1
+    info%stencil_type = DMDA_STENCIL_BOX
     info%ndims = -1
 
     info%xs = -1
@@ -128,8 +110,6 @@ contains
     nullify(info%periodic)
     nullify(info%gridsize)
     nullify(info%corners)
-    nullify(info%data)
-    info%bag = 0
   end function InfoCreate
 
   subroutine InfoSetFromOptions(info, options, ierr)
@@ -137,107 +117,105 @@ contains
 
     type(info_type) info
     type(options_type) options
+    PetscBool flag
     PetscErrorCode ierr
-    
-    PetscScalar default
-    PetscSizeT sizeofint, sizeofscalar, sizeofbool, sizeofdata
-    PetscInt one
 
-    one = 1
-    ! grab, allocate sizes
+    ! allocate sizes
     info%ndims = options%ndims
-    allocate(info%gridsize(1:info%ndims))
+    allocate(info%gridsize(info%ndims))
+    info%gridsize = -1.d0
+    allocate(info%corners(info%ndims,2))
+    info%corners = 0.d0
+    allocate(info%periodic(info%ndims))
+    info%periodic = PETSC_FALSE
 
-    ! create the bag
-    call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
-    call PetscDataTypeGetSize(PETSC_BOOL, sizeofbool, ierr)
-    call PetscDataTypeGetSize(PETSC_INT, sizeofint, ierr)
-
-    sizeofdata = 3*2*sizeofscalar + 3*sizeofbool + 6*sizeofint
-    ! For some reason valgrind is throwing an error with this size.
-    ! It's clearly correct, and this dates back to older PETSc, so I'm
-    ! not exactly sure what's wrong.  For now, we'll do the safe thing
-    ! of just tacking on a bit of extra memory.  It seems to only be
-    ! this bag? (the only one with two arrays?)
-    sizeofdata = sizeofdata + sizeofscalar
-
-    call PetscBagCreate(info%comm, sizeofdata, info%bag, ierr)
-    call PetscBagSetName(info%bag, TRIM(options%my_prefix)//info%name, "", ierr)
-
-    ! register data
+    ! get options
     ! -- grid size
-    call PetscBagGetData(info%bag, info%data, ierr)
-    call PetscBagRegisterInt(info%bag, info%data%NX, ZERO_I, trim(options%my_prefix)//'NX', &
-         'grid size in X', ierr)
-    call PetscBagRegisterInt(info%bag, info%data%NY, ZERO_I, trim(options%my_prefix)//'NY', &
-         'grid size in Y', ierr)
+    call OptionsGetInt(options, "-NX", "grid size in X", info%NX, flag, ierr)
+    call OptionsGetInt(options, "-NY", "grid size in Y", info%NY, flag, ierr)
     if (info%ndims > 2) then
-       call PetscBagRegisterInt(info%bag, info%data%NZ, ZERO_I, trim(options%my_prefix)//'NZ', &
-            'grid size in Z', ierr)
-    else 
-       info%data%NZ = 1
+      call OptionsGetInt(options, "-NZ", "grid size in Z", info%NZ, flag, ierr)
+    else
+      info%NZ = 1
     end if
-    info%NX => info%data%NX
-    info%NY => info%data%NY
-    info%NZ => info%data%NZ
 
     ! -- stencil info
-    call PetscBagRegisterInt(info%bag, info%data%stencil_size, ONE_I, &
-         trim(options%my_prefix)//'stencil_size', &
-         'number of grid points in the stencil', ierr)
-    info%stencil_size => info%data%stencil_size
-    call PetscBagRegisterInt(info%bag, info%data%stencil_size_rho, NEG_ONE_I, &
-         trim(options%my_prefix)//'stencil_size_rho', &
-         'number of grid points in the stencil for rho -- sets higher order terms', ierr)
-    info%stencil_size_rho => info%data%stencil_size_rho
-    call PetscBagRegisterInt(info%bag, info%data%stencil_type, DMDA_STENCIL_BOX, &
-         trim(options%my_prefix)//'stencil_type', 'stencil type: 0=STAR, 1=BOX', ierr)
-    info%stencil_type => info%data%stencil_type
+    call OptionsGetInt(options, "-stencil_size", "number of grid points in the stencil", &
+         info%stencil_size, flag, ierr)
+    call OptionsGetInt(options, "-stencil_size_rho", &
+         "number of grid points in the stencil for rho -- defaults to match derivative order", &
+         info%stencil_size_rho, flag, ierr)
+    call OptionsGetInt(options, "-stencil_type", &
+         "stencil type: 0=STAR (i.e. D2Q5), 1=BOX (i.e. D2Q9)", &
+         info%stencil_type, flag, ierr)
 
     ! -- grid perioidicty
-    call PetscBagRegisterBool(info%bag, info%data%periodic(X_DIRECTION), PETSC_FALSE, &
-         trim(options%my_prefix)//'bc_periodic_x', 'x-direction periodic?', ierr)
-    call PetscBagRegisterBool(info%bag, info%data%periodic(Y_DIRECTION), PETSC_FALSE, &
-         trim(options%my_prefix)//'bc_periodic_y', 'y-direction periodic?', ierr)
+    call OptionsGetBool(options, "-bc_periodic_x", "periodic in x-direction", &
+         info%periodic(X_DIRECTION), flag, ierr)
+    call OptionsGetBool(options, "-bc_periodic_y", "periodic in y-direction", &
+         info%periodic(Y_DIRECTION), flag, ierr)
     if (info%ndims > 2) then
-       call PetscBagRegisterBool(info%bag, info%data%periodic(Z_DIRECTION), PETSC_FALSE, &
-            trim(options%my_prefix)//'bc_periodic_z', 'z-direction periodic?', ierr)
+      call OptionsGetBool(options, "-bc_periodic_z", "periodic in z-direction", &
+           info%periodic(Z_DIRECTION), flag, ierr)
     end if
-    info%periodic => info%data%periodic
 
     ! -- grid corners
-    call PetscBagRegisterScalar(info%bag, info%data%corners(X_DIRECTION,1), ZERO_S, &
-         trim(options%my_prefix)//'x_start', 'lower x coordinate [m]', ierr)
     if (info%periodic(X_DIRECTION)) then
-       default = 1.*(info%NX)
+      info%corners(X_DIRECTION,2) = info%NX
     else
-       default = 1.*(info%NX-1)
+      info%corners(X_DIRECTION,2) = info%NX-1
     end if
-    call PetscBagRegisterScalar(info%bag, info%data%corners(X_DIRECTION,2), default, &
-         trim(options%my_prefix)//'x_end', 'upper x coordinate [m]', ierr)
+    call OptionsGetReal(options, "-x_start", "lower x coordinate", &
+         info%corners(X_DIRECTION,1), flag, ierr)
+    call OptionsGetReal(options, "-x_end", "upper x coordinate", &
+         info%corners(X_DIRECTION,2), flag, ierr)
 
-    call PetscBagRegisterScalar(info%bag, info%data%corners(Y_DIRECTION,1), ZERO_S, &
-         trim(options%my_prefix)//'y_start', 'lower y coordinate [m]', ierr)
     if (info%periodic(Y_DIRECTION)) then
-       default = 1.*(info%NY)
+      info%corners(Y_DIRECTION,2) = info%NY
     else
-       default = 1.*(info%NY-1)
+      info%corners(Y_DIRECTION,2) = info%NY-1
     end if
-    call PetscBagRegisterScalar(info%bag, info%data%corners(Y_DIRECTION,2), default, &
-         trim(options%my_prefix)//'y_end', 'upper y coordinate [m]', ierr)
+    call OptionsGetReal(options, "-y_start", "lower y coordinate", &
+         info%corners(Y_DIRECTION,1), flag, ierr)
+    call OptionsGetReal(options, "-y_end", "upper y coordinate", &
+         info%corners(Y_DIRECTION,2), flag, ierr)
 
     if (info%ndims > 2) then
-       call PetscBagRegisterScalar(info%bag, info%data%corners(Z_DIRECTION,1), ZERO_S, &
-            trim(options%my_prefix)//'z_start', 'lower z coordinate [m]', ierr)
-       if (info%periodic(Z_DIRECTION)) then
-          default = 1.*(info%NZ)
-       else
-          default = 1.*(info%NZ-1)
-       end if
-       call PetscBagRegisterScalar(info%bag, info%data%corners(Z_DIRECTION,2), default, &
-            trim(options%my_prefix)//'z_end', 'upper z coordinate [m]', ierr)
+      if (info%periodic(Z_DIRECTION)) then
+        info%corners(Z_DIRECTION,2) = info%NZ
+      else
+        info%corners(Z_DIRECTION,2) = info%NZ-1
+      end if
+      call OptionsGetReal(options, "-z_start", "lower z coordinate", &
+           info%corners(Z_DIRECTION,1), flag, ierr)
+      call OptionsGetReal(options, "-z_end", "upper z coordinate", &
+           info%corners(Z_DIRECTION,2), flag, ierr)
     end if
-    info%corners => info%data%corners
+
+    ! calculate grid spacing
+    if (info%periodic(X_DIRECTION)) then
+       info%gridsize(X_DIRECTION) = (info%corners(X_DIRECTION,2) - &
+            info%corners(X_DIRECTION, 1))/info%NX
+    else
+       info%gridsize(X_DIRECTION) = (info%corners(X_DIRECTION,2) - &
+            info%corners(X_DIRECTION, 1))/(info%NX-1)
+    end if
+    if (info%periodic(Y_DIRECTION)) then
+       info%gridsize(Y_DIRECTION) = (info%corners(Y_DIRECTION,2) - &
+            info%corners(Y_DIRECTION, 1))/(info%NY)
+    else
+       info%gridsize(Y_DIRECTION) = (info%corners(Y_DIRECTION,2) - &
+            info%corners(Y_DIRECTION, 1))/(info%NY-1)
+    end if
+    if (info%ndims > 2) then
+       if (info%periodic(Z_DIRECTION)) then
+          info%gridsize(Z_DIRECTION) = (info%corners(Z_DIRECTION,2) - &
+               info%corners(Z_DIRECTION, 1))/(info%NZ)
+       else
+          info%gridsize(Z_DIRECTION) = (info%corners(Z_DIRECTION,2) - &
+               info%corners(Z_DIRECTION, 1))/(info%NZ-1)
+       end if
+    end if
 
     ! nullify z-things for a 2D DA
     if (info%ndims.eq.2) then
@@ -251,49 +229,24 @@ contains
        info%nproc_z = PETSC_DECIDE
     end if
 
-    ! calculate grid spacing
-    if (info%periodic(X_DIRECTION)) then
-       info%gridsize(X_DIRECTION) = (info%corners(X_DIRECTION,2) - &
-            info%corners(X_DIRECTION, 1))/info%NX
-    else 
-       info%gridsize(X_DIRECTION) = (info%corners(X_DIRECTION,2) - &
-            info%corners(X_DIRECTION, 1))/(info%NX-1)
-    end if
-    if (info%periodic(Y_DIRECTION)) then
-       info%gridsize(Y_DIRECTION) = (info%corners(Y_DIRECTION,2) - &
-            info%corners(Y_DIRECTION, 1))/(info%NY)
-    else 
-       info%gridsize(Y_DIRECTION) = (info%corners(Y_DIRECTION,2) - &
-            info%corners(Y_DIRECTION, 1))/(info%NY-1)
-    end if
-    if (info%ndims > 2) then
-       if (info%periodic(Z_DIRECTION)) then
-          info%gridsize(Z_DIRECTION) = (info%corners(Z_DIRECTION,2) - &
-               info%corners(Z_DIRECTION, 1))/(info%NZ)
-       else 
-          info%gridsize(Z_DIRECTION) = (info%corners(Z_DIRECTION,2) - &
-               info%corners(Z_DIRECTION, 1))/(info%NZ-1)
-       end if
-    end if
-
     call MPI_Comm_rank(info%comm, info%rank, ierr)
     call MPI_Comm_size(info%comm, info%nprocs, ierr)
   end subroutine InfoSetFromOptions
 
   subroutine InfoView(info)
     type(info_type) info
-    
     print*, ' Domain size =', info%NX,info%NY,info%NZ
   end subroutine InfoView
-  
+
   subroutine InfoDestroy(info, ierr)
     type(info_type) info
     PetscErrorCode ierr
-    
+
     if (associated(info%gridsize)) deallocate(info%gridsize)
     if (associated(info%ownership_x)) deallocate(info%ownership_x)
     if (associated(info%ownership_y)) deallocate(info%ownership_y)
     if (associated(info%ownership_z)) deallocate(info%ownership_z)
-    if (info%bag /= 0) call PetscBagDestroy(info%bag, ierr)
+    if (associated(info%corners)) deallocate(info%corners)
+    if (associated(info%periodic)) deallocate(info%periodic)
   end subroutine InfoDestroy
 end module LBM_Info_module

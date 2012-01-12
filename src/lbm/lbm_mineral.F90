@@ -13,11 +13,9 @@
 !!! ====================================================================
 #define PETSC_USE_FORTRAN_MODULES 1
 #include "finclude/petscsysdef.h"
-#include "finclude/petscbagdef.h"
 
 module LBM_Mineral_module
   use petsc
-  use LBM_Mineral_Bag_Data_type_module
   implicit none
 
   private
@@ -28,35 +26,22 @@ module LBM_Mineral_module
     PetscInt id
     character(len=MAXWORDLENGTH):: name
 
-    ! bagged parameters
     PetscScalar,pointer,dimension(:) :: gw ! component-mineral force coefs
-
-    type(mineral_bag_data_type),pointer:: data
-    PetscBag bag
   end type mineral_type
 
-  interface PetscBagGetData
-     subroutine PetscBagGetData(bag, data, ierr)
-       use LBM_Mineral_Bag_Data_type_module
-       PetscBag bag
-       type(mineral_bag_data_type),pointer :: data
-       PetscErrorCode ierr
-     end subroutine PetscBagGetData
-  end interface
-  
   interface MineralCreate
     module procedure MineralCreateOne
     module procedure MineralCreateN
   end interface
-  
+
   public :: MineralCreate, &
        MineralDestroy, &
        MineralSetFromOptions, &
        MineralSetName, &
        MineralSetID
-  
+
 contains
-  
+
   function MineralCreateOne(comm) result(mineral)
     MPI_Comm comm
     type(mineral_type),pointer :: mineral
@@ -65,8 +50,6 @@ contains
     mineral%comm = comm
     mineral%id = 0
     nullify(mineral%gw)
-    nullify(mineral%data)
-    mineral%bag = 0
     name = 'mineral1'
     call MineralSetName(mineral, name)
   end function MineralCreateOne
@@ -85,8 +68,6 @@ contains
        amineral => minerals(lcv)
        amineral%comm = comm
        nullify(amineral%gw)
-       nullify(amineral%data)
-       amineral%bag = 0
        call MineralSetID(amineral, lcv)
        name = 'mineral'//char(lcv+48)
        call MineralSetName(amineral, name)
@@ -96,6 +77,7 @@ contains
   subroutine MineralDestroy(mineral, ierr)
     type(mineral_type) mineral
     PetscErrorCode ierr
+    if (associated(mineral%gw)) deallocate(mineral%gw)
   end subroutine MineralDestroy
 
   subroutine MineralSetName(mineral, name)
@@ -116,38 +98,28 @@ contains
     type(options_type) options
     PetscErrorCode ierr
 
-    PetscSizeT sizeofscalar, sizeofdata
     PetscInt lcv
-    character(len=MAXWORDLENGTH):: paramname,componentname
-    PetscBool help, flag
-    write(paramname, '(I1)') mineral%id
-    
+    PetscBool flag
+    character(len=MAXWORDLENGTH):: idstring, componentname
+    write(idstring, '(I1)') mineral%id
+
     ! set the mineral name from options
-    call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
-    if (help) call PetscPrintf(options%comm, "-mineral"//trim(paramname)//"_name=<mineral"// &
-         trim(paramname)//">: name the mineral -- for use with parameter options\n", ierr)
-    call PetscOptionsGetString(options%my_prefix, "-mineral"//trim(paramname)//"_name", &
-         mineral%name, flag, ierr)
-
-    ! create the bag
-    call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
-    sizeofdata = (NMAX_COMPONENTS)*sizeofscalar
-    sizeofdata = sizeofdata + sizeofscalar
-
-    call PetscBagCreate(mineral%comm, sizeofdata, mineral%bag, ierr)
-    call PetscBagSetName(mineral%bag, TRIM(options%my_prefix)//mineral%name, "", ierr)
-    call PetscBagGetData(mineral%bag, mineral%data, ierr)
+    call OptionsGetString(options, "-"//trim(mineral%name)//"_name", &
+         "name the mineral", mineral%name, flag, ierr)
+    call OptionsGroupHeader(options, " "//trim(mineral%name)//" Options", ierr)
 
     ! register data
+    allocate(mineral%gw(options%ncomponents))
     do lcv=1,options%ncomponents
-      write(paramname, '(I1)') lcv
-      call PetscOptionsGetString(options%my_prefix, "-component"//trim(paramname)//"_name", &
+      write(idstring, '(I1)') lcv
+      call PetscOptionsGetString(options%my_prefix, "-component"//trim(idstring)//"_name", &
            componentname, flag, ierr)
-      paramname = 'gw_'//trim(mineral%name)//'_'//trim(componentname)
-      call PetscBagRegisterScalar(mineral%bag, mineral%data%gw(lcv), ZERO_S, &
-           trim(options%my_prefix)//trim(paramname), &
-           'mineral-component interaction potential coefficient', ierr)
+      idstring = '-gw_'//trim(mineral%name)//'_'//trim(componentname)
+      call OptionsGetReal(options, trim(idstring), &
+           "mineral-component interaction potential coefficient", mineral%gw(lcv), &
+           flag, ierr)
     end do
-    mineral%gw => mineral%data%gw(1:options%ncomponents)
+
+    call OptionsGroupFooter(options, " "//trim(mineral%name)//" Options", ierr)
   end subroutine MineralSetFromOptions
 end module LBM_Mineral_module

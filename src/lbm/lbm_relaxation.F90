@@ -14,11 +14,9 @@
 
 #define PETSC_USE_FORTRAN_MODULES 1
 #include "finclude/petscsysdef.h"
-#include "finclude/petscbagdef.h"
 
 module LBM_Relaxation_module
   use petsc
-  use LBM_Relaxation_Bag_Data_type_module
   use LBM_Distribution_Function_type_module
   implicit none
 
@@ -27,37 +25,24 @@ module LBM_Relaxation_module
 
   type, public :: relaxation_type
      MPI_Comm comm
+     character(len=MAXWORDLENGTH):: name
      PetscInt id
      PetscInt s
      PetscInt b
      PetscInt mode
-     
-     PetscScalar,pointer :: tau ! relaxation time
-     PetscScalar,pointer :: s1  ! MRT relaxation time
-     PetscScalar,pointer :: s2  ! MRT relaxation time
-     PetscScalar,pointer :: s3  ! MRT relaxation time
-     PetscScalar,pointer :: s4  ! MRT relaxation time (only for 3D)
-     PetscScalar,pointer :: s5  ! MRT relaxation time (only for 3D)
+
+     PetscScalar tau ! relaxation time
+     PetscScalar s1  ! MRT relaxation time
+     PetscScalar s2  ! MRT relaxation time
+     PetscScalar s3  ! MRT relaxation time
+     PetscScalar s4  ! MRT relaxation time (only for 3D)
+     PetscScalar s5  ! MRT relaxation time (only for 3D)
      PetscScalar,pointer,dimension(:) :: tau_mrt ! species of S vector for mrt
 
      ! dependents, set by discretization
      PetscScalar d_k
      PetscScalar c_s2
-
-     ! bag 
-     character(len=MAXWORDLENGTH):: name
-     type(relaxation_bag_data_type),pointer:: data
-     PetscBag bag
   end type relaxation_type
-     
-  interface PetscBagGetData
-     subroutine PetscBagGetData(bag, data, ierr)
-       use LBM_Relaxation_Bag_Data_type_module
-       PetscBag bag
-       type(relaxation_bag_data_type),pointer :: data
-       PetscErrorCode ierr
-     end subroutine PetscBagGetData
-  end interface
 
   public :: RelaxationCreate, &
        RelaxationDestroy, &
@@ -74,31 +59,27 @@ contains
     type(relaxation_type),pointer:: relax
     allocate(relax)
     relax%comm = comm
+    relax%name = ''
     relax%id = 0
     relax%s = -1
     relax%b = -1
     relax%mode = RELAXATION_MODE_SRT
 
-    nullify(relax%tau)
-    nullify(relax%s1)
-    nullify(relax%s2)
-    nullify(relax%s3)
-    nullify(relax%s4)
-    nullify(relax%s5)
+    relax%tau = 1.d0
+    relax%s1 = 1.d0
+    relax%s2 = 1.d0
+    relax%s3 = 1.d0
+    relax%s4 = 1.d0
+    relax%s5 = 1.d0
     nullify(relax%tau_mrt)
 
-    relax%d_k = 0. 
+    relax%d_k = 0.d0
     relax%c_s2 = 1.d0/3.
-
-    nullify(relax%data)
-    relax%bag = 0
-    relax%name = ''
   end function RelaxationCreate
 
   subroutine RelaxationDestroy(relax, ierr)
     type(relaxation_type) relax
     PetscErrorCode ierr
-    if (relax%bag /= 0) call PetscBagDestroy(relax%bag, ierr)
     if (associated(relax%tau_mrt)) deallocate(relax%tau_mrt)
   end subroutine RelaxationDestroy
 
@@ -119,7 +100,6 @@ contains
   subroutine RelaxationSetName(relax, name)
     type(relaxation_type) relax
     character(len=MAXWORDLENGTH):: name
-    
     relax%name = name
   end subroutine RelaxationSetName
 
@@ -133,45 +113,32 @@ contains
     use LBM_Options_module
     type(relaxation_type) relax
     type(options_type) options
+    PetscBool flag
     PetscErrorCode ierr
 
-    PetscSizeT sizeofscalar, sizeofdata
     PetscInt lcv
-    character(len=MAXWORDLENGTH):: paramname, paramname2
 
-    ! create the bag
-    call PetscDataTypeGetSize(PETSC_SCALAR, sizeofscalar, ierr)
-    sizeofdata = 6*sizeofscalar 
-    sizeofdata = sizeofdata + sizeofscalar
+    call OptionsGroupHeader(options, "  "//trim(relax%name)//" Relaxation Options", ierr)
 
-    call PetscBagCreate(relax%comm, sizeofdata, relax%bag, ierr)
-    call PetscBagGetData(relax%bag, relax%data, ierr)
+    ! single and multiple relaxation times
+    call OptionsGetReal(options, "-tau_"//trim(relax%name), "relaxation time", &
+         relax%tau, flag, ierr)
 
-    call PetscBagRegisterScalar(relax%bag, relax%data%tau, ONE_S, &
-         trim(options%my_prefix)//'tau_'//trim(relax%name), 'relaxation time', ierr)
-    relax%tau => relax%data%tau
-
-    call PetscBagRegisterScalar(relax%bag, relax%data%s1, ONE_S, &
-         trim(options%my_prefix)//'s1_'//trim(relax%name), 'MRT relaxation time', ierr)
-    relax%s1 => relax%data%s1
-
-    call PetscBagRegisterScalar(relax%bag, relax%data%s2, ONE_S, &
-         trim(options%my_prefix)//'s2_'//trim(relax%name), 'MRT relaxation time', ierr)
-    relax%s2 => relax%data%s2
-
-    call PetscBagRegisterScalar(relax%bag, relax%data%s3, ONE_S, &
-         trim(options%my_prefix)//'s3_'//trim(relax%name), 'MRT relaxation time', ierr)
-    relax%s3 => relax%data%s3
-   
-    call PetscBagRegisterScalar(relax%bag, relax%data%s4, ONE_S, &
-         trim(options%my_prefix)//'s4_'//trim(relax%name), 'MRT relaxation time', ierr)
-    relax%s4 => relax%data%s4
-
-    call PetscBagRegisterScalar(relax%bag, relax%data%s5, ONE_S, &
-         trim(options%my_prefix)//'s5_'//trim(relax%name), 'MRT relaxation time', ierr)
-    relax%s5 => relax%data%s5
-
-    call PetscBagSetName(relax%bag, TRIM(options%my_prefix)//relax%name, "", ierr)
+    relax%s1 = 1.d0/relax%tau
+    call OptionsGetReal(options, "-s1_"//trim(relax%name), "MRT relaxation time", &
+         relax%s1, flag, ierr)
+    relax%s2 = 1.d0/relax%tau
+    call OptionsGetReal(options, "-s2_"//trim(relax%name), "MRT relaxation time", &
+         relax%s2, flag, ierr)
+    relax%s3 = 1.d0/relax%tau
+    call OptionsGetReal(options, "-s3_"//trim(relax%name), "MRT relaxation time", &
+         relax%s3, flag, ierr)
+    relax%s4 = 1.d0/relax%tau
+    call OptionsGetReal(options, "-s4_"//trim(relax%name), "MRT relaxation time", &
+         relax%s4, flag, ierr)
+    relax%s5 = 1.d0/relax%tau
+    call OptionsGetReal(options, "-s5_"//trim(relax%name), "MRT relaxation time", &
+         relax%s5, flag, ierr)
   end subroutine RelaxationSetFromOptions
 
   subroutine RelaxationCollide(relax, fi, fi_eq, m, dist)
