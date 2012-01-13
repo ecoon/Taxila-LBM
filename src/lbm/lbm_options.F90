@@ -404,10 +404,12 @@
       PetscBool flag
       PetscErrorCode ierr
 
-      PetscInt lcv
+      PetscInt lcv, nvals_tmp
+      character(len=MAXSTRINGLENGTH):: warning
 
       character(len=MAXWORDLENGTH):: default = ""
       character(len=MAXWORDLENGTH):: tmpdefault = ""
+      nvals_tmp = nvals
 
       if (options%print_help) then
         do lcv=1,nvals
@@ -418,7 +420,11 @@
         call PetscPrintf(options%comm, "  -"//trim(options%my_prefix)// &
              trim(name(2:))//" <"//default(1:len_trim(default)-1)//">: "//trim(help)//"\n", ierr)
       end if
-      call PetscOptionsGetIntArray(options%my_prefix, name, val, nvals, flag, ierr)
+      call PetscOptionsGetIntArray(options%my_prefix, name, val, nvals_tmp, flag, ierr)
+      if (nvals_tmp /= nvals) then
+        write(warning, *) "WARNING: expected", nvals, "but got", nvals_tmp, "for", name
+        call PetscPrintf(options%comm, warning, ierr)
+      end if
     end subroutine OptionsGetIntArray
 
     subroutine OptionsGetReal(options, name, help, val, flag, ierr)
@@ -443,15 +449,17 @@
       type(options_type) options
       character(len=*):: name
       character(len=*):: help
+      character(len=MAXSTRINGLENGTH):: warning
       PetscInt nvals
       PetscReal val(nvals)
       PetscBool flag
       PetscErrorCode ierr
 
-      PetscInt lcv
+      PetscInt lcv,nvals_tmp
 
       character(len=MAXWORDLENGTH):: default = ""
       character(len=MAXWORDLENGTH):: tmpdefault = ""
+      nvals_tmp = nvals
 
       if (options%print_help) then
         do lcv=1,nvals
@@ -462,7 +470,11 @@
         call PetscPrintf(options%comm, "  -"//trim(options%my_prefix)// &
              trim(name(2:))//" <"//default(1:len_trim(default)-1)//">: "//trim(help)//"\n", ierr)
       end if
-      call PetscOptionsGetRealArray(options%my_prefix, name, val, nvals, flag, ierr)
+      call PetscOptionsGetRealArray(options%my_prefix, name, val, nvals_tmp, flag, ierr)
+      if (nvals_tmp /= nvals) then
+        write(warning, *) "WARNING: expected", nvals, "but got", nvals_tmp, "for", name
+        call PetscPrintf(options%comm, warning, ierr)
+      end if
     end subroutine OptionsGetRealArray
 
     subroutine OptionsGetString(options, name, help, val, flag, ierr)

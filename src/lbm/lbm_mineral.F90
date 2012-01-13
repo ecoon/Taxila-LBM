@@ -45,11 +45,13 @@ contains
   function MineralCreateOne(comm) result(mineral)
     MPI_Comm comm
     type(mineral_type),pointer :: mineral
+
     character(len=MAXWORDLENGTH):: name
+
     allocate(mineral)
     mineral%comm = comm
-    mineral%id = 0
-    nullify(mineral%gw)
+    call MineralInitialize(mineral)
+
     name = 'mineral1'
     call MineralSetName(mineral, name)
   end function MineralCreateOne
@@ -62,17 +64,23 @@ contains
     character(len=MAXWORDLENGTH):: name
     PetscInt lcv
     allocate(minerals(1:n))
-    name = ''
 
     do lcv=1,n
        amineral => minerals(lcv)
        amineral%comm = comm
-       nullify(amineral%gw)
+       call MineralInitialize(amineral)
        call MineralSetID(amineral, lcv)
        name = 'mineral'//char(lcv+48)
        call MineralSetName(amineral, name)
     end do
   end function MineralCreateN
+
+  subroutine MineralInitialize(mineral)
+    type(mineral_type) mineral
+    mineral%name = ''
+    mineral%id = 0
+    nullify(mineral%gw)
+  end subroutine MineralInitialize
 
   subroutine MineralDestroy(mineral, ierr)
     type(mineral_type) mineral
@@ -113,6 +121,7 @@ contains
     mineral%gw(:) = 0.d0
     do lcv=1,options%ncomponents
       write(idstring, '(I1)') lcv
+      componentname = "component"//trim(idstring)
       call PetscOptionsGetString(options%my_prefix, "-component"//trim(idstring)//"_name", &
            componentname, flag, ierr)
       idstring = '-gw_'//trim(mineral%name)//'_'//trim(componentname)
