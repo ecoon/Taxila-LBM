@@ -167,13 +167,13 @@ contains
     if (associated(flow%gvt)) deallocate(flow%gvt)
   end subroutine FlowDestroy
 
-  subroutine FlowSetName(flow, name) 
-    type(flow_type) flow 
-    character(len=MAXWORDLENGTH):: name       
+  subroutine FlowSetName(flow, name)
+    type(flow_type) flow
+    character(len=MAXWORDLENGTH):: name
     flow%name = name
     call DistributionSetName(flow%distribution, name)
   end subroutine FlowSetName
-    
+
   subroutine FlowSetFromOptions(flow, options, ierr)
     use LBM_Options_module
     type(flow_type) flow
@@ -195,7 +195,7 @@ contains
     call DiscretizationSetType(flow%disc, options%flow_disc)
     call DiscretizationSetDerivOrder(flow%disc, options%deriv_order)
     call DiscretizationSetUp(flow%disc)
-    
+
     flow%use_nonideal_eos = options%flow_use_nonideal_eos
     do lcv=1,flow%ncomponents
        call ComponentSetSizes(flow%components(lcv), flow%ncomponents, flow%disc%b)
@@ -411,12 +411,12 @@ contains
 
     ! deal with consistency.  Assume component 1's tau, mm are correct
     ! viscosity/time scale
-    if (flow%components(1)%viscosity < -990.) then
+    if (flow%components(1)%viscosity < -990.d0) then
        ! tau is correct, viscosity is not given
        flow%components(1)%time_scale = 1.
        flow%components(1)%viscosity = flow%grid%length_scale * &
          flow%grid%length_scale * (flow%components(1)%relax%tau - 0.5)/3.
-    else        
+    else
        flow%components(1)%time_scale = flow%grid%length_scale * &
             flow%grid%length_scale * (flow%components(1)%relax%tau - 0.5)/ &
             (flow%components(1)%viscosity*3.)
@@ -764,7 +764,7 @@ contains
 
     PetscInt i,j,k,m,d
     PetscScalar mm(1:flow%ncomponents)
-    
+
     do m=1,flow%ncomponents
        mm(m) = flow%components(m)%mm
     end do
