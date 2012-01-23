@@ -17,6 +17,7 @@
 
 module LBM_Flow_module
   use petsc
+  use LBM_Error_module
   use LBM_Relaxation_module
   use LBM_EOS_module
   use LBM_Component_module
@@ -446,7 +447,7 @@ contains
              flow%components(lcv)%relax%tau = consistent_tau
 
           else if (abs(flow%components(lcv)%relax%tau - consistent_tau) > eps) then
-             SETERRQ(PETSC_COMM_WORLD, 1, 'Viscosities and relaxation times specified '// &
+             call LBMError(PETSC_COMM_WORLD, 1, 'Viscosities and relaxation times specified '// &
                   'for components are not consistent.', ierr)
           else
              ! all ok
@@ -465,7 +466,7 @@ contains
              flow%components(lcv)%mm = consistent_mm
 
           else if (abs(flow%components(lcv)%mm - consistent_mm) > eps) then
-             SETERRQ(PETSC_COMM_WORLD, 1, 'Densities and molecular masses specified '// &
+             call LBMError(PETSC_COMM_WORLD, 1, 'Densities and molecular masses specified '// &
                   'for components are not consistent.', ierr)
           else
              ! all ok

@@ -45,6 +45,7 @@
 
   subroutine initialize_state_d3(rho, u, walls, dist, components, options)
     use petsc
+    use LBM_Error_module
     use LBM_Distribution_Function_type_module
     use LBM_Component_module
     use LBM_Options_module
@@ -92,10 +93,10 @@
     case(1)
       call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_xp_component1', xp3_ave_p, &
            flag, ierr)
-      if (.not.flag) SETERRQ(1, 1, 'invalid boundary pressure for xp_component1', ierr)
+      if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary pressure for xp_component1', ierr)
       call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_xm_component1', xm3_ave_p, &
            flag, ierr)
-      if (.not.flag) SETERRQ(1, 1, 'invalid boundary value for xm_component1', ierr)
+      if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value for xm_component1', ierr)
 
       do i=dist%info%xs,dist%info%xe
         t = dble(i-1)/dble(dist%info%NX-1)
@@ -104,10 +105,10 @@
     case(2)
       call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_yp_component1', xp3_ave_p, &
            flag, ierr)
-      if (.not.flag) SETERRQ(1, 1, 'invalid boundary pressure for yp_component1', ierr)
+      if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary pressure for yp_component1', ierr)
       call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_ym_component1', xm3_ave_p, &
            flag, ierr)
-      if (.not.flag) SETERRQ(1, 1, 'invalid boundary value for ym_component1', ierr)
+      if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value for ym_component1', ierr)
 
       do i=dist%info%ys,dist%info%ye
         t = dble(i-1)/dble(dist%info%NY-1)
@@ -116,10 +117,10 @@
     case(3)
       call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_zp_component1', xp3_ave_p, &
            flag, ierr)
-      if (.not.flag) SETERRQ(1, 1, 'invalid boundary pressure for zp_component1', ierr)
+      if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary pressure for zp_component1', ierr)
       call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_zm_component1', xm3_ave_p, &
            flag, ierr)
-      if (.not.flag) SETERRQ(1, 1, 'invalid boundary value for zm_component1', ierr)
+      if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value for zm_component1', ierr)
 
       do i=dist%info%zs,dist%info%ze
         t = dble(i-1)/dble(dist%info%NZ-1)
@@ -131,6 +132,7 @@
 
   subroutine initialize_state_d2(rho, u, walls, dist, components, options)
     use petsc
+    use LBM_Error_module
     use LBM_Distribution_Function_type_module
     use LBM_Component_module
     use LBM_Options_module
@@ -174,10 +176,10 @@
     case(1)
       call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_xp_component1', xp3_ave_p, &
            flag, ierr)
-      if (.not.flag) SETERRQ(1, 1, 'invalid boundary pressure for xp_component1', ierr)
+      if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary pressure for xp_component1', ierr)
       call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_xm_component1', xm3_ave_p, &
            flag, ierr)
-      if (.not.flag) SETERRQ(1, 1, 'invalid boundary value for xm_component1', ierr)
+      if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value for xm_component1', ierr)
 
       do i=dist%info%xs,dist%info%xe
         t = dble(i-1)/dble(dist%info%NX-1)
@@ -186,10 +188,10 @@
     case(2)
       call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_yp_component1', xp3_ave_p, &
            flag, ierr)
-      if (.not.flag) SETERRQ(1, 1, 'invalid boundary pressure for yp_component1', ierr)
+      if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary pressure for yp_component1', ierr)
       call PetscOptionsGetReal(options%my_prefix,'-bc_pressure_ym_component1', xm3_ave_p, &
            flag, ierr)
-      if (.not.flag) SETERRQ(1, 1, 'invalid boundary value for ym_component1', ierr)
+      if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value for ym_component1', ierr)
 
       do i=dist%info%ys,dist%info%ye
         t = dble(i-1)/dble(dist%info%NY-1)

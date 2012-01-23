@@ -17,6 +17,7 @@
 
 module LBM_Relaxation_module
   use petsc
+  use LBM_Error_module
   use LBM_Distribution_Function_type_module
   implicit none
 
@@ -155,7 +156,7 @@ contains
     case(RELAXATION_MODE_SRT)
       call RelaxationCollideSRT(relax, fi, fi_eq, m, dist)
     case DEFAULT
-      SETERRQ(1, 1, 'invalid relaxation mode in LBM', ierr)
+      call LBMError(PETSC_COMM_SELF, 1, 'invalid relaxation mode in LBM', ierr)
     end select
   end subroutine RelaxationCollide
 

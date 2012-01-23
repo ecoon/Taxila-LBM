@@ -20,6 +20,7 @@
   module LBM_module
     use petsc
     use Timing_module
+    use LBM_Error_module
     use LBM_Discretization_module
     use LBM_Grid_module
     use LBM_Distribution_Function_module
@@ -469,7 +470,7 @@
       else if (kwrite > 0) then
          lbm%io%counter = istep/kwrite
       else
-         SETERRQ(PETSC_COMM_WORLD, 1, &
+         call LBMError(PETSC_COMM_WORLD, 1, &
               'must set -restart_counter to define which file to restart from', ierr)
       end if
 

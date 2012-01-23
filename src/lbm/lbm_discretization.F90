@@ -17,6 +17,7 @@
 ! generic class for discretizations
 module LBM_Discretization_module
   use petsc
+  use LBM_Error_module
   use LBM_Discretization_Type_module
   use LBM_Discretization_D3Q19_module
   use LBM_Discretization_D2Q9_module
@@ -83,7 +84,7 @@ contains
          (deriv_order.eq.8).or.(deriv_order.eq.10)) then
        disc%deriv_order = deriv_order
     else
-       SETERRQ(1, 1, 'Invalid derivative order', ierr)
+       call LBMError(PETSC_COMM_SELF, 1, 'Invalid derivative order', ierr)
     end if
   end subroutine DiscretizationSetDerivOrder
 
@@ -103,7 +104,7 @@ contains
     case(D2Q9_DISCRETIZATION)
        call DiscretizationSetUp_D2Q9(disc)
     case DEFAULT
-       if (disc%ndims < 0 ) SETERRQ(1, 1, 'Invalid Discretization', ierr)
+       if (disc%ndims < 0 ) call LBMError(PETSC_COMM_SELF, 1, 'Invalid Discretization', ierr)
     end select
   end subroutine DiscretizationSetUp
 
@@ -119,7 +120,7 @@ contains
     case(D2Q9_DISCRETIZATION)
        call DiscretizationSetUpRelax_D2Q9(disc, relax)
     case DEFAULT
-       SETERRQ(1,1,'invalid discretization in LBM',ierr)
+       call LBMError(PETSC_COMM_SELF,1,'invalid discretization in LBM',ierr)
     end select
   end subroutine DiscretizationSetUpRelax
 
@@ -144,7 +145,7 @@ contains
     case(D2Q9_DISCRETIZATION)
        call DiscretizationEquilf_D2Q9(disc, rho, u, walls, feq, m, relax, dist)
     case DEFAULT
-       SETERRQ(1,1,'invalid discretization in LBM',ierr)
+       call LBMError(PETSC_COMM_SELF,1,'invalid discretization in LBM',ierr)
     end select
   end subroutine DiscretizationEquilf
 
@@ -161,7 +162,7 @@ contains
     case(D2Q9_DISCRETIZATION)
        call DiscSetLocalDirections_D2Q9(disc, boundary, directions, cardinals)
     case DEFAULT
-       SETERRQ(1,1,'invalid discretization in LBM',ierr)
+       call LBMError(PETSC_COMM_SELF,1,'invalid discretization in LBM',ierr)
     end select
   end subroutine DiscSetLocalDirections
 
@@ -180,7 +181,7 @@ contains
     case(D2Q9_DISCRETIZATION)
        call DiscApplyBCDirichletToBoundary_D2Q9(disc, fi, vals, directions, dist)
     case DEFAULT
-       SETERRQ(1,1,'invalid discretization in LBM',ierr)
+       call LBMError(PETSC_COMM_SELF,1,'invalid discretization in LBM',ierr)
     end select
   end subroutine DiscApplyBCDirichletToBoundary
 
@@ -202,7 +203,7 @@ contains
        call DiscApplyBCFluxToBoundary_D2Q9(disc, fi, vals, directions, cardinals, &
             dist)
     case DEFAULT
-       SETERRQ(1,1,'invalid discretization in LBM',ierr)
+       call LBMError(PETSC_COMM_SELF,1,'invalid discretization in LBM',ierr)
     end select
   end subroutine DiscApplyBCFluxToBoundary
 
@@ -225,7 +226,7 @@ contains
        call DiscApplyBCVelocityToBoundary_D2Q9(disc, fi, vals, directions, cardinals, &
             dist)
     case DEFAULT
-       SETERRQ(1,1,'invalid discretization in LBM',ierr)
+       call LBMError(PETSC_COMM_SELF,1,'invalid discretization in LBM',ierr)
     end select
   end subroutine DiscApplyBCVelocityToBoundary
 end module LBM_Discretization_module
