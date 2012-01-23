@@ -515,7 +515,7 @@
     type(options_type) options
     PetscScalar,dimension(dist%s, dist%info%ndims, dist%info%ys:dist%info%ye):: xm_bcvals, xp_bcvals
     PetscScalar,dimension(dist%s, dist%info%ndims, dist%info%xs:dist%info%xe):: ym_bcvals, yp_bcvals
-    PetscScalar,pointer:: zm_bcvals, zp_bcvals
+    PetscScalar :: zm_bcvals(*), zp_bcvals(*)
     PetscInt bc_dim
 
     ! local
