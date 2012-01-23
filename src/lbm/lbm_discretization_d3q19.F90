@@ -42,6 +42,7 @@ module LBM_Discretization_Directions_D3Q19_module
 end module LBM_Discretization_Directions_D3Q19_module
 
 module LBM_Discretization_D3Q19_module
+  use LBM_Error_module
   use LBM_Discretization_Type_module
   use LBM_Discretization_Directions_D3Q19_module
   use LBM_Distribution_Function_type_module
@@ -222,7 +223,7 @@ contains
       disc%ffw( 9) = 1.d0/5355.   ! w_{300}(9) in Sbragaglia, Phys Rev E (2007)
       disc%ffw(10) = 1.d0/10710.
       disc%ffw(11) = 1.d0/42840.
-      SETERRQ(PETSC_COMM_WORLD, 1, &
+      call LBMError(PETSC_COMM_WORLD, 1, &
            'Derivative order 10 for D3 not yet implemented', ierr)
     end if
 

@@ -18,6 +18,7 @@
   subroutine initialize_bcs_transport(bc_flags, xm_bcvals, xp_bcvals, ym_bcvals, & 
        yp_bcvals, zm_bcvals, zp_bcvals, bc_dim, dist, options)
     use petsc
+    use LBM_Error_module
     use LBM_Distribution_Function_type_module
     use LBM_Options_module
     implicit none
@@ -50,12 +51,12 @@
     call PetscOptionsGetReal(options%my_prefix,'-bc_conc_pointsource', pointsource_conc,&
          flag, ierr)
     if (.not.flag) then
-       SETERRQ(1,1,'invalid boundary value for point source concentration', ierr)
+       call LBMError(PETSC_COMM_SELF,1,'invalid boundary value for point source concentration', ierr)
     end if
     call PetscOptionsGetInt(options%my_prefix,'-bc_conc_pointsource_location', &
          pointsource_node, flag, ierr)
     if (.not.flag) then
-       SETERRQ(1,1,'invalid node for point source concentration', ierr)
+       call LBMError(PETSC_COMM_SELF,1,'invalid node for point source concentration', ierr)
     end if
 
     if (dist%info%xs.eq.1) then

@@ -17,6 +17,7 @@
 #include "finclude/petscdmdef.h"
   module LBM_Options_module
     use petsc
+    use LBM_Error_module
     implicit none
 
     private
@@ -267,7 +268,7 @@
       end if
 
       if (options%flow_disc == NULL_DISCRETIZATION) then
-         SETERRQ(1, 1, 'Invalid Discretization', ierr)
+         call LBMError(PETSC_COMM_SELF, 1, 'Invalid Discretization', ierr)
       end if
 
       ! transport stuff
@@ -290,9 +291,10 @@
         end if
 
         if (options%transport_disc == NULL_DISCRETIZATION) then
-          SETERRQ(1, 1, 'Invalid Discretization', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'Invalid Discretization', ierr)
         else if (tmpdims /= options%ndims) then
-            SETERRQ(1,1,"Flow and transport discretization dimensions don't match", ierr)
+            call LBMError(PETSC_COMM_SELF,1, &
+                 "Flow and transport discretization dimensions don't match", ierr)
         end if
 
         options%nspecies = 1

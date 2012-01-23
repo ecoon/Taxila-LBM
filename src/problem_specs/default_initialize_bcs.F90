@@ -44,6 +44,7 @@
   subroutine initialize_bcs_d3(bc_flags, xm_bcvals, xp_bcvals, ym_bcvals, & 
        yp_bcvals, zm_bcvals, zp_bcvals, bc_dim, dist, options)
     use petsc
+    use LBM_Error_module
     use LBM_Distribution_Function_type_module
     use LBM_Options_module
     implicit none
@@ -158,7 +159,7 @@
             poise_xm, flag, ierr)
        call PetscOptionsGetReal(options%my_prefix,'-bc_velocity_xm_avg', xm3_ave, &
             flag, ierr)
-       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+       if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
 
     else if (bc_flags(BOUNDARY_XM).eq.BC_FLUX) then
        ! check if poiseuille velocity
@@ -170,7 +171,7 @@
              call PetscOptionsGetReal(options%my_prefix,&
                   '-bc_flux_xm', xm3_ave_f(1,X_DIRECTION), flag, ierr)
           end if
-          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+          if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
        end do
 
     else if (bc_flags(BOUNDARY_XM).eq.BC_DIRICHLET) then
@@ -180,7 +181,7 @@
                xm3_ave_p(m), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
                '-bc_pressure_xm', xm3_ave_p(1), flag, ierr)
-          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+          if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
        end do
     endif
 
@@ -192,7 +193,7 @@
             poise_xp, flag, ierr)
        call PetscOptionsGetReal(options%my_prefix,'-bc_velocity_xp_avg', xp3_ave, &
             flag, ierr)
-       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+       if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
         
     else if (bc_flags(BOUNDARY_XP).eq.BC_FLUX) then
        ! check if poiseuille velocity
@@ -204,7 +205,7 @@
              call PetscOptionsGetReal(options%my_prefix,&
                   '-bc_flux_xp', xp3_ave_f(1,X_DIRECTION), flag, ierr)
           end if
-          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+          if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
        end do
 
     else if (bc_flags(BOUNDARY_XP).eq.BC_DIRICHLET) then
@@ -214,7 +215,7 @@
                xp3_ave_p(m), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
                '-bc_pressure_xp', xp3_ave_p(1), flag, ierr)
-          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+          if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
        end do
     endif
 
@@ -226,7 +227,7 @@
             poise_ym, flag, ierr)
        call PetscOptionsGetReal(options%my_prefix,'-bc_velocity_ym_avg', ym3_ave, &
             flag, ierr)
-       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+       if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
         
     else if (bc_flags(BOUNDARY_YM).eq.BC_FLUX) then
        ! check if poiseuille velocity
@@ -247,7 +248,7 @@
                ym3_ave_p(m), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
                '-bc_pressure_ym', ym3_ave_p(1), flag, ierr)
-          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+          if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
        end do
     endif
 
@@ -259,7 +260,7 @@
             poise_yp, flag, ierr)
        call PetscOptionsGetReal(options%my_prefix,'-bc_velocity_yp_avg', yp3_ave, &
             flag, ierr)
-       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+       if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
         
     else if (bc_flags(BOUNDARY_YP).eq.BC_FLUX) then
        ! check if poiseuille velocity
@@ -280,7 +281,7 @@
                yp3_ave_p(m), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
                '-bc_pressure_yp', yp3_ave_p(1), flag, ierr)
-          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+          if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
        end do
     endif
 
@@ -293,7 +294,7 @@
                poise_zm, flag, ierr)
           call PetscOptionsGetReal(options%my_prefix,'-bc_velocity_zm_avg', zm3_ave, &
                flag, ierr)
-          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+          if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
 
     else if (bc_flags(BOUNDARY_ZM).eq.BC_FLUX) then
        ! check if poiseuille velocity
@@ -314,7 +315,7 @@
                   zm3_ave_p(m), flag, ierr)
              if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
                   '-bc_pressure_zm', zm3_ave_p(1), flag, ierr)
-             if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+             if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
           end do
        endif
 
@@ -326,7 +327,7 @@
                poise_zp, flag, ierr)
           call PetscOptionsGetReal(options%my_prefix,'-bc_velocity_zp_avg', zp3_ave, &
                flag, ierr)
-          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+          if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
 
     else if (bc_flags(BOUNDARY_ZP).eq.BC_FLUX) then
        ! check if poiseuille velocity
@@ -347,7 +348,7 @@
                   zp3_ave_p(m), flag, ierr)
              if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
                   '-bc_pressure_zp', zp3_ave_p(1), flag, ierr)
-             if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+             if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
           end do
        endif
     end if
@@ -502,6 +503,7 @@
   subroutine initialize_bcs_d2(bc_flags, xm_bcvals, xp_bcvals, ym_bcvals, & 
        yp_bcvals, zm_bcvals, zp_bcvals, bc_dim, dist, options)
     use petsc
+    use LBM_Error_module
     use LBM_Distribution_Function_type_module
     use LBM_Options_module
     implicit none
@@ -590,7 +592,7 @@
             poise_xm, flag, ierr)
        call PetscOptionsGetReal(options%my_prefix,'-bc_velocity_xm_avg', xm3_ave, &
             flag, ierr)
-       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+       if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
 
     else if (bc_flags(BOUNDARY_XM).eq.BC_FLUX) then
        ! check if poiseuille velocity
@@ -602,7 +604,7 @@
              call PetscOptionsGetReal(options%my_prefix,&
                   '-bc_flux_xm', xm3_ave_f(1,X_DIRECTION), flag, ierr)
           end if
-          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+          if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
        end do
 
     else if (bc_flags(BOUNDARY_XM).eq.BC_DIRICHLET) then
@@ -612,7 +614,7 @@
                xm3_ave_p(m), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
                '-bc_pressure_xm', xm3_ave_p(1), flag, ierr)
-          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+          if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
        end do
     endif
 
@@ -624,7 +626,7 @@
             poise_xp, flag, ierr)
        call PetscOptionsGetReal(options%my_prefix,'-bc_velocity_xp_avg', xp3_ave, &
             flag, ierr)
-       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+       if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
         
     else if (bc_flags(BOUNDARY_XP).eq.BC_FLUX) then
        ! check if poiseuille velocity
@@ -636,7 +638,7 @@
              call PetscOptionsGetReal(options%my_prefix,&
                   '-bc_flux_xp', xp3_ave_f(1,X_DIRECTION), flag, ierr)
           end if
-          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+          if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
        end do
 
     else if (bc_flags(BOUNDARY_XP).eq.BC_DIRICHLET) then
@@ -646,7 +648,7 @@
                xp3_ave_p(m), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
                '-bc_pressure_xp', xp3_ave_p(1), flag, ierr)
-          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+          if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
        end do
     endif
 
@@ -658,7 +660,7 @@
             poise_ym, flag, ierr)
        call PetscOptionsGetReal(options%my_prefix,'-bc_velocity_ym_avg', ym3_ave, &
             flag, ierr)
-       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+       if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
         
     else if (bc_flags(BOUNDARY_YM).eq.BC_FLUX) then
        ! check if poiseuille velocity
@@ -679,7 +681,7 @@
                ym3_ave_p(m), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
                '-bc_pressure_ym', ym3_ave_p(1), flag, ierr)
-          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+          if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
        end do
     endif
 
@@ -691,7 +693,7 @@
             poise_yp, flag, ierr)
        call PetscOptionsGetReal(options%my_prefix,'-bc_velocity_yp_avg', yp3_ave, &
             flag, ierr)
-       if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+       if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
         
     else if (bc_flags(BOUNDARY_YP).eq.BC_FLUX) then
        ! check if poiseuille velocity
@@ -712,7 +714,7 @@
                yp3_ave_p(m), flag, ierr)
           if ((dist%s.eq.1).and. .not.flag) call PetscOptionsGetReal(options%my_prefix,&
                '-bc_pressure_yp', yp3_ave_p(1), flag, ierr)
-          if (.not.flag) SETERRQ(1, 1, 'invalid boundary value', ierr)
+          if (.not.flag) call LBMError(PETSC_COMM_SELF, 1, 'invalid boundary value', ierr)
        end do
     endif
 

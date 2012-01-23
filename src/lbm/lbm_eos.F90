@@ -19,6 +19,7 @@
 
 module LBM_EOS_module
   use petsc
+  use LBM_Error_module
   use LBM_Distribution_Function_type_module
   implicit none
 
@@ -141,7 +142,7 @@ contains
     end if
 
     if (.not.done) then
-      SETERRQ(PETSC_COMM_WORLD, 1, 'Invalid EOS type', ierr)
+      call LBMError(PETSC_COMM_WORLD, 1, 'Invalid EOS type', ierr)
     end  if
   end subroutine EOSSetFromOptions
 
@@ -164,7 +165,7 @@ contains
     case (EOS_PR)
       call EOSApply_PR(eos, rho, psi, g_mm, m, dist)
     case DEFAULT
-      SETERRQ(PETSC_COMM_WORLD, 1, 'Invalid EOS type', ierr)
+      call LBMError(PETSC_COMM_WORLD, 1, 'Invalid EOS type', ierr)
     end select
   end subroutine EOSApply
 

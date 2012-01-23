@@ -19,6 +19,7 @@
 
 module LBM_Distribution_Function_module
   use petsc
+  use LBM_Error_module
   use LBM_Distribution_Function_type_module
   use LBM_Info_module
   use LBM_Discretization_Type_module
@@ -397,7 +398,7 @@ contains
     else if (distribution%info%ndims.eq.3) then
        call DistributionGatherValueToDirectionD3(distribution, val, out)
     else 
-       SETERRQ(1, 1, 'invalid ndims in LBM', ierr)
+       call LBMError(PETSC_COMM_SELF, 1, 'invalid ndims in LBM', ierr)
     end if
   end subroutine DistributionGatherValueToDirection
   
@@ -431,7 +432,7 @@ contains
     case(2)
       call DistributionStreamD2(dist%fi_a, dist)
     case DEFAULT
-       SETERRQ(1, 1, 'invalid discretization in LBM', ierr)
+       call LBMError(PETSC_COMM_SELF, 1, 'invalid discretization in LBM', ierr)
     end select
   end subroutine DistributionStream
 
@@ -490,7 +491,7 @@ contains
     case(2)
        call DistributionBouncebackD2(dist, dist%fi_a, walls)
     case DEFAULT 
-       SETERRQ(1, 1, 'invalid discretization in LBM', ierr)
+       call LBMError(PETSC_COMM_SELF, 1, 'invalid discretization in LBM', ierr)
     end select
   end subroutine DistributionBounceback
 

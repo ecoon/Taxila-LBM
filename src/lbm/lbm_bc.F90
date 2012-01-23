@@ -18,6 +18,7 @@
 #include "finclude/petscdmdef.h"
 
 module LBM_BC_module
+  use LBM_Error_module
   use LBM_Info_module
   use LBM_Grid_module
   use LBM_Distribution_Function_type_module
@@ -375,7 +376,7 @@ contains
 
     ! first, check to make sure number of components = 2
     if (dist%s /= 2) then
-       SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic only makes sense for two-component', ierr)
+       call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic only makes sense for two-component', ierr)
        return
     end if
 
@@ -385,7 +386,7 @@ contains
     case(D2Q9_DISCRETIZATION)
        call BCApplyPseudoperiodicD2(bc, dist%fi_a, walls, dist)
     case DEFAULT
-       SETERRQ(PETSC_COMM_SELF, 1, 'invalid discretization in LBM', ierr)
+       call LBMError(PETSC_COMM_SELF, 1, 'invalid discretization in LBM', ierr)
     end select
   end subroutine BCApplyPseudoperiodic
 
@@ -440,7 +441,7 @@ contains
     PetscScalar,dimension(dist%info%rgxyzl):: walls
     PetscErrorCode ierr
 
-    SETERRQ(PETSC_COMM_SELF, 1, 'zero gradient BC not implemented yet', ierr)
+    call LBMError(PETSC_COMM_SELF, 1, 'zero gradient BC not implemented yet', ierr)
     return
     select case(dist%info%ndims)
     case(2)
@@ -999,7 +1000,7 @@ contains
     ! XM BOUNDARY
     if ((bc%flags(BOUNDARY_XM).eq.BC_PSEUDOPERIODIC).and.(dist%info%xs.eq.1)) then
        if (.not.dist%info%periodic(X_DIRECTION)) then
-          SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
           return
        end if
        do k=dist%info%zs,dist%info%ze
@@ -1023,7 +1024,7 @@ contains
     if ((bc%flags(BOUNDARY_XP).eq.BC_PSEUDOPERIODIC).and.(dist%info%xe.eq.dist%info%NX)) &
          then
        if (.not.dist%info%periodic(X_DIRECTION)) then
-          SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
           return
        end if
        do k=dist%info%zs,dist%info%ze
@@ -1046,7 +1047,7 @@ contains
     ! YM BOUNDARY
     if ((bc%flags(BOUNDARY_YM).eq.BC_PSEUDOPERIODIC).and.(dist%info%ys.eq.1)) then
        if (.not.dist%info%periodic(Y_DIRECTION)) then
-          SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
           return
        end if
        do k=dist%info%zs,dist%info%ze
@@ -1070,7 +1071,7 @@ contains
     if ((bc%flags(BOUNDARY_YP).eq.BC_PSEUDOPERIODIC).and.(dist%info%ye.eq.dist%info%NY)) &
          then
        if (.not.dist%info%periodic(Y_DIRECTION)) then
-          SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
           return
        end if
        do k=dist%info%zs,dist%info%ze
@@ -1093,7 +1094,7 @@ contains
     ! ZM BOUNDARY
     if ((bc%flags(BOUNDARY_ZM).eq.BC_PSEUDOPERIODIC).and.(dist%info%zs.eq.1)) then
        if (.not.dist%info%periodic(Z_DIRECTION)) then
-          SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_z', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_z', ierr)
           return
        end if
        do j=dist%info%ys,dist%info%ye
@@ -1117,7 +1118,7 @@ contains
     if ((bc%flags(BOUNDARY_ZP).eq.BC_PSEUDOPERIODIC).and.(dist%info%ze.eq.dist%info%NZ)) &
          then
        if (.not.dist%info%periodic(Z_DIRECTION)) then
-          SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_z', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_z', ierr)
           return
        end if
        do j=dist%info%ys,dist%info%ye
@@ -1153,7 +1154,7 @@ contains
     ! XM BOUNDARY
     if ((bc%flags(BOUNDARY_XM).eq.BC_PSEUDOPERIODIC).and.(dist%info%xs.eq.1)) then
        if (.not.dist%info%periodic(X_DIRECTION)) then
-          SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
           return
        end if
        do j=dist%info%ys,dist%info%ye
@@ -1175,7 +1176,7 @@ contains
     if ((bc%flags(BOUNDARY_XP).eq.BC_PSEUDOPERIODIC).and.(dist%info%xe.eq.dist%info%NX)) &
          then
        if (.not.dist%info%periodic(X_DIRECTION)) then
-          SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
           return
        end if
        do j=dist%info%ys,dist%info%ye
@@ -1196,7 +1197,7 @@ contains
     ! YM BOUNDARY
     if ((bc%flags(BOUNDARY_YM).eq.BC_PSEUDOPERIODIC).and.(dist%info%ys.eq.1)) then
        if (.not.dist%info%periodic(Y_DIRECTION)) then
-          SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
           return
        end if
        do i=dist%info%xs,dist%info%xe
@@ -1218,7 +1219,7 @@ contains
     if ((bc%flags(BOUNDARY_YP).eq.BC_PSEUDOPERIODIC).and.(dist%info%ye.eq.dist%info%NY)) &
          then
        if (.not.dist%info%periodic(Y_DIRECTION)) then
-          SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
           return
        end if
        do i=dist%info%xs,dist%info%xe
@@ -1252,7 +1253,7 @@ contains
     ! XM BOUNDARY
     if ((bc%flags(BOUNDARY_XM).eq.BC_PSEUDOPERIODIC).and.(dist%info%xs.eq.1)) then
        if (.not.dist%info%periodic(X_DIRECTION)) then
-          SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
           return
        end if
        do k=dist%info%zs,dist%info%ze
@@ -1276,7 +1277,7 @@ contains
     if ((bc%flags(BOUNDARY_XP).eq.BC_PSEUDOPERIODIC).and.(dist%info%xe.eq.dist%info%NX)) &
          then
        if (.not.dist%info%periodic(X_DIRECTION)) then
-          SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
           return
        end if
        do k=dist%info%zs,dist%info%ze
@@ -1299,7 +1300,7 @@ contains
     ! YM BOUNDARY
     if ((bc%flags(BOUNDARY_YM).eq.BC_PSEUDOPERIODIC).and.(dist%info%ys.eq.1)) then
        if (.not.dist%info%periodic(Y_DIRECTION)) then
-          SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
           return
        end if
        do k=dist%info%zs,dist%info%ze
@@ -1323,7 +1324,7 @@ contains
     if ((bc%flags(BOUNDARY_YP).eq.BC_PSEUDOPERIODIC).and.(dist%info%ye.eq.dist%info%NY)) &
          then
        if (.not.dist%info%periodic(Y_DIRECTION)) then
-          SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
           return
        end if
        do k=dist%info%zs,dist%info%ze
@@ -1346,7 +1347,7 @@ contains
     ! ZM BOUNDARY
     if ((bc%flags(BOUNDARY_ZM).eq.BC_PSEUDOPERIODIC).and.(dist%info%zs.eq.1)) then
        if (.not.dist%info%periodic(Z_DIRECTION)) then
-          SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_z', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_z', ierr)
           return
        end if
        do j=dist%info%ys,dist%info%ye
@@ -1370,7 +1371,7 @@ contains
     if ((bc%flags(BOUNDARY_ZP).eq.BC_PSEUDOPERIODIC).and.(dist%info%ze.eq.dist%info%NZ)) &
          then
        if (.not.dist%info%periodic(Z_DIRECTION)) then
-          SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_z', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_z', ierr)
           return
        end if
        do j=dist%info%ys,dist%info%ye
@@ -1406,7 +1407,7 @@ contains
     ! XM BOUNDARY
     if ((bc%flags(BOUNDARY_XM).eq.BC_PSEUDOPERIODIC).and.(dist%info%xs.eq.1)) then
        if (.not.dist%info%periodic(X_DIRECTION)) then
-          SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
           return
        end if
        do j=dist%info%ys,dist%info%ye
@@ -1428,7 +1429,7 @@ contains
     if ((bc%flags(BOUNDARY_XP).eq.BC_PSEUDOPERIODIC).and.(dist%info%xe.eq.dist%info%NX)) &
          then
        if (.not.dist%info%periodic(X_DIRECTION)) then
-          SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
           return
        end if
        do j=dist%info%ys,dist%info%ye
@@ -1449,7 +1450,7 @@ contains
     ! YM BOUNDARY
     if ((bc%flags(BOUNDARY_YM).eq.BC_PSEUDOPERIODIC).and.(dist%info%ys.eq.1)) then
        if (.not.dist%info%periodic(Y_DIRECTION)) then
-          SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
           return
        end if
        do i=dist%info%xs,dist%info%xe
@@ -1471,7 +1472,7 @@ contains
     if ((bc%flags(BOUNDARY_YP).eq.BC_PSEUDOPERIODIC).and.(dist%info%ye.eq.dist%info%NY)) &
          then
        if (.not.dist%info%periodic(Y_DIRECTION)) then
-          SETERRQ(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
+          call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
           return
        end if
        do i=dist%info%xs,dist%info%xe

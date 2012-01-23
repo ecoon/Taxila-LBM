@@ -18,6 +18,7 @@
 
 module LBM_Grid_module
   use petsc
+  use LBM_Error_module
   use LBM_Info_module
   implicit none
 
@@ -83,12 +84,12 @@ contains
 
     grid%length_scale = grid%info%gridsize(X_DIRECTION)
     if (abs(grid%info%gridsize(Y_DIRECTION)-grid%length_scale) > eps) then
-       SETERRQ(PETSC_COMM_WORLD, 1, &
+       call LBMError(PETSC_COMM_WORLD, 1, &
             'Lattice sizes must be equal, check grid parameters.', ierr)
     end if
     if (grid%info%ndims > 2) then
        if (abs(grid%info%gridsize(Z_DIRECTION)-grid%length_scale) > eps) then
-          SETERRQ(PETSC_COMM_WORLD,1,'Lattice sizes must be equal, check grid parameters.', ierr)
+          call LBMError(PETSC_COMM_WORLD,1,'Lattice sizes must be equal, check grid parameters.', ierr)
        end if
     end if
   end subroutine GridSetPhysicalScales
