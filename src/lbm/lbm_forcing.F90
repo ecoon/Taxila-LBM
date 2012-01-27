@@ -1349,10 +1349,13 @@ contains
     do i=dist%info%xs,dist%info%xe
     if (walldata(i,j,k).eq.0) then
       do n=1,2*dist%info%ndims
+        ! I don't remember why we don't include ghost walls here?
+        ! Must find out and fix this comment! etc.
         if ((tmp(n,i,j,k) > 0.).and.(tmp(n,i,j,k) < 998.)) then
           do d=1,dist%info%ndims
             forces(:,d,i,j,k) = forces(:,d,i,j,k) &
-                 - 1./6.*rho(:,i,j,k)*walls%minerals(int(tmp(n,i,j,k)))%gw(:)
+                 - 1./6.*rho(:,i,j,k)*walls%minerals(int(tmp(n,i,j,k)))%gw(:) &
+                 *dist%disc%ci(n,d)
           end do
         end if
       end do
@@ -1360,7 +1363,8 @@ contains
         if ((tmp(n,i,j,k) > 0.).and.(tmp(n,i,j,k) < 998.)) then
           do d=1,dist%info%ndims
             forces(:,d,i,j,k) = forces(:,d,i,j,k) &
-                 - 1./12.*rho(:,i,j,k)*walls%minerals(int(tmp(n,i,j,k)))%gw(:)
+                 - 1./12.*rho(:,i,j,k)*walls%minerals(int(tmp(n,i,j,k)))%gw(:) &
+                 *dist%disc%ci(n,d)
           end do
         end if
       end do
@@ -1414,6 +1418,12 @@ contains
         end if
       end do
     end if
+    if ((i == 50).and.(j == 2)) then
+      print*, 'i50,j2:'
+      print*, 'neighbors:', tmp(:,i,j)
+      print*, '
+      
+
     end do
     end do
   end subroutine LBMAddFluidSolidForcesD2
