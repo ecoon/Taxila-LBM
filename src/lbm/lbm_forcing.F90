@@ -1418,12 +1418,6 @@ contains
         end if
       end do
     end if
-    if ((i == 50).and.(j == 2)) then
-      print*, 'i50,j2:'
-      print*, 'neighbors:', tmp(:,i,j)
-      print*, '
-      
-
     end do
     end do
   end subroutine LBMAddFluidSolidForcesD2
