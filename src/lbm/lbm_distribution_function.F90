@@ -291,7 +291,7 @@ contains
          distribution%info%rgxs:distribution%info%rgxe, &
          distribution%info%rgys:distribution%info%rgye, &
          distribution%info%rgzs:distribution%info%rgze):: rho
-    
+
     PetscInt i,j,k,m
     do k=distribution%info%zs,distribution%info%ze
     do j=distribution%info%ys,distribution%info%ye
@@ -309,7 +309,7 @@ contains
   subroutine DistributionCalcFlux1(distribution, walls)
     type(distribution_type) distribution
     PetscScalar,dimension(distribution%info%rgxyzl):: walls
-    
+
     call DistributionCalcFlux2(distribution,walls,distribution%flux)
   end subroutine DistributionCalcFlux1
 

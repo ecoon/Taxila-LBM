@@ -66,6 +66,7 @@ contains
          dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: gradrho
     PetscScalar,dimension(dist%info%ndims):: weightsum
     PetscErrorCode ierr
+    PetscScalar,parameter:: eps=1.e-12 ! slightly larger than machine epsilon
 
     gradrho = 0.
     weightsum = 0.
@@ -944,12 +945,13 @@ contains
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           do m=1,dist%s
           do d=1,dist%info%ndims
-             forces(m,d,i,j,k) = forces(m,d,i,j,k) - dist%disc%c_0*rho(m,i,j,k)* &
-                  sum(components(m)%gf*(gradrho(:,d,i,j,k)/weightsum(d)),1)
+            if (weightsum(d) > eps) then
+              forces(m,d,i,j,k) = forces(m,d,i,j,k) - dist%disc%c_0*rho(m,i,j,k)* &
+                   sum(components(m)%gf*(gradrho(:,d,i,j,k)/weightsum(d)),1)
+            end if
           end do
           end do
        end if
-    
     end do
     end do
     end do
@@ -975,6 +977,7 @@ contains
          dist%info%rgys:dist%info%rgye):: gradrho
     PetscScalar,dimension(dist%info%ndims):: weightsum
     PetscErrorCode ierr
+    PetscScalar,parameter:: eps=1.e-12 ! slightly larger than machine epsilon
 
     gradrho = 0.
     weightsum = 0.
@@ -1285,8 +1288,10 @@ contains
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           do m=1,dist%s
           do d=1,dist%info%ndims
-             forces(m,d,i,j) = forces(m,d,i,j) - dist%disc%c_0*rho(m,i,j)* &
-                  sum(components(m)%gf*(gradrho(:,d,i,j)/weightsum(d)),1)
+            if (weightsum(d) > eps) then
+              forces(m,d,i,j) = forces(m,d,i,j) - dist%disc%c_0*rho(m,i,j)* &
+                   sum(components(m)%gf*(gradrho(:,d,i,j)/weightsum(d)),1)
+            end if
           end do
           end do
        end if

@@ -164,6 +164,7 @@ contains
          "density scale, defaults to nondimensional value", component%density, flag, ierr)
 
     allocate(component%gf(component%s))
+    component%gf(:) = 0.d0
     do lcv=1,component%s
        write(idstring, '(I1, I1)') component%id, lcv
        call OptionsGetReal(options, "-g_"//trim(idstring), &
