@@ -150,12 +150,12 @@ contains
      
     oneontau = 1.d0/relax%tau
     if (relax%mode .eq. RELAXATION_MODE_MRT) then
-       relax%tau_mrt(0) = oneontau 
+       relax%tau_mrt(0) = 1.0 !oneontau 
        relax%tau_mrt(1) = relax%s1 
        relax%tau_mrt(2) = relax%s2 
-       relax%tau_mrt(3) = oneontau 
+       relax%tau_mrt(3) = 1.0 !oneontau 
        relax%tau_mrt(4) = relax%s3 
-       relax%tau_mrt(5) = oneontau 
+       relax%tau_mrt(5) = 1.0 !oneontau 
        relax%tau_mrt(6) = relax%s3 
        relax%tau_mrt(7) = oneontau
        relax%tau_mrt(8) = oneontau
