@@ -199,8 +199,15 @@
             write(*,*) 'outputing step', istep, 'to file', lbm%io%counter
          endif
 
-         if ((.not.lbm%options%steadystate).or. &
-              (lbm%options%steadystate_rampup_steps > 0)) then
+         ! In the standard initialization approach, moments are provided
+         ! and fi is calculated from equilibrium based upon those moments.
+         ! flow fi is already initialized in the following cases --
+         !  1. we are running a steady state problem and it is pre-calculated
+         !  2. we initialized from a restart file
+         !  3. we initialized from an IC fi file
+         if (((.not.lbm%options%steadystate).or. &
+              (lbm%options%steadystate_rampup_steps > 0)).and. &
+              (.not.lbm%options%restart).and.(.not.lbm%options%ic_from_file)) then
            call FlowFiInit(lbm%flow, lbm%walls)
          end if
 

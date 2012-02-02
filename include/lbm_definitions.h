@@ -95,6 +95,7 @@
 
   ! walls enum for special values
   PetscScalar,parameter :: WALL_PORESPACE = 0.0 ! note this is not used frequently, most places have wall(i,j,k).eq.0
+  PetscScalar,parameter :: WALL_NONREACTIVE = 800.0
   PetscScalar,parameter :: WALL_GHOST = 999.0
   PetscScalar,parameter :: WALL_NORMAL_X = 900.0 ! this wall allows for no-stick condition for a wall oriented with x-normal
   PetscScalar,parameter :: WALL_NORMAL_Y = 901.0 ! this wall allows for no-stick condition for a wall oriented with y-normal
