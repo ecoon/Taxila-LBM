@@ -38,6 +38,8 @@ def petsc2h5(directory, infile='input_data', outfile='soln.h5'):
     for i in range(int(sr._options['npasses'])/int(sr._options['kwrite'])+1):
         if len(sr._size) < 3:
             prs = np.array(sr.loadVec('prs%03d.dat'%i)[:,:,0], dtype=np.float)
+            rho_raw = np.array(sr.loadVec('rho%03d.dat'%i), dtype=np.float)
+            rho = [rho[:,:,i] for i in range(rho.shape[2])]
             u = np.array(sr.loadVec('u%03d.dat'%i), dtype=np.float)
             u_x = u[:,:,0]
             u_y = u[:,:,1]
@@ -45,6 +47,8 @@ def petsc2h5(directory, infile='input_data', outfile='soln.h5'):
             shape = sr._size+(1,)
         else:
             prs = np.array(sr.loadVec('prs%03d.dat'%i)[:,:,:,0], dtype=np.float)
+            rho_raw = np.array(sr.loadVec('rho%03d.dat'%i), dtype=np.float)
+            rho = [rho[:,:,:,i] for i in range(rho.shape[3])]
             u = np.array(sr.loadVec('u%03d.dat'%i),dtype=np.float)
             u_x = u[:,:,:,0]
             u_y = u[:,:,:,1]
@@ -57,6 +61,9 @@ def petsc2h5(directory, infile='input_data', outfile='soln.h5'):
         group.create_dataset(name='Liquid X-Velocity', shape=shape, data=u_x)
         group.create_dataset(name='Liquid Y-Velocity', shape=shape, data=u_y)
         group.create_dataset(name='Liquid Z-Velocity', shape=shape, data=u_z)
+        for i,rho in enumerate(rho):
+            group.create_dataset(name='Component %d Density'%i, shape=shape,
+                                 data=rho)
 
     out.close()
 
