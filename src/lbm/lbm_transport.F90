@@ -583,11 +583,14 @@ contains
     end do
     end do
   end subroutine TransportReactWithWallsD2
-    
+
   subroutine TransportApplyBCs(transport, walls)
     type(transport_type) transport
     type(walls_type) walls
-    call BCApply(transport%bc, walls%walls_a, transport%distribution)
+    PetscScalar,dimension(transport%distribution%s, &
+         transport%distribution%disc%ndims, &
+         transport%distribution%info%gxyzl) :: zeros
+    call BCApply(transport%bc, zeros, walls%walls_a, transport%distribution)
   end subroutine TransportApplyBCs
 end module LBM_Transport_module
-  
+

@@ -166,48 +166,51 @@ contains
     end select
   end subroutine DiscSetLocalDirections
 
-  subroutine DiscApplyBCDirichletToBoundary(disc, fi, vals, directions, dist)
+  subroutine DiscApplyBCDirichletToBoundary(disc, fi, forces, vals, directions, cardinals, dist)
     use LBM_Distribution_Function_type_module
     type(discretization_type) disc
     type(distribution_type) dist
     PetscInt,intent(in),dimension(0:dist%b):: directions
+    PetscInt,intent(in),dimension(1:dist%info%ndims):: cardinals
     PetscScalar,intent(inout),dimension(1:dist%s, 0:dist%b):: fi
+    PetscScalar,intent(in),dimension(dist%s, dist%info%ndims):: forces
     PetscScalar,intent(in),dimension(dist%s,dist%info%ndims):: vals
     PetscErrorCode ierr
 
     select case(disc%name)
     case(D3Q19_DISCRETIZATION)
-       call DiscApplyBCDirichletToBoundary_D3Q19(disc, fi, vals, directions, dist)
+       call DiscApplyBCDirichletToBoundary_D3Q19(disc, fi, forces, vals, directions, cardinals, dist)
     case(D2Q9_DISCRETIZATION)
-       call DiscApplyBCDirichletToBoundary_D2Q9(disc, fi, vals, directions, dist)
+       call DiscApplyBCDirichletToBoundary_D2Q9(disc, fi, forces, vals, directions, cardinals, dist)
     case DEFAULT
        call LBMError(PETSC_COMM_SELF,1,'invalid discretization in LBM',ierr)
     end select
   end subroutine DiscApplyBCDirichletToBoundary
 
-  subroutine DiscApplyBCFluxToBoundary(disc, fi, vals, directions, cardinals, dist)
+  subroutine DiscApplyBCFluxToBoundary(disc, fi, forces, vals, directions, cardinals, dist)
     use LBM_Distribution_Function_type_module
     type(discretization_type) disc
     type(distribution_type) dist
     PetscInt,intent(in),dimension(0:disc%b):: directions
     PetscInt,intent(in),dimension(0:disc%ndims):: cardinals
     PetscScalar,intent(inout),dimension(1:dist%s, 0:disc%b):: fi
+    PetscScalar,intent(in),dimension(dist%s, dist%info%ndims):: forces
     PetscScalar,intent(in),dimension(dist%s,dist%info%ndims):: vals
     PetscErrorCode ierr
 
     select case(disc%name)
     case(D3Q19_DISCRETIZATION)
-       call DiscApplyBCFluxToBoundary_D3Q19(disc, fi, vals, directions, cardinals, &
+       call DiscApplyBCFluxToBoundary_D3Q19(disc, fi, forces, vals, directions, cardinals, &
             dist)
     case(D2Q9_DISCRETIZATION)
-       call DiscApplyBCFluxToBoundary_D2Q9(disc, fi, vals, directions, cardinals, &
+       call DiscApplyBCFluxToBoundary_D2Q9(disc, fi, forces, vals, directions, cardinals, &
             dist)
     case DEFAULT
        call LBMError(PETSC_COMM_SELF,1,'invalid discretization in LBM',ierr)
     end select
   end subroutine DiscApplyBCFluxToBoundary
 
-  subroutine DiscApplyBCVelocityToBoundary(disc, fi, vals, directions, cardinals, &
+  subroutine DiscApplyBCVelocityToBoundary(disc, fi, forces, vals, directions, cardinals, &
        dist)
     use LBM_Distribution_Function_type_module
     type(discretization_type) disc
@@ -215,15 +218,16 @@ contains
     PetscInt,intent(in),dimension(0:disc%b):: directions
     PetscInt,intent(in),dimension(0:disc%ndims):: cardinals
     PetscScalar,intent(inout),dimension(1:dist%s, 0:disc%b):: fi
+    PetscScalar,intent(in),dimension(dist%s, dist%info%ndims):: forces
     PetscScalar,intent(in),dimension(dist%s, dist%info%ndims):: vals
     PetscErrorCode ierr
 
     select case(disc%name)
     case(D3Q19_DISCRETIZATION)
-       call DiscApplyBCVelocityToBoundary_D3Q19(disc, fi, vals, directions, cardinals, &
+       call DiscApplyBCVelocityToBoundary_D3Q19(disc, fi, forces, vals, directions, cardinals, &
             dist)
     case(D2Q9_DISCRETIZATION)
-       call DiscApplyBCVelocityToBoundary_D2Q9(disc, fi, vals, directions, cardinals, &
+       call DiscApplyBCVelocityToBoundary_D2Q9(disc, fi, forces, vals, directions, cardinals, &
             dist)
     case DEFAULT
        call LBMError(PETSC_COMM_SELF,1,'invalid discretization in LBM',ierr)

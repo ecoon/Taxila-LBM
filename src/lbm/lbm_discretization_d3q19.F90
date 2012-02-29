@@ -303,29 +303,33 @@ contains
     end do
   end subroutine DiscretizationEquilf_D3Q19
 
-  subroutine DiscApplyBCDirichletToBoundary_D3Q19(disc, fi, pvals, directions, dist)
+  subroutine DiscApplyBCDirichletToBoundary_D3Q19(disc, fi, forces, pvals, &
+       directions, cardinals, dist)
     type(discretization_type) disc
     type(distribution_type) dist
     PetscInt,intent(in),dimension(0:disc%b):: directions
+    PetscInt,intent(in),dimension(1:dist%info%ndims):: cardinals
     PetscScalar,intent(inout),dimension(1:dist%s, 0:disc%b):: fi
+    PetscScalar,intent(in),dimension(1:dist%s, dist%info%ndims):: forces
     PetscScalar,intent(in),dimension(dist%s,dist%info%ndims):: pvals
 
-    PetscScalar wtmp
+    PetscScalar rhovtmp
     PetscScalar,dimension(0:disc%b)::ftmp
     PetscInt m
 
-    wtmp = 0
+    rhovtmp = 0
 
     do m=1,dist%s
        ftmp = 0.0
-       wtmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) &
+       rhovtmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) &
             + fi(m,directions(NORTH)) + fi(m,directions(WEST)) &
             + fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
             + fi(m,directions(NORTHWEST)) + fi(m,directions(SOUTHWEST)) &
             + fi(m,directions(SOUTHEAST)) + 2.*(fi(m,directions(DOWN)) &
             + fi(m,directions(WESTDOWN)) + fi(m,directions(EASTDOWN)) &
-            + fi(m,directions(SOUTHDOWN)) + fi(m,directions(NORTHDOWN)))
-       wtmp = pvals(m,1) - wtmp
+            + fi(m,directions(SOUTHDOWN)) + fi(m,directions(NORTHDOWN))) &
+            + forces(m,cardinals(CARDINAL_NORMAL))/2.0
+       rhovtmp = pvals(m,1) - rhovtmp
 
        ! Choice should not affect the momentum significantly
        ftmp(directions(UP)) = fi(m,directions(DOWN))
@@ -335,15 +339,16 @@ contains
        ftmp(directions(SOUTHUP)) = fi(m,directions(NORTHDOWN))
 
        fi(m,directions(UP)) = 2./3.*ftmp(directions(UP)) &
-            + 1./3.*wtmp &
+            + 1./3.*(rhovtmp - forces(m,cardinals(CARDINAL_NORMAL))/2.0) &
             - 1./3.*(ftmp(directions(EASTUP))+ ftmp(directions(WESTUP)) &
             + ftmp(directions(NORTHUP)) + ftmp(directions(SOUTHUP))) &
             + 1./3.*(fi(m,directions(DOWN)) &
             + fi(m,directions(WESTDOWN)) + fi(m,directions(EASTDOWN)) &
             + fi(m,directions(SOUTHDOWN)) + fi(m,directions(NORTHDOWN)))
 
-       fi(m,directions(EASTUP)) = 1./3.*ftmp(directions(EASTUP)) &
-            + 1./6.*wtmp &
+        fi(m,directions(EASTUP)) = 1./3.*ftmp(directions(EASTUP)) &
+            + 1./2.*(-forces(m,cardinals(CARDINAL_CROSS))/2.) &
+            + 1./6.*(rhovtmp - forces(m,cardinals(CARDINAL_NORMAL))/2.0) &
             - 1./2.*(fi(m,directions(EAST)) &
             - fi(m,directions(WEST)) + fi(m,directions(NORTHEAST)) &
             - fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
@@ -355,7 +360,8 @@ contains
             + 2./3.*fi(m,directions(WESTDOWN))
 
        fi(m,directions(WESTUP)) = 1./3.*ftmp(directions(WESTUP)) &
-            + 1./6.*wtmp &
+            - 1./2.*(-forces(m,cardinals(CARDINAL_CROSS))/2.) &
+            + 1./6.*(rhovtmp - forces(m,cardinals(CARDINAL_NORMAL))/2.0) &
             + 1./2.*(fi(m,directions(EAST)) &
             - fi(m,directions(WEST)) + fi(m,directions(NORTHEAST)) &
             - fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
@@ -367,7 +373,8 @@ contains
             + 2./3.*fi(m,directions(EASTDOWN))
 
        fi(m,directions(NORTHUP)) = 1./3.*ftmp(directions(NORTHUP)) &
-            + 1./6.*wtmp &
+            + 1./2.*(-forces(m,cardinals(CARDINAL_RESULTANT))/2.) &
+            + 1./6.*(rhovtmp - forces(m,cardinals(CARDINAL_NORMAL))/2.0) &
             - 1./2.*(fi(m,directions(NORTH)) &
             - fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
             + fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
@@ -379,7 +386,8 @@ contains
             + 2./3.*fi(m,directions(SOUTHDOWN))
 
        fi(m,directions(SOUTHUP)) = 1./3.*ftmp(directions(SOUTHUP)) &
-            + 1./6.*wtmp &
+            - 1./2.*(-forces(m,cardinals(CARDINAL_RESULTANT))/2.) &
+            + 1./6.*(rhovtmp - forces(m,cardinals(CARDINAL_NORMAL))/2.0) &
             + 1./2.*(fi(m,directions(NORTH)) &
             - fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
             + fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
@@ -393,11 +401,12 @@ contains
     return
   end subroutine DiscApplyBCDirichletToBoundary_D3Q19
 
-  subroutine DiscApplyBCVelocityToBoundary_D3Q19(disc, fi, fvals, directions, cardinals, &
-       dist)
+  subroutine DiscApplyBCVelocityToBoundary_D3Q19(disc, fi, forces, fvals, &
+       directions, cardinals, dist)
     type(discretization_type) disc
     type(distribution_type) dist
     PetscScalar,intent(inout),dimension(1:dist%s, 0:disc%b):: fi
+    PetscScalar,intent(in),dimension(1:dist%s, dist%info%ndims):: forces
     PetscScalar,intent(in),dimension(dist%s,dist%info%ndims):: fvals
     PetscInt,intent(in),dimension(0:disc%b):: directions
     PetscInt,intent(in),dimension(1:dist%info%ndims):: cardinals
@@ -416,7 +425,8 @@ contains
             + fi(m,directions(NORTHWEST)) + fi(m,directions(SOUTHWEST)) &
             + fi(m,directions(SOUTHEAST)) + 2.*(fi(m,directions(DOWN)) &
             + fi(m,directions(WESTDOWN)) + fi(m,directions(EASTDOWN)) &
-            + fi(m,directions(SOUTHDOWN)) + fi(m,directions(NORTHDOWN)))
+            + fi(m,directions(SOUTHDOWN)) + fi(m,directions(NORTHDOWN))) &
+            + forces(m,cardinals(CARDINAL_NORMAL))/2.0
        rhotmp = rhotmp/(1. - fvals(1,cardinals(CARDINAL_NORMAL)))
 
        ! Choice should not affect the momentum significantly
@@ -427,7 +437,8 @@ contains
        ftmp(directions(SOUTHUP)) = fi(m,directions(NORTHDOWN))
 
        fi(m,directions(UP)) = 2./3.*ftmp(directions(UP)) &
-            + 1./3.*rhotmp*fvals(1,cardinals(CARDINAL_NORMAL)) &
+            + 1./3.*(rhotmp*fvals(1,cardinals(CARDINAL_NORMAL)) &
+                     - forces(m,cardinals(CARDINAL_NORMAL))/2.0) &
             - 1./3.*(ftmp(directions(EASTUP))+ ftmp(directions(WESTUP)) &
             + ftmp(directions(NORTHUP)) + ftmp(directions(SOUTHUP))) &
             + 1./3.*(fi(m,directions(DOWN)) &
@@ -435,8 +446,10 @@ contains
             + fi(m,directions(SOUTHDOWN)) + fi(m,directions(NORTHDOWN)))
 
        fi(m,directions(EASTUP)) = 1./3.*ftmp(directions(EASTUP)) &
-            + 1./2.*rhotmp*fvals(1,cardinals(CARDINAL_CROSS)) &
-            + 1./6.*rhotmp*fvals(1,cardinals(CARDINAL_NORMAL)) &
+            + 1./2.*(rhotmp*fvals(1,cardinals(CARDINAL_CROSS)) &
+                     - forces(m,cardinals(CARDINAL_CROSS))/2.) &
+            + 1./6.*(rhotmp*fvals(1,cardinals(CARDINAL_NORMAL)) &
+                     - forces(m,cardinals(CARDINAL_NORMAL))/2.) &
             - 1./2.*(fi(m,directions(EAST)) &
             - fi(m,directions(WEST)) + fi(m,directions(NORTHEAST)) &
             - fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
@@ -448,8 +461,10 @@ contains
             + 2./3.*fi(m,directions(WESTDOWN))
 
        fi(m,directions(WESTUP)) = 1./3.*ftmp(directions(WESTUP)) &
-            - 1./2.*rhotmp*fvals(1,cardinals(CARDINAL_CROSS)) &
-            + 1./6.*rhotmp*fvals(1,cardinals(CARDINAL_NORMAL)) &
+            - 1./2.*(rhotmp*fvals(1,cardinals(CARDINAL_CROSS)) &
+                     - forces(m,cardinals(CARDINAL_CROSS))/2.) &
+            + 1./6.*(rhotmp*fvals(1,cardinals(CARDINAL_NORMAL)) &
+                     - forces(m,cardinals(CARDINAL_NORMAL))/2.) &
             + 1./2.*(fi(m,directions(EAST)) &
             - fi(m,directions(WEST)) + fi(m,directions(NORTHEAST)) &
             - fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
@@ -461,8 +476,10 @@ contains
             + 2./3.*fi(m,directions(EASTDOWN))
 
        fi(m,directions(NORTHUP)) = 1./3.*ftmp(directions(NORTHUP)) &
-            + 1./2.*rhotmp*fvals(1,cardinals(CARDINAL_RESULTANT)) &
-            + 1./6.*rhotmp*fvals(1,cardinals(CARDINAL_NORMAL)) &
+            + 1./2.*(rhotmp*fvals(1,cardinals(CARDINAL_RESULTANT)) &
+                     - forces(m,cardinals(CARDINAL_RESULTANT))/2.) &
+            + 1./6.*(rhotmp*fvals(1,cardinals(CARDINAL_NORMAL)) &
+                     - forces(m,cardinals(CARDINAL_NORMAL))/2.) &
             - 1./2.*(fi(m,directions(NORTH)) &
             - fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
             + fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
@@ -474,8 +491,10 @@ contains
             + 2./3.*fi(m,directions(SOUTHDOWN))
 
        fi(m,directions(SOUTHUP)) = 1./3.*ftmp(directions(SOUTHUP)) &
-            - 1./2.*rhotmp*fvals(1,cardinals(CARDINAL_RESULTANT)) &
-            + 1./6.*rhotmp*fvals(1,cardinals(CARDINAL_NORMAL)) &
+            - 1./2.*(rhotmp*fvals(1,cardinals(CARDINAL_RESULTANT)) &
+                     - forces(m,cardinals(CARDINAL_RESULTANT))/2.) &
+            + 1./6.*(rhotmp*fvals(1,cardinals(CARDINAL_NORMAL)) &
+                     - forces(m,cardinals(CARDINAL_NORMAL))/2.) &
             + 1./2.*(fi(m,directions(NORTH)) &
             - fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
             + fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
@@ -489,11 +508,12 @@ contains
     return
   end subroutine DiscApplyBCVelocityToBoundary_D3Q19
 
-  subroutine DiscApplyBCFluxToBoundary_D3Q19(disc, fi, fvals, directions, cardinals, &
-       dist)
+  subroutine DiscApplyBCFluxToBoundary_D3Q19(disc, fi, forces, fvals, &
+       directions, cardinals, dist)
     type(discretization_type) disc
     type(distribution_type) dist
     PetscScalar,intent(inout),dimension(1:dist%s, 0:disc%b):: fi
+    PetscScalar,intent(in),dimension(1:dist%s, dist%info%ndims):: forces
     PetscScalar,intent(in),dimension(dist%s,dist%info%ndims):: fvals
     PetscInt,intent(in),dimension(0:disc%b):: directions
     PetscInt,intent(in),dimension(1:dist%info%ndims):: cardinals
@@ -514,7 +534,8 @@ contains
        ftmp(directions(SOUTHUP)) = fi(m,directions(NORTHDOWN))
 
        fi(m,directions(UP)) = 2./3.*ftmp(directions(UP)) &
-            + 1./3.*fvals(m,cardinals(CARDINAL_NORMAL)) &
+            + 1./3.*(fvals(m,cardinals(CARDINAL_NORMAL)) &
+                     - forces(m,cardinals(CARDINAL_NORMAL))/2.) &
             - 1./3.*(ftmp(directions(EASTUP))+ ftmp(directions(WESTUP)) &
             + ftmp(directions(NORTHUP)) + ftmp(directions(SOUTHUP))) &
             + 1./3.*(fi(m,directions(DOWN)) &
@@ -522,8 +543,10 @@ contains
             + fi(m,directions(SOUTHDOWN)) + fi(m,directions(NORTHDOWN)))
 
        fi(m,directions(EASTUP)) = 1./3.*ftmp(directions(EASTUP)) &
-            + 1./2.*fvals(m,cardinals(CARDINAL_CROSS)) &
-            + 1./6.*fvals(m,cardinals(CARDINAL_NORMAL)) &
+            + 1./2.*(fvals(m,cardinals(CARDINAL_CROSS)) &
+                     - forces(m,cardinals(CARDINAL_CROSS))/2.) &
+            + 1./6.*(fvals(m,cardinals(CARDINAL_NORMAL)) &
+                     - forces(m,cardinals(CARDINAL_NORMAL))/2.) &
             - 1./2.*(fi(m,directions(EAST)) &
             - fi(m,directions(WEST)) + fi(m,directions(NORTHEAST)) &
             - fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
@@ -535,8 +558,10 @@ contains
             + 2./3.*fi(m,directions(WESTDOWN))
 
        fi(m,directions(WESTUP)) = 1./3.*ftmp(directions(WESTUP)) &
-            - 1./2.*fvals(m,cardinals(CARDINAL_CROSS)) &
-            + 1./6.*fvals(m,cardinals(CARDINAL_NORMAL)) &
+            - 1./2.*(fvals(m,cardinals(CARDINAL_CROSS)) &
+                     - forces(m,cardinals(CARDINAL_CROSS))/2.) &
+            + 1./6.*(fvals(m,cardinals(CARDINAL_NORMAL)) &
+                     - forces(m,cardinals(CARDINAL_NORMAL))/2.) &
             + 1./2.*(fi(m,directions(EAST)) &
             - fi(m,directions(WEST)) + fi(m,directions(NORTHEAST)) &
             - fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
@@ -548,8 +573,10 @@ contains
             + 2./3.*fi(m,directions(EASTDOWN))
 
        fi(m,directions(NORTHUP)) = 1./3.*ftmp(directions(NORTHUP)) &
-            + 1./2.*fvals(m,cardinals(CARDINAL_RESULTANT)) &
-            + 1./6.*fvals(m,cardinals(CARDINAL_NORMAL)) &
+            + 1./2.*(fvals(m,cardinals(CARDINAL_RESULTANT)) &
+                     - forces(m,cardinals(CARDINAL_RESULTANT))/2.) &
+            + 1./6.*(fvals(m,cardinals(CARDINAL_NORMAL)) &
+                     - forces(m,cardinals(CARDINAL_NORMAL))/2.) &
             - 1./2.*(fi(m,directions(NORTH)) &
             - fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
             + fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
@@ -561,8 +588,10 @@ contains
             + 2./3.*fi(m,directions(SOUTHDOWN))
 
        fi(m,directions(SOUTHUP)) = 1./3.*ftmp(directions(SOUTHUP)) &
-            - 1./2.*fvals(m,cardinals(CARDINAL_RESULTANT)) &
-            + 1./6.*fvals(m,cardinals(CARDINAL_NORMAL)) &
+            - 1./2.*(fvals(m,cardinals(CARDINAL_RESULTANT)) &
+                     - forces(m,cardinals(CARDINAL_RESULTANT))/2.) &
+            + 1./6.*(fvals(m,cardinals(CARDINAL_NORMAL)) &
+                     - forces(m,cardinals(CARDINAL_NORMAL))/2.) &
             + 1./2.*(fi(m,directions(NORTH)) &
             - fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
             + fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &

@@ -453,16 +453,37 @@
     subroutine LBMInitializeStateFromFile(lbm)
       use petsc
       type(lbm_type) lbm
+      PetscBool flag
       PetscErrorCode ierr
 
-      if (lbm%grid%info%rank.eq.0) then
-         write(*,*) 'reading initial condition from file', lbm%options%ic_file
-      endif
-      call IOLoadFile(lbm%io, lbm%flow%distribution%fi_g, lbm%options%ic_file)
-      call DMGlobalToLocalBegin(lbm%grid%da(NCOMPONENTXBDOF), lbm%flow%distribution%fi_g, &
-           INSERT_VALUES, lbm%flow%distribution%fi, ierr)
-      call DMGlobalToLocalEnd(lbm%grid%da(NCOMPONENTXBDOF), lbm%flow%distribution%fi_g, &
-           INSERT_VALUES, lbm%flow%distribution%fi, ierr)
+      call OptionsGetString(lbm%options, "-ic_file", "IC for distribution function", &
+           lbm%options%ic_file, flag, ierr)
+      if (flag) then
+        if (lbm%grid%info%rank.eq.0) then
+          write(*,*) 'reading initial condition from file', lbm%options%ic_file
+        endif
+        call IOLoadFile(lbm%io, lbm%flow%distribution%fi_g, lbm%options%ic_file)
+        call DMGlobalToLocalBegin(lbm%grid%da(NCOMPONENTXBDOF), lbm%flow%distribution%fi_g, &
+             INSERT_VALUES, lbm%flow%distribution%fi, ierr)
+        call DMGlobalToLocalEnd(lbm%grid%da(NCOMPONENTXBDOF), lbm%flow%distribution%fi_g, &
+             INSERT_VALUES, lbm%flow%distribution%fi, ierr)
+
+      else
+        call OptionsGetString(lbm%options, "-ic_file_rho", "IC for rho", &
+             lbm%options%ic_file, flag, ierr)
+        if (flag) then
+          if (lbm%grid%info%rank.eq.0) then
+            write(*,*) 'reading initial condition for rho from file', lbm%options%ic_file
+          endif
+          call IOLoadFile(lbm%io, lbm%flow%distribution%rho_g, lbm%options%ic_file)
+          call DMGlobalToLocalBegin(lbm%grid%da(NCOMPONENTDOF), lbm%flow%distribution%rho_g, &
+               INSERT_VALUES, lbm%flow%distribution%rho, ierr)
+          call DMGlobalToLocalEnd(lbm%grid%da(NCOMPONENTDOF), lbm%flow%distribution%rho_g, &
+               INSERT_VALUES, lbm%flow%distribution%rho, ierr)
+          ! unset the ic_from_file flag, which is implemented as if fi was initialized
+          lbm%options%ic_from_file = PETSC_FALSE
+        end if
+      end if
       return
     end subroutine LBMInitializeStateFromFile
 
