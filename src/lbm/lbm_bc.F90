@@ -339,10 +339,11 @@ contains
     endif
   end subroutine BCZeroForcesD2
 
-  subroutine BCApply(bc, walls, dist)
+  subroutine BCApply(bc, forces, walls, dist)
     type(bc_type) bc
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%info%rgxyzl):: walls
+    PetscScalar,dimension(dist%s,dist%info%ndims,dist%info%gxyzl):: forces
 
     logical,dimension(0:10):: bcs_done    
     PetscInt lcv_sides
@@ -355,11 +356,11 @@ contains
           case (BC_PSEUDOPERIODIC)         ! pseudo-periodic
              call BCApplyPseudoperiodic(bc, walls, dist)
           case (BC_FLUX)         ! flux
-             call BCApplyFlux(bc, walls, dist)
+             call BCApplyFlux(bc, forces, walls, dist)
           case (BC_VELOCITY)         ! flux
-             call BCApplyVelocity(bc, walls, dist)
+             call BCApplyVelocity(bc, forces, walls, dist)
           case (BC_DIRICHLET)         ! dirichlet conc/pressure
-             call BCApplyDirichlet(bc, walls, dist)
+             call BCApplyDirichlet(bc, forces, walls, dist)
           case (BC_ZERO_GRADIENT)         ! dirichlet conc/pressure
              call BCApplyZeroGradient(bc, walls, dist)
           end select
@@ -390,47 +391,50 @@ contains
     end select
   end subroutine BCApplyPseudoperiodic
 
-  subroutine BCApplyDirichlet(bc, walls, dist)
+  subroutine BCApplyDirichlet(bc, forces, walls, dist)
     type(bc_type) bc
     type(distribution_type) dist
     PetscScalar,dimension(dist%info%rgxyzl):: walls
+    PetscScalar,dimension(dist%s,dist%info%ndims,dist%info%gxyzl):: forces
 
     select case(dist%info%ndims)
     case(2)
-       call BCApplyDirichletD2(bc, dist%fi_a, walls, bc%xm_a, bc%xp_a, &
+       call BCApplyDirichletD2(bc, dist%fi_a, forces, walls, bc%xm_a, bc%xp_a, &
             bc%ym_a, bc%yp_a, dist)
     case(3)
-       call BCApplyDirichletD3(bc, dist%fi_a, walls, bc%xm_a, bc%xp_a, &
+       call BCApplyDirichletD3(bc, dist%fi_a, forces, walls, bc%xm_a, bc%xp_a, &
             bc%ym_a, bc%yp_a, bc%zm_a, bc%zp_a, dist)
     end select
   end subroutine BCApplyDirichlet
 
-  subroutine BCApplyFlux(bc, walls, dist)
+  subroutine BCApplyFlux(bc, forces, walls, dist)
     type(bc_type) bc
     type(distribution_type) dist
+    PetscScalar,dimension(dist%s,dist%info%ndims,dist%info%gxyzl):: forces
     PetscScalar,dimension(dist%info%rgxyzl):: walls
 
     select case(dist%info%ndims)
     case(2)
-       call BCApplyFluxD2(bc, dist%fi_a, walls, bc%xm_a, bc%xp_a, &
+       call BCApplyFluxD2(bc, dist%fi_a, forces, walls, bc%xm_a, bc%xp_a, &
             bc%ym_a, bc%yp_a, dist)
     case(3)
-       call BCApplyFluxD3(bc, dist%fi_a, walls, bc%xm_a, bc%xp_a, &
+       call BCApplyFluxD3(bc, dist%fi_a, forces, walls, bc%xm_a, bc%xp_a, &
             bc%ym_a, bc%yp_a, bc%zm_a, bc%zp_a, dist)
     end select
   end subroutine BCApplyFlux
 
-  subroutine BCApplyVelocity(bc, walls, dist)
+  subroutine BCApplyVelocity(bc, forces, walls, dist)
     type(bc_type) bc
     type(distribution_type) dist
+    PetscScalar,dimension(dist%s,dist%info%ndims,dist%info%gxyzl):: forces
     PetscScalar,dimension(dist%info%rgxyzl):: walls
 
     select case(dist%info%ndims)
     case(2)
-       call BCApplyVelocityD2(bc, dist%fi_a, walls, bc%xm_a, bc%xp_a, &
+       call BCApplyVelocityD2(bc, dist%fi_a, forces, walls, bc%xm_a, bc%xp_a, &
             bc%ym_a, bc%yp_a, dist)
     case(3)
-       call BCApplyVelocityD3(bc, dist%fi_a, walls, bc%xm_a, bc%xp_a, &
+       call BCApplyVelocityD3(bc, dist%fi_a, forces, walls, bc%xm_a, bc%xp_a, &
             bc%ym_a, bc%yp_a, bc%zm_a, bc%zp_a, dist)
     end select
   end subroutine BCApplyVelocity
@@ -451,12 +455,14 @@ contains
     end select
   end subroutine BCApplyZeroGradient
 
-  subroutine BCApplyDirichletD3(bc, fi, walls, xm_vals, xp_vals, &
+  subroutine BCApplyDirichletD3(bc, fi, forces, walls, xm_vals, xp_vals, &
        ym_vals, yp_vals, zm_vals, zp_vals, dist)
     type(bc_type) bc
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
+    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: forces
     PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
     PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye, &
@@ -479,8 +485,11 @@ contains
              i = 1
              if (walls(i,j,k).eq.0) then
                 call DiscApplyBCDirichletToBoundary(dist%disc, fi(:,:,i,j,k), &
-                     xm_vals(:,j,k), directions, dist)
+                     forces(:,:,i,j,k), xm_vals(:,j,k), directions, cardinals, dist)
              end if
+
+!             if ((i.eq.1 .or. i.eq.15) .and. j.eq.4 .and. k.eq.1) &
+!                  print*, 'with forces (X_DIR):', forces(:,X_DIRECTION,i,j,k)
           end do
        end do
     endif
@@ -494,7 +503,7 @@ contains
              i = dist%info%NX
              if (walls(i,j,k).eq.0) then
                 call DiscApplyBCDirichletToBoundary(dist%disc, fi(:,:,i,j,k), &
-                     xp_vals(:,j,k), directions, dist)
+                     forces(:,:,i,j,k), xp_vals(:,j,k), directions, cardinals, dist)
              end if
           end do
        end do
@@ -509,7 +518,7 @@ contains
              j = 1
              if (walls(i,j,k).eq.0) then
                 call DiscApplyBCDirichletToBoundary(dist%disc, fi(:,:,i,j,k), &
-                     ym_vals(:,i,k), directions, dist)
+                     forces(:,:,i,j,k), ym_vals(:,i,k), directions, cardinals, dist)
              end if
           end do
        end do
@@ -524,7 +533,7 @@ contains
              j = dist%info%NY
              if (walls(i,j,k).eq.0) then
                 call DiscApplyBCDirichletToBoundary(dist%disc, fi(:,:,i,j,k), &
-                     yp_vals(:,i,k), directions, dist)
+                     forces(:,:,i,j,k), yp_vals(:,i,k), directions, cardinals, dist)
              end if
           end do
        end do
@@ -539,7 +548,7 @@ contains
              k = 1
              if (walls(i,j,k).eq.0) then
                 call DiscApplyBCDirichletToBoundary(dist%disc, fi(:,:,i,j,k), &
-                     zm_vals(:,i,j), directions, dist)
+                     forces(:,:,i,j,k), zm_vals(:,i,j), directions, cardinals, dist)
              end if
           end do
        end do
@@ -554,7 +563,7 @@ contains
              k = dist%info%NZ
              if (walls(i,j,k).eq.0) then
                 call DiscApplyBCDirichletToBoundary(dist%disc, fi(:,:,i,j,k), &
-                     zp_vals(:,i,j), directions, dist)
+                     forces(:,:,i,j,k), zp_vals(:,i,j), directions, cardinals, dist)
              end if
           end do
        end do
@@ -562,11 +571,13 @@ contains
     return
   end subroutine BCApplyDirichletD3
 
-  subroutine BCApplyDirichletD2(bc, fi, walls, xm_vals, xp_vals, ym_vals, yp_vals, dist)
+  subroutine BCApplyDirichletD2(bc, fi, forces, walls, xm_vals, xp_vals, ym_vals, yp_vals, dist)
     type(bc_type) bc
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: fi
+    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: forces
     PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye):: walls
     PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye):: xm_vals, xp_vals
@@ -584,7 +595,7 @@ contains
           i = 1
           if (walls(i,j).eq.0) then
              call DiscApplyBCDirichletToBoundary(dist%disc, fi(:,:,i,j), &
-                  xm_vals(:,j), directions, dist)
+                  forces(:,:,i,j), xm_vals(:,j), directions, cardinals, dist)
           end if
        end do
     endif
@@ -597,7 +608,7 @@ contains
           i = dist%info%NX
           if (walls(i,j).eq.0) then
              call DiscApplyBCDirichletToBoundary(dist%disc, fi(:,:,i,j), &
-                  xp_vals(:,j), directions, dist)
+                  forces(:,:,i,j), xp_vals(:,j), directions, cardinals, dist)
           end if
        end do
     endif
@@ -610,7 +621,7 @@ contains
           j = 1
           if (walls(i,j).eq.0) then
              call DiscApplyBCDirichletToBoundary(dist%disc, fi(:,:,i,j), &
-                  ym_vals(:,i), directions, dist)
+                  forces(:,:,i,j), ym_vals(:,i), directions, cardinals, dist)
           end if
        end do
     endif
@@ -623,18 +634,20 @@ contains
           j = dist%info%NY
           if (walls(i,j).eq.0) then
              call DiscApplyBCDirichletToBoundary(dist%disc, fi(:,:,i,j), &
-                  yp_vals(:,i), directions, dist)
+                  forces(:,:,i,j), yp_vals(:,i), directions, cardinals, dist)
           end if
        end do
     endif
   end subroutine BCApplyDirichletD2
 
-  subroutine BCApplyFluxD3(bc, fi, walls, xm_vals, xp_vals, &
+  subroutine BCApplyFluxD3(bc, fi, forces, walls, xm_vals, xp_vals, &
        ym_vals, yp_vals, zm_vals, zp_vals, dist)
     type(bc_type) bc
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
+    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: forces
     PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
     PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye, &
@@ -657,7 +670,7 @@ contains
              i = 1
              if (walls(i,j,k).eq.0) then
                 call DiscApplyBCFluxToBoundary(dist%disc, fi(:,:,i,j,k), &
-                     xm_vals(:,j,k), directions, cardinals, dist)
+                     forces(:,:,i,j,k), xm_vals(:,j,k), directions, cardinals, dist)
              end if
           end do
        end do
@@ -672,7 +685,7 @@ contains
              i = dist%info%NX
              if (walls(i,j,k).eq.0) then
                 call DiscApplyBCFluxToBoundary(dist%disc, fi(:,:,i,j,k), &
-                     xp_vals(:,j,k), directions, cardinals, dist)
+                     forces(:,:,i,j,k), xp_vals(:,j,k), directions, cardinals, dist)
              end if
           end do
        end do
@@ -687,7 +700,7 @@ contains
              j = 1
              if (walls(i,j,k).eq.0) then
                 call DiscApplyBCFluxToBoundary(dist%disc, fi(:,:,i,j,k), &
-                     ym_vals(:,i,k), directions, cardinals, dist)
+                     forces(:,:,i,j,k), ym_vals(:,i,k), directions, cardinals, dist)
              end if
           end do
        end do
@@ -702,7 +715,7 @@ contains
              j = dist%info%NY
              if (walls(i,j,k).eq.0) then
                 call DiscApplyBCFluxToBoundary(dist%disc, fi(:,:,i,j,k), &
-                     yp_vals(:,i,k), directions, cardinals, dist)
+                     forces(:,:,i,j,k), yp_vals(:,i,k), directions, cardinals, dist)
              end if
           end do
        end do
@@ -717,7 +730,7 @@ contains
              k = 1
              if (walls(i,j,k).eq.0) then
                 call DiscApplyBCFluxToBoundary(dist%disc, fi(:,:,i,j,k), &
-                     zm_vals(:,i,j), directions, cardinals, dist)
+                     forces(:,:,i,j,k), zm_vals(:,i,j), directions, cardinals, dist)
              end if
           end do
        end do
@@ -732,7 +745,7 @@ contains
              k = dist%info%NZ
              if (walls(i,j,k).eq.0) then
                 call DiscApplyBCFluxToBoundary(dist%disc, fi(:,:,i,j,k), &
-                     zp_vals(:,i,j), directions, cardinals, dist)
+                     forces(:,:,i,j,k), zp_vals(:,i,j), directions, cardinals, dist)
              end if
           end do
        end do
@@ -740,11 +753,13 @@ contains
     return
   end subroutine BCApplyFluxD3
 
-  subroutine BCApplyFluxD2(bc, fi, walls, xm_vals, xp_vals, ym_vals, yp_vals, dist)
+  subroutine BCApplyFluxD2(bc, fi, forces, walls, xm_vals, xp_vals, ym_vals, yp_vals, dist)
     type(bc_type) bc
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: fi
+    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: forces
     PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye):: walls
     PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye):: xm_vals, xp_vals
@@ -762,7 +777,7 @@ contains
           i = 1
           if (walls(i,j).eq.0) then
              call DiscApplyBCFluxToBoundary(dist%disc, fi(:,:,i,j), &
-                  xm_vals(:,j), directions, cardinals, dist)
+                  forces(:,:,i,j), xm_vals(:,j), directions, cardinals, dist)
           end if
        end do
     endif
@@ -775,7 +790,7 @@ contains
           i = dist%info%NX
           if (walls(i,j).eq.0) then
              call DiscApplyBCFluxToBoundary(dist%disc, fi(:,:,i,j), &
-                  xp_vals(:,j), directions, cardinals, dist)
+                  forces(:,:,i,j), xp_vals(:,j), directions, cardinals, dist)
           end if
        end do
     endif
@@ -788,7 +803,7 @@ contains
           j = 1
           if (walls(i,j).eq.0) then
              call DiscApplyBCFluxToBoundary(dist%disc, fi(:,:,i,j), &
-                  ym_vals(:,i), directions, cardinals, dist)
+                  forces(:,:,i,j), ym_vals(:,i), directions, cardinals, dist)
           end if
        end do
     endif
@@ -801,18 +816,20 @@ contains
           j = dist%info%NY
           if (walls(i,j).eq.0) then
              call DiscApplyBCFluxToBoundary(dist%disc, fi(:,:,i,j), &
-                  yp_vals(:,i), directions, cardinals, dist)
+                  forces(:,:,i,j), yp_vals(:,i), directions, cardinals, dist)
           end if
        end do
     endif
   end subroutine BCApplyFluxD2
 
-  subroutine BCApplyVelocityD3(bc, fi, walls, xm_vals, xp_vals, &
+  subroutine BCApplyVelocityD3(bc, fi, forces, walls, xm_vals, xp_vals, &
        ym_vals, yp_vals, zm_vals, zp_vals, dist)
     type(bc_type) bc
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
+    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: forces
     PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
     PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye, &
@@ -835,7 +852,7 @@ contains
              i = 1
              if (walls(i,j,k).eq.0) then
                 call DiscApplyBCVelocityToBoundary(dist%disc, fi(:,:,i,j,k), &
-                     xm_vals(:,j,k), directions, cardinals, dist)
+                     forces(:,:,i,j,k), xm_vals(:,j,k), directions, cardinals, dist)
              end if
           end do
        end do
@@ -850,7 +867,7 @@ contains
              i = dist%info%NX
              if (walls(i,j,k).eq.0) then
                 call DiscApplyBCVelocityToBoundary(dist%disc, fi(:,:,i,j,k), &
-                     xp_vals(:,j,k), directions, cardinals, dist)
+                     forces(:,:,i,j,k), xp_vals(:,j,k), directions, cardinals, dist)
              end if
           end do
        end do
@@ -865,7 +882,7 @@ contains
              j = 1
              if (walls(i,j,k).eq.0) then
                 call DiscApplyBCVelocityToBoundary(dist%disc, fi(:,:,i,j,k), &
-                     ym_vals(:,i,k), directions, cardinals, dist)
+                     forces(:,:,i,j,k), ym_vals(:,i,k), directions, cardinals, dist)
              end if
           end do
        end do
@@ -880,7 +897,7 @@ contains
              j = dist%info%NY
              if (walls(i,j,k).eq.0) then
                 call DiscApplyBCVelocityToBoundary(dist%disc, fi(:,:,i,j,k), &
-                     yp_vals(:,i,k), directions, cardinals, dist)
+                     forces(:,:,i,j,k), yp_vals(:,i,k), directions, cardinals, dist)
              end if
           end do
        end do
@@ -895,7 +912,7 @@ contains
              k = 1
              if (walls(i,j,k).eq.0) then
                 call DiscApplyBCVelocityToBoundary(dist%disc, fi(:,:,i,j,k), &
-                     zm_vals(:,i,j), directions, cardinals, dist)
+                     forces(:,:,i,j,k), zm_vals(:,i,j), directions, cardinals, dist)
              end if
           end do
        end do
@@ -910,7 +927,7 @@ contains
              k = dist%info%NZ
              if (walls(i,j,k).eq.0) then
                 call DiscApplyBCVelocityToBoundary(dist%disc, fi(:,:,i,j,k), &
-                     zp_vals(:,i,j), directions, cardinals, dist)
+                     forces(:,:,i,j,k), zp_vals(:,i,j), directions, cardinals, dist)
              end if
           end do
        end do
@@ -918,11 +935,13 @@ contains
     return
   end subroutine BCApplyVelocityD3
 
-  subroutine BCApplyVelocityD2(bc, fi, walls, xm_vals, xp_vals, ym_vals, yp_vals, dist)
+  subroutine BCApplyVelocityD2(bc, fi, forces, walls, xm_vals, xp_vals, ym_vals, yp_vals, dist)
     type(bc_type) bc
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: fi
+    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: forces
     PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye):: walls
     PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye):: xm_vals, xp_vals
@@ -940,7 +959,7 @@ contains
           i = 1
           if (walls(i,j).eq.0) then
              call DiscApplyBCVelocityToBoundary(dist%disc, fi(:,:,i,j), &
-                  xm_vals(:,j), directions, cardinals, dist)
+                  forces(:,:,i,j), xm_vals(:,j), directions, cardinals, dist)
           end if
        end do
     endif
@@ -953,7 +972,7 @@ contains
           i = dist%info%NX
           if (walls(i,j).eq.0) then
              call DiscApplyBCVelocityToBoundary(dist%disc, fi(:,:,i,j), &
-                  xp_vals(:,j), directions, cardinals, dist)
+                  forces(:,:,i,j), xp_vals(:,j), directions, cardinals, dist)
           end if
        end do
     endif
@@ -966,7 +985,7 @@ contains
           j = 1
           if (walls(i,j).eq.0) then
              call DiscApplyBCVelocityToBoundary(dist%disc, fi(:,:,i,j), &
-                  ym_vals(:,i), directions, cardinals, dist)
+                  forces(:,:,i,j), ym_vals(:,i), directions, cardinals, dist)
           end if
        end do
     endif
@@ -979,7 +998,7 @@ contains
           j = dist%info%NY
           if (walls(i,j).eq.0) then
              call DiscApplyBCVelocityToBoundary(dist%disc, fi(:,:,i,j), &
-                  yp_vals(:,i), directions, cardinals, dist)
+                  forces(:,:,i,j), yp_vals(:,i), directions, cardinals, dist)
           end if
        end do
     endif

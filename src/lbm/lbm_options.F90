@@ -147,7 +147,7 @@
       PetscInt tmpdims
       PetscInt wpnum, wpdummy, lcv
       character(len=3):: wpstring
-      PetscBool help
+      PetscBool help, ic_from_file
 
       call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", options%print_help, ierr)
       call OptionsGroupHeader(options, "Simulation Options", ierr)
@@ -178,9 +178,11 @@
            options%restart, flag, ierr)
       call OptionsGetInt(options, "-restart_counter", "output file number to start from", &
            options%restart_counter, flag, ierr)
-      call OptionsGetString(options, "-ic_file", &
-           "start from a given IC for the distribution function", &
-           options%ic_file, options%ic_from_file, ierr)
+
+      call PetscOptionsHasName(options%my_prefix, "-ic_file", options%ic_from_file, ierr)
+      if (.not.options%ic_from_file) &
+        call PetscOptionsHasName(options%my_prefix, "-ic_file_rho", options%ic_from_file, ierr)
+
       call OptionsGetInt(options, "-istep", "intial timestep", options%istep, flag, ierr)
 
       ! options for i/o
