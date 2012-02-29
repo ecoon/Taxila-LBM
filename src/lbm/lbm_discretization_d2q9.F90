@@ -202,11 +202,14 @@ contains
     end do
   end subroutine DiscretizationEquilf_D2Q9
 
-  subroutine DiscApplyBCDirichletToBoundary_D2Q9(disc, fi, pvals, directions, dist)
+  subroutine DiscApplyBCDirichletToBoundary_D2Q9(disc, fi, forces, pvals, &
+       directions, cardinals, dist)
     type(discretization_type) disc
     type(distribution_type) dist
     PetscScalar,intent(inout),dimension(1:dist%s, 0:dist%b):: fi
+    PetscScalar,intent(in),dimension(1:dist%s, dist%info%ndims):: forces
     PetscInt,intent(in),dimension(0:dist%b):: directions
+    PetscInt,intent(in),dimension(1:dist%info%ndims):: cardinals
     PetscScalar,intent(in),dimension(dist%s,dist%info%ndims):: pvals
 
     PetscScalar rhovtmp
@@ -219,28 +222,31 @@ contains
        ftmp = 0.0
        rhovtmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) &
             + fi(m,directions(WEST)) + 2.*(fi(m,directions(NORTH)) &
-            + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST)))
+            + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST))) &
+            + forces(m,cardinals(CARDINAL_NORMAL))/2.d0
        rhovtmp = rhovtmp - pvals(m,1)
 
        ! Choice should not affect the momentum significantly
        ftmp(directions(SOUTH)) = fi(m,directions(NORTH))
        ftmp(directions(SOUTHWEST)) = fi(m,directions(NORTHEAST))
        ftmp(directions(SOUTHEAST)) = fi(m,directions(NORTHWEST))
-       
+
        fi(m,directions(SOUTH)) = 1./3.*ftmp(directions(SOUTH)) &
-            - 2./3.*rhovtmp &
+            - 2./3.*(rhovtmp - forces(m,cardinals(CARDINAL_NORMAL))/2.d0) &
             - 2./3.*(ftmp(directions(SOUTHWEST)) + ftmp(directions(SOUTHEAST))) &
             + 2./3.*(fi(m,directions(NORTH)) + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST)))
-       
+
        fi(m,directions(SOUTHWEST)) = 1./3.*ftmp(directions(SOUTHWEST)) &
-            - 1./6.*rhovtmp &
+            - 1./6.*(rhovtmp - forces(m,cardinals(CARDINAL_NORMAL))/2.d0) &
+            - 1./2.*(-forces(m,cardinals(CARDINAL_CROSS))/2.0) &
             + 1./2.*(fi(m,directions(EAST)) - fi(m,directions(WEST))) &
             + 1./6.*(fi(m,directions(NORTH)) - ftmp(directions(SOUTH))) &
             - 1./3.*(fi(m,directions(NORTHWEST)) - ftmp(directions(SOUTHEAST))) &
             + 2./3.*fi(m,directions(NORTHEAST))
-       
+
        fi(m,directions(SOUTHEAST)) = 1./3.*ftmp(directions(SOUTHEAST)) &
-            - 1./6.*rhovtmp &
+            - 1./6.*(rhovtmp - forces(m,cardinals(CARDINAL_NORMAL))/2.d0) &
+            + 1./2.*(-forces(m,cardinals(CARDINAL_CROSS))/2.0) &
             - 1./2.*(fi(m,directions(EAST)) - fi(m,directions(WEST))) &
             + 1./6.*(fi(m,directions(NORTH)) - ftmp(directions(SOUTH))) &
             - 1./3.*(fi(m,directions(NORTHEAST)) - ftmp(directions(SOUTHWEST))) &
@@ -248,11 +254,12 @@ contains
     enddo
   end subroutine DiscApplyBCDirichletToBoundary_D2Q9
 
-  subroutine DiscApplyBCVelocityToBoundary_D2Q9(disc, fi, fvals, directions, cardinals, &
-       dist)
+  subroutine DiscApplyBCVelocityToBoundary_D2Q9(disc, fi, forces, fvals, &
+       directions, cardinals, dist)
     type(discretization_type) disc
     type(distribution_type) dist
     PetscScalar,intent(inout),dimension(1:dist%s, 0:dist%b):: fi
+    PetscScalar,intent(in),dimension(1:dist%s, dist%info%ndims):: forces
     PetscInt,intent(in),dimension(0:dist%b):: directions
     PetscScalar,intent(in),dimension(dist%s,dist%info%ndims):: fvals
     PetscInt,intent(in),dimension(1:dist%info%ndims):: cardinals
@@ -265,45 +272,48 @@ contains
 
     ! written for the NORTH boundary.
     do m=1,dist%s
-       rhotmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) + fi(m,directions(WEST)) &
-            + 2.*(fi(m,directions(NORTH)) + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST))) 
+       rhotmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) &
+            + fi(m,directions(WEST)) + 2.*(fi(m,directions(NORTH)) &
+            + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST))) &
+            + forces(m,cardinals(CARDINAL_NORMAL))/2.0
        rhotmp = rhotmp/(1. - fvals(1,cardinals(CARDINAL_NORMAL)))
-       
+
        ! Choice should not affect the momentum significantly
        ftmp(directions(SOUTH)) = fi(m,directions(NORTH))
        ftmp(directions(SOUTHEAST)) = fi(m,directions(NORTHWEST))
        ftmp(directions(SOUTHWEST)) = fi(m,directions(NORTHEAST))
 
        fi(m,directions(SOUTH)) = 1./3.*ftmp(directions(SOUTH)) &
-            + 2./3.*rhotmp*fvals(1,cardinals(CARDINAL_NORMAL)) &
+            + 2./3.*(rhotmp*fvals(1,cardinals(CARDINAL_NORMAL)) - forces(m,cardinals(CARDINAL_NORMAL))/2.) &
             - 2./3.*(ftmp(directions(SOUTHEAST)) + ftmp(directions(SOUTHWEST))) &
             + 2./3.*(fi(m,directions(NORTH)) + fi(m,directions(NORTHEAST)) + fi(m,directions(NORTHWEST)))
 
        fi(m,directions(SOUTHWEST)) = 1./3.*ftmp(directions(SOUTHWEST)) &
-            - 1./2.*rhotmp*fvals(1,cardinals(CARDINAL_CROSS)) &
-            + 1./6.*rhotmp*fvals(1,cardinals(CARDINAL_NORMAL)) &
+            - 1./2.*(rhotmp*fvals(1,cardinals(CARDINAL_CROSS)) - forces(m,cardinals(CARDINAL_CROSS))/2.) &
+            + 1./6.*(rhotmp*fvals(1,cardinals(CARDINAL_NORMAL)) - forces(m,cardinals(CARDINAL_NORMAL))/2.) &
             + 1./2.*(fi(m,directions(EAST)) - fi(m,directions(WEST))) &
             + 1./6.*(fi(m,directions(NORTH)) - ftmp(directions(SOUTH))) &
             - 1./3.*(fi(m,directions(NORTHWEST)) - ftmp(directions(SOUTHEAST))) &
             + 2./3.*fi(m,directions(NORTHEAST))
 
        fi(m,directions(SOUTHEAST)) = 1./3.*ftmp(directions(SOUTHEAST)) &
-            + 1./2.*rhotmp*fvals(1,cardinals(CARDINAL_CROSS)) &
-            + 1./6.*rhotmp*fvals(1,cardinals(CARDINAL_NORMAL)) &
+            + 1./2.*(rhotmp*fvals(1,cardinals(CARDINAL_CROSS)) - forces(m,cardinals(CARDINAL_CROSS))/2.) &
+            + 1./6.*(rhotmp*fvals(1,cardinals(CARDINAL_NORMAL)) - forces(m,cardinals(CARDINAL_NORMAL))/2.) &
             - 1./2.*(fi(m,directions(EAST)) - fi(m,directions(WEST))) &
             + 1./6.*(fi(m,directions(NORTH)) - ftmp(directions(SOUTH))) &
             - 1./3.*(fi(m,directions(NORTHEAST)) - ftmp(directions(SOUTHWEST))) &
-            + 2./3.*fi(m,directions(NORTHWEST)) 
+            + 2./3.*fi(m,directions(NORTHWEST))
 
     enddo
     return
   end subroutine DiscApplyBCVelocityToBoundary_D2Q9
 
-  subroutine DiscApplyBCFluxToBoundary_D2Q9(disc, fi, fvals, directions, cardinals, &
-       dist)
+  subroutine DiscApplyBCFluxToBoundary_D2Q9(disc, fi, forces, fvals, &
+       directions, cardinals, dist)
     type(discretization_type) disc
     type(distribution_type) dist
     PetscScalar,intent(inout),dimension(1:dist%s, 0:dist%b):: fi
+    PetscScalar,intent(in),dimension(1:dist%s, dist%info%ndims):: forces
     PetscInt,intent(in),dimension(0:dist%b):: directions
     PetscScalar,intent(in),dimension(dist%s,dist%info%ndims):: fvals
     PetscInt,intent(in),dimension(1:dist%info%ndims):: cardinals
@@ -329,15 +339,16 @@ contains
 
        ! Chang et al '09, eqn 11
        fi(m,directions(SOUTH)) = ftmp(directions(SOUTH)) &
-            + twothirds*fvals(m,cardinals(CARDINAL_NORMAL)) &
+            + twothirds*(fvals(m,cardinals(CARDINAL_NORMAL)) &
+                          - forces(m,cardinals(CARDINAL_NORMAL))/2.0) &
             + twothirds*(  fi(m,directions(NORTH)) - ftmp(directions(SOUTH)) &
                          + fi(m,directions(NORTHEAST)) - ftmp(directions(SOUTHWEST)) &
                          + fi(m,directions(NORTHWEST)) - ftmp(directions(SOUTHEAST)))
 
        ! Chang et al '09, eqn 13
        fi(m,directions(SOUTHWEST)) = ftmp(directions(SOUTHWEST)) &
-            - onehalf*fvals(m,cardinals(CARDINAL_CROSS)) &
-            + onesixth*fvals(m,cardinals(CARDINAL_NORMAL)) &
+            - onehalf*(fvals(m,cardinals(CARDINAL_CROSS)) - forces(m,cardinals(CARDINAL_CROSS))/2.0) &
+            + onesixth*(fvals(m,cardinals(CARDINAL_NORMAL)) - forces(m,cardinals(CARDINAL_NORMAL))/2.0) &
             + onehalf*(fi(m,directions(EAST)) - fi(m,directions(WEST))) &
             + onesixth*(fi(m,directions(NORTH)) - ftmp(directions(SOUTH))) &
             - onethird*(fi(m,directions(NORTHWEST)) - ftmp(directions(SOUTHEAST))) &
@@ -345,8 +356,8 @@ contains
 
        ! Chang et al '09, eqn 12
        fi(m,directions(SOUTHEAST)) = ftmp(directions(SOUTHEAST)) &
-            + onehalf*fvals(m,cardinals(CARDINAL_CROSS)) &
-            + onesixth*fvals(m,cardinals(CARDINAL_NORMAL)) &
+            + onehalf*(fvals(m,cardinals(CARDINAL_CROSS)) - forces(m,cardinals(CARDINAL_CROSS))/2.0) &
+            + onesixth*(fvals(m,cardinals(CARDINAL_NORMAL)) - forces(m,cardinals(CARDINAL_NORMAL))/2.0) &
             - onehalf*(fi(m,directions(EAST)) - fi(m,directions(WEST))) &
             + onesixth*(fi(m,directions(NORTH)) - ftmp(directions(SOUTH))) &
             + twothirds*(fi(m,directions(NORTHWEST)) - ftmp(directions(SOUTHEAST))) &
@@ -363,7 +374,7 @@ contains
     PetscInt,intent(out),dimension(1:discretization_dims) :: cardinals
 
     PetscInt i
-    
+
     select case(boundary)
     case (BOUNDARY_YP)
        ! identity mapping

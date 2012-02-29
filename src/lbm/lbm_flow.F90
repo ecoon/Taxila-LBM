@@ -550,7 +550,7 @@ contains
     call DistributionCalcFlux(flow%distribution, walls%walls_a)
     call DistributionCommunicateDensityEnd(flow%distribution)
     call FlowCalcForces(flow, walls)
-    call BCZeroForces(flow%bc, flow%forces, flow%distribution)
+!    call BCZeroForces(flow%bc, flow%forces, flow%distribution)
     call FlowUpdateUE(flow, walls%walls_a)
   end subroutine FlowUpdateMoments
 
@@ -1118,7 +1118,7 @@ contains
     type(flow_type) flow
     type(walls_type) walls
 
-    call BCApply(flow%bc, walls%walls_a, flow%distribution)
+    call BCApply(flow%bc, flow%forces, walls%walls_a, flow%distribution)
   end subroutine FlowApplyBCs
 
   subroutine print_a_few(fi, rho, u, forces, walls, dist, istep)

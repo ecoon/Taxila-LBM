@@ -951,11 +951,16 @@ contains
             end if
           end do
           end do
+
+!          if ((i.eq.1 .or. i.eq.15) .and. j.eq.4 .and. k.eq.1) then
+          if (i.eq.1 .and. j.eq.4 .and. k.eq.1) then
+            print*, 'final gradient (X_DIR):', gradrho(:,X_DIRECTION,i,j,k)/weightsum(X_DIRECTION)
+            print*, 'forces (X_DIR):', forces(:,X_DIRECTION,i,j,k)
+          end if
        end if
     end do
     end do
     end do
-    
   end subroutine LBMAddFluidFluidForcesD3
 
   subroutine LBMAddFluidFluidForcesD2(dist, components, rho, walls, forces)
