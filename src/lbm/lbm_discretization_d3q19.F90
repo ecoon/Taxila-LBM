@@ -78,6 +78,8 @@ contains
     allocate(disc%mmt_mrt(0:disc%b))                 ! diagonal M dot MT matrix
     allocate(disc%ffw(1:4*disc%deriv_order))        ! slightly larger than needed in all cases
 
+    disc%local_normal = UP
+
     disc%opposites(ORIGIN) = ORIGIN
     disc%opposites(EAST) = WEST
     disc%opposites(WEST) = EAST
@@ -313,90 +315,47 @@ contains
     PetscScalar,intent(in),dimension(1:dist%s, dist%info%ndims):: forces
     PetscScalar,intent(in),dimension(dist%s,dist%info%ndims):: pvals
 
-    PetscScalar rhovtmp
-    PetscScalar,dimension(0:disc%b)::ftmp
-    PetscInt m
+    PetscScalar Qx,Qy,Qz,mo_x, mo_y
+    PetscInt m,n
 
-    rhovtmp = 0
+    ! NOTE ON ASSUMPTIONS:
+    ! -- f*_i(x,t) = f_i(x,t-dt) (see Chang, Liu, and Lin, Comp & Math with Apps 2009)
+    ! -- weights are isotropic (for instance, that weights(12) - weights(11) = 0)
+    ! -- rho*u = F_x/2, i.e. that tangential momentum is due to forces only
 
     do m=1,dist%s
-       ftmp = 0.0
-       rhovtmp = fi(m,directions(ORIGIN)) + fi(m,directions(EAST)) &
-            + fi(m,directions(NORTH)) + fi(m,directions(WEST)) &
-            + fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
-            + fi(m,directions(NORTHWEST)) + fi(m,directions(SOUTHWEST)) &
-            + fi(m,directions(SOUTHEAST)) + 2.*(fi(m,directions(DOWN)) &
-            + fi(m,directions(WESTDOWN)) + fi(m,directions(EASTDOWN)) &
-            + fi(m,directions(SOUTHDOWN)) + fi(m,directions(NORTHDOWN))) &
-            + forces(m,cardinals(CARDINAL_NORMAL))/2.0
-       rhovtmp = pvals(m,1) - rhovtmp
+       Qz = (pvals(m,1) - sum(fi(m,:))) &
+            / (disc%weights(directions(UP)) + disc%weights(directions(EASTUP)) &
+               + disc%weights(directions(WESTUP)) + disc%weights(directions(NORTHUP)) &
+               + disc%weights(directions(SOUTHUP)))
 
-       ! Choice should not affect the momentum significantly
-       ftmp(directions(UP)) = fi(m,directions(DOWN))
-       ftmp(directions(EASTUP)) = fi(m,directions(WESTDOWN))
-       ftmp(directions(WESTUP)) = fi(m,directions(EASTDOWN))
-       ftmp(directions(NORTHUP)) = fi(m,directions(SOUTHDOWN))
-       ftmp(directions(SOUTHUP)) = fi(m,directions(NORTHDOWN))
+       print*, 'up,eastup,westup,northup,southup:', directions(UP), &
+            directions(EASTUP),directions(WESTUP),directions(NORTHUP),directions(SOUTHUP)
 
-       fi(m,directions(UP)) = 2./3.*ftmp(directions(UP)) &
-            + 1./3.*(rhovtmp - forces(m,cardinals(CARDINAL_NORMAL))/2.0) &
-            - 1./3.*(ftmp(directions(EASTUP))+ ftmp(directions(WESTUP)) &
-            + ftmp(directions(NORTHUP)) + ftmp(directions(SOUTHUP))) &
-            + 1./3.*(fi(m,directions(DOWN)) &
-            + fi(m,directions(WESTDOWN)) + fi(m,directions(EASTDOWN)) &
-            + fi(m,directions(SOUTHDOWN)) + fi(m,directions(NORTHDOWN)))
+       fi(m,directions(UP)) = fi(m,directions(UP)) + disc%weights(directions(UP))*Qz
 
-        fi(m,directions(EASTUP)) = 1./3.*ftmp(directions(EASTUP)) &
-            + 1./2.*(-forces(m,cardinals(CARDINAL_CROSS))/2.) &
-            + 1./6.*(rhovtmp - forces(m,cardinals(CARDINAL_NORMAL))/2.0) &
-            - 1./2.*(fi(m,directions(EAST)) &
-            - fi(m,directions(WEST)) + fi(m,directions(NORTHEAST)) &
-            - fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
-            + fi(m,directions(SOUTHEAST))) &
-            - 1./6.*(ftmp(directions(UP)) - fi(m,directions(DOWN)) &
-            + ftmp(directions(NORTHUP)) + ftmp(directions(SOUTHUP)) &
-            - fi(m,directions(SOUTHDOWN)) - fi(m,directions(NORTHDOWN))) &
-            + 1./3.*(ftmp(directions(WESTUP)) - fi(m,directions(EASTDOWN))) &
-            + 2./3.*fi(m,directions(WESTDOWN))
+       mo_x = 0.d0
+       mo_y = 0.d0
+       do n=1,disc%b
+         mo_x = mo_x + disc%ci(directions(UP),cardinals(CARDINAL_NORMAL)) &
+                * fi(m,directions(n))*disc%ci(directions(n), cardinals(CARDINAL_CROSS))
+         mo_y = mo_y + disc%ci(directions(UP),cardinals(CARDINAL_NORMAL)) &
+                * fi(m,directions(n))*disc%ci(directions(n), cardinals(CARDINAL_RESULTANT))
+       end do
+       Qx = -mo_x/(disc%weights(directions(EASTUP))+disc%weights(directions(WESTUP)))
+       Qy = -mo_y/(disc%weights(directions(NORTHUP))+disc%weights(directions(SOUTHUP)))
 
-       fi(m,directions(WESTUP)) = 1./3.*ftmp(directions(WESTUP)) &
-            - 1./2.*(-forces(m,cardinals(CARDINAL_CROSS))/2.) &
-            + 1./6.*(rhovtmp - forces(m,cardinals(CARDINAL_NORMAL))/2.0) &
-            + 1./2.*(fi(m,directions(EAST)) &
-            - fi(m,directions(WEST)) + fi(m,directions(NORTHEAST)) &
-            - fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
-            + fi(m,directions(SOUTHEAST))) &
-            - 1./6.*(ftmp(directions(UP)) - fi(m,directions(DOWN)) &
-            + ftmp(directions(NORTHUP)) + ftmp(directions(SOUTHUP)) &
-            - fi(m,directions(SOUTHDOWN)) - fi(m,directions(NORTHDOWN))) &
-            + 1./3.*(ftmp(directions(EASTUP)) - fi(m,directions(WESTDOWN))) &
-            + 2./3.*fi(m,directions(EASTDOWN))
+       print*, 'qx,qy,qz:', Qx,Qy,Qz
 
-       fi(m,directions(NORTHUP)) = 1./3.*ftmp(directions(NORTHUP)) &
-            + 1./2.*(-forces(m,cardinals(CARDINAL_RESULTANT))/2.) &
-            + 1./6.*(rhovtmp - forces(m,cardinals(CARDINAL_NORMAL))/2.0) &
-            - 1./2.*(fi(m,directions(NORTH)) &
-            - fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
-            + fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
-            - fi(m,directions(SOUTHEAST))) &
-            - 1./6.*(ftmp(directions(UP)) - fi(m,directions(DOWN)) &
-            + ftmp(directions(EASTUP)) + ftmp(directions(WESTUP)) &
-            - fi(m,directions(WESTDOWN)) - fi(m,directions(EASTDOWN))) &
-            + 1./3.*(ftmp(directions(SOUTHUP)) - fi(m,directions(NORTHDOWN))) &
-            + 2./3.*fi(m,directions(SOUTHDOWN))
+       fi(m,directions(EASTUP)) = fi(m,directions(EASTUP)) &
+                                  + disc%weights(directions(EASTUP))*(Qx + Qz)
+       fi(m,directions(WESTUP)) = fi(m,directions(WESTUP)) &
+                                  + disc%weights(directions(WESTUP))*(-Qx + Qz)
+       fi(m,directions(NORTHUP)) = fi(m,directions(NORTHUP)) &
+                                  + disc%weights(directions(NORTHUP))*(Qy + Qz)
+       fi(m,directions(SOUTHUP)) = fi(m,directions(SOUTHUP)) &
+                                  + disc%weights(directions(SOUTHUP))*(-Qy + Qz)
 
-       fi(m,directions(SOUTHUP)) = 1./3.*ftmp(directions(SOUTHUP)) &
-            - 1./2.*(-forces(m,cardinals(CARDINAL_RESULTANT))/2.) &
-            + 1./6.*(rhovtmp - forces(m,cardinals(CARDINAL_NORMAL))/2.0) &
-            + 1./2.*(fi(m,directions(NORTH)) &
-            - fi(m,directions(SOUTH)) + fi(m,directions(NORTHEAST)) &
-            + fi(m,directions(NORTHWEST)) - fi(m,directions(SOUTHWEST)) &
-            - fi(m,directions(SOUTHEAST))) &
-            - 1./6.*(ftmp(directions(UP)) - fi(m,directions(DOWN)) &
-            + ftmp(directions(EASTUP)) + ftmp(directions(WESTUP)) &
-            - fi(m,directions(WESTDOWN)) - fi(m,directions(EASTDOWN))) &
-            + 1./3.*(ftmp(directions(NORTHUP)) - fi(m,directions(SOUTHDOWN))) &
-            + 2./3.*fi(m,directions(NORTHDOWN))
     enddo
     return
   end subroutine DiscApplyBCDirichletToBoundary_D3Q19

@@ -318,6 +318,7 @@
 
          call PetscLogStagePop(ierr)
          call PetscLogStagePush(logger%stage(BC_STAGE), ierr)
+
          ! internal bounceback
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
@@ -340,11 +341,11 @@
             call PetscLogEventEnd(logger%event_bc_flow,ierr)
          end if
 
-         if (associated(lbm%transport)) then
-            call PetscLogEventBegin(logger%event_bc_tran,ierr)
-            call TransportApplyBCs(lbm%transport, lbm%walls)
-            call PetscLogEventEnd(logger%event_bc_tran,ierr)
-         end if
+         ! if (associated(lbm%transport)) then
+         !    call PetscLogEventBegin(logger%event_bc_tran,ierr)
+         !    call TransportApplyBCs(lbm%transport, lbm%walls)
+         !    call PetscLogEventEnd(logger%event_bc_tran,ierr)
+         ! end if
 
          ! update moments for rho, psi
          call PetscLogStagePop(ierr)

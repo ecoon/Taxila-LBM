@@ -541,15 +541,25 @@ contains
     call BCRestoreArrays(flow%bc, ierr)
   end subroutine FlowRestoreArrays
 
-  subroutine FlowUpdateMoments(flow, walls)
+  subroutine FlowCalcRhoForces(flow, walls)
     type(flow_type) flow
     type(walls_type) walls
 
     call DistributionCalcDensity(flow%distribution, walls%walls_a)
-    call DistributionCommunicateDensityBegin(flow%distribution)
-    call DistributionCalcFlux(flow%distribution, walls%walls_a)
-    call DistributionCommunicateDensityEnd(flow%distribution)
+    call BCApplyDirichletToRho(flow%bc, walls%walls_a, flow%distribution)
+    call DistributionCommunicateDensity(flow%distribution)
     call FlowCalcForces(flow, walls)
+  end subroutine FlowCalcRhoForces
+
+  subroutine FlowUpdateMoments(flow, walls)
+    type(flow_type) flow
+    type(walls_type) walls
+
+    !call DistributionCalcDensity(flow%distribution, walls%walls_a)
+    !call DistributionCommunicateDensityBegin(flow%distribution)
+    call DistributionCalcFlux(flow%distribution, walls%walls_a)
+    !call DistributionCommunicateDensityEnd(flow%distribution)
+    !call FlowCalcForces(flow, walls)
 !    call BCZeroForces(flow%bc, flow%forces, flow%distribution)
     call FlowUpdateUE(flow, walls%walls_a)
   end subroutine FlowUpdateMoments
@@ -891,6 +901,7 @@ contains
 
   subroutine FlowStream(flow)
     type(flow_type) flow
+    call BCPreStream(flow%bc,flow%distribution)
     call DistributionStream(flow%distribution)
   end subroutine FlowStream
 
@@ -1118,6 +1129,12 @@ contains
     type(flow_type) flow
     type(walls_type) walls
 
+    ! Calculate rho, using the streamed values for internal, the rho
+    ! boundary condition for Dirichlet BCs, and f^* as the previous
+    ! timestep value.  Then calculate forces from that rho.
+    call FlowCalcRhoForces(flow, walls)
+
+    ! apply boundary conditions, using the calculated forces
     call BCApply(flow%bc, flow%forces, walls%walls_a, flow%distribution)
   end subroutine FlowApplyBCs
 
