@@ -29,6 +29,7 @@ module LBM_Discretization_Type_module
      PetscScalar :: c_0 ! grid factor for fluid-fluid terms
      PetscInt,pointer:: ci(:,:)
      PetscScalar,pointer:: weights(:)
+     PetscInt :: local_normal
      PetscInt,pointer:: opposites(:)
      PetscInt,pointer:: reflect_x(:)
      PetscInt,pointer:: reflect_y(:)
