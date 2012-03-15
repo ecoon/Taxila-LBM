@@ -28,7 +28,7 @@ module LBM_BC_module
   implicit none
   private
 #include "lbm_definitions.h"
-  
+
   type, public:: bc_type
     MPI_Comm comm
     type(grid_type),pointer:: grid
@@ -121,20 +121,12 @@ contains
     bc%nbcs = nbcs
   end subroutine BCSetSizes
 
-  ! set up the vectors for holding boundary data
   subroutine BCSetFromOptions(bc, options, ierr)
     type(bc_type) bc
     type(options_type) options
     PetscErrorCode ierr
 
-    ! locals
-    PetscBool flag
-    PetscInt nmax
-
-    ! flags and constant values from options
-    nmax = 6
-    call PetscOptionsGetIntArray(options%my_prefix, '-bc_flags', bc%flags, &
-         nmax, flag, ierr)
+    ! nothing to do, BCs get set from their containing physics module
   end subroutine BCSetFromOptions
 
   subroutine BCSetUp(bc)
