@@ -1134,9 +1134,37 @@ contains
     ! timestep value.  Then calculate forces from that rho.
     call FlowCalcRhoForces(flow, walls)
 
+    ! some BCs are special cases and need preprocessing
+    do lcv_side=1,flow%ndims*2
+      if ((flow%bc_flags(lcv_side).eq.BC_PRESSURE_OUTLET).and. &
+           .not.flow%bc_done(BC_PRESSURE_OUTLET)) then
+        call FlowUpdateBCPressureOutlet(flow, walls)
+        flow%bc_done(BC_PRESSURE_OUTLET) = PETSC_TRUE
+      else if ((flow%bc_flags(lcv_side).eq.BC_FLUX_OUTLET).and. &
+           .not.flow%bc_done(BC_FLUX_OUTLET)) then
+        call FlowUpdateBCFluxOutlet(flow, walls)
+        flow%bc_done(BC_FLUX_OUTLET) = PETSC_TRUE
+      end if
+    end do
+    flow%bc_done(BC_FLUX_OUTLET) = PETSC_FALSE
+    flow%bc_done(BC_PRESSURE_OUTLET) = PETSC_FALSE
+
     ! apply boundary conditions, using the calculated forces
     call BCApply(flow%bc, flow%forces, walls%walls_a, flow%distribution)
   end subroutine FlowApplyBCs
+
+  subroutine FlowUpdateBCPressureOutlet(flow, walls)
+    type(flow_type) flow
+    type(walls_type) walls
+
+    select case(flow%ndims)
+    case (2)
+      call FlowUpdateBCPressureOutletD2(flow)
+
+    case (3)
+    end select
+  end subroutine FlowUpdateBCPressureOutlet
+
 
   subroutine print_a_few(fi, rho, u, forces, walls, dist, istep)
     type(distribution_type) dist
