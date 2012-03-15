@@ -473,37 +473,6 @@ contains
     end select
   end subroutine BCApplyDirichletToRho_D3
 
-  subroutine BCApply(bc, forces, walls, dist)
-    type(bc_type) bc
-    type(distribution_type) dist
-    PetscScalar,dimension(1:dist%info%rgxyzl):: walls
-    PetscScalar,dimension(dist%s,dist%info%ndims,dist%info%gxyzl):: forces
-
-    logical,dimension(0:10):: bcs_done
-    PetscInt lcv_sides
-    bcs_done=.FALSE.
-    bcs_done(BC_PERIODIC) = .TRUE.   ! periodic done by default
-
-    do lcv_sides = 1,6
-      if (.not.bcs_done(bc%flags(lcv_sides))) then
-        select case (bc%flags(lcv_sides))
-        case (BC_PSEUDOPERIODIC)         ! pseudo-periodic
-          call BCApplyPseudoperiodic(bc, walls, dist)
-        case (BC_DIRICHLET)         ! dirichlet conc/pressure
-          call BCApplyDirichlet(bc, forces, walls, dist)
-        case (BC_NEUMANN)         ! flux
-          call BCApplyFlux(bc, forces, walls, dist)
-
-        case (BC_VELOCITY)         ! flux
-          call BCApplyVelocity(bc, forces, walls, dist)
-        case (BC_ZERO_GRADIENT)         ! dirichlet conc/pressure
-          call BCApplyZeroGradient(bc, walls, dist)
-        end select
-        bcs_done(bc%flags(lcv_sides)) = .TRUE. ! only do each bc type once
-      endif
-    enddo
-  end subroutine BCApply
-
   subroutine BCPreStream(bc, dist)
     type(bc_type) bc
     type(distribution_type) dist
@@ -672,6 +641,34 @@ contains
     end select
   end subroutine BCPreStream_D3
 
+  subroutine BCApply(bc, forces, walls, dist)
+    type(bc_type) bc
+    type(distribution_type) dist
+    PetscScalar,dimension(1:dist%info%rgxyzl):: walls
+    PetscScalar,dimension(dist%s,dist%info%ndims,dist%info%gxyzl):: forces
+
+    logical,dimension(0:10):: bcs_done
+    PetscInt lcv_sides
+    bcs_done=.FALSE.
+    bcs_done(BC_PERIODIC) = .TRUE.   ! periodic done by default
+
+    do lcv_sides = 1,6
+      if (.not.bcs_done(bc%flags(lcv_sides))) then
+        select case (bc%flags(lcv_sides))
+        case (BC_PSEUDOPERIODIC)         ! pseudo-periodic
+          call BCApplyPseudoperiodic(bc, walls, dist)
+        case (BC_DIRICHLET)         ! dirichlet conc/pressure
+          call BCApplyDirichlet(bc, forces, walls, dist)
+        case (BC_NEUMANN)
+          call BCApplyNeumann(bc, forces, walls, dist)
+        case (BC_VELOCITY)
+          call BCApplyVelocity(bc, forces, walls, dist)
+        end select
+        bcs_done(bc%flags(lcv_sides)) = .TRUE. ! only do each bc type once
+      endif
+    enddo
+  end subroutine BCApply
+
   subroutine BCApplyPseudoperiodic(bc, walls, dist)
     type(bc_type) bc
     type(distribution_type) dist
@@ -693,788 +690,6 @@ contains
       call LBMError(PETSC_COMM_SELF, 1, 'invalid discretization in LBM', ierr)
     end select
   end subroutine BCApplyPseudoperiodic
-
-  subroutine BCApplyDirichlet(bc, forces, walls, dist)
-    type(bc_type) bc
-    type(distribution_type) dist
-    PetscScalar,dimension(dist%info%rgxyzl):: walls
-    PetscScalar,dimension(dist%s,dist%info%ndims,dist%info%gxyzl):: forces
-
-    select case(dist%info%ndims)
-    case(2)
-      call BCApplyDirichletD2(bc, dist%fi_a, forces, walls, bc%xm_a, bc%xp_a, &
-           bc%ym_a, bc%yp_a, dist)
-    case(3)
-      call BCApplyDirichletD3(bc, dist%fi_a, forces, walls, bc%xm_a, bc%xp_a, &
-           bc%ym_a, bc%yp_a, bc%zm_a, bc%zp_a, dist)
-    end select
-  end subroutine BCApplyDirichlet
-
-  subroutine BCApplyneumann(bc, forces, walls, dist)
-    type(bc_type) bc
-    type(distribution_type) dist
-    PetscScalar,dimension(dist%s,dist%info%ndims,dist%info%gxyzl):: forces
-    PetscScalar,dimension(dist%info%rgxyzl):: walls
-
-    select case(dist%info%ndims)
-    case(2)
-      call BCApplyneumannD2(bc, dist%fi_a, forces, walls, bc%xm_a, bc%xp_a, &
-           bc%ym_a, bc%yp_a, dist)
-    case(3)
-      call BCApplyneumannD3(bc, dist%fi_a, forces, walls, bc%xm_a, bc%xp_a, &
-           bc%ym_a, bc%yp_a, bc%zm_a, bc%zp_a, dist)
-    end select
-  end subroutine BCApplyneumann
-
-  subroutine BCApplyVelocity(bc, forces, walls, dist)
-    type(bc_type) bc
-    type(distribution_type) dist
-    PetscScalar,dimension(dist%s,dist%info%ndims,dist%info%gxyzl):: forces
-    PetscScalar,dimension(dist%info%rgxyzl):: walls
-
-    select case(dist%info%ndims)
-    case(2)
-      call BCApplyVelocityD2(bc, dist%fi_a, forces, walls, bc%xm_a, bc%xp_a, &
-           bc%ym_a, bc%yp_a, dist)
-    case(3)
-      call BCApplyVelocityD3(bc, dist%fi_a, forces, walls, bc%xm_a, bc%xp_a, &
-           bc%ym_a, bc%yp_a, bc%zm_a, bc%zp_a, dist)
-    end select
-  end subroutine BCApplyVelocity
-
-  subroutine BCApplyDirichletD3(bc, fi, forces, walls, xm_vals, xp_vals, &
-       ym_vals, yp_vals, zm_vals, zp_vals, dist)
-    type(bc_type) bc
-    type(distribution_type) dist
-    PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
-    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: forces
-    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
-         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
-    PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye, &
-         dist%info%zs:dist%info%ze):: xm_vals, xp_vals
-    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
-         dist%info%zs:dist%info%ze):: ym_vals, yp_vals
-    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
-         dist%info%ys:dist%info%ye):: zm_vals, zp_vals
-
-    PetscInt i,j,k
-    PetscInt directions(0:dist%b)
-    PetscInt cardinals(1:dist%info%ndims)
-
-    directions(:) = 0
-    ! XM BOUNDARY
-    if ((bc%flags(BOUNDARY_XM).eq.BC_DIRICHLET).and.(dist%info%xs.eq.1)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_XM, directions, cardinals)
-      do k=dist%info%zs,dist%info%ze
-        do j=dist%info%ys,dist%info%ye
-          i = 1
-          if (walls(i,j,k).eq.0) then
-            call BCApplyDirichletNode(bc, fi(:,:,i,j,k), forces(:,:,i,j,k), &
-                 xm_vals(:,j,k), directions, cardinals, dist)
-          end if
-        end do
-      end do
-    endif
-
-    directions(:) = 0
-    ! XP BOUNDARY
-    if ((bc%flags(BOUNDARY_XP).eq.BC_DIRICHLET).and.(dist%info%xe.eq.dist%info%NX)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_XP, directions, cardinals)
-      do k=dist%info%zs,dist%info%ze
-        do j=dist%info%ys,dist%info%ye
-          i = dist%info%NX
-          if (walls(i,j,k).eq.0) then
-            call BCApplyDirichletNode(bc, fi(:,:,i,j,k), &
-                 -forces(:,:,i,j,k), xp_vals(:,j,k), directions, cardinals, dist)
-          end if
-        end do
-      end do
-    endif
-
-    directions(:) = 0
-    ! YM BOUNDARY
-    if ((bc%flags(BOUNDARY_YM).eq.BC_DIRICHLET).and.(dist%info%ys.eq.1)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_YM, directions, cardinals)
-      do k=dist%info%zs,dist%info%ze
-        do i=dist%info%xs,dist%info%xe
-          j = 1
-          if (walls(i,j,k).eq.0) then
-            call BCApplyDirichletNode(bc, fi(:,:,i,j,k), &
-                 forces(:,:,i,j,k), ym_vals(:,i,k), directions, cardinals, dist)
-          end if
-        end do
-      end do
-    endif
-
-    directions(:) = 0
-    ! YP BOUNDARY
-    if ((bc%flags(BOUNDARY_YP).eq.BC_DIRICHLET).and.(dist%info%ye.eq.dist%info%NY)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_YP, directions, cardinals)
-      do k=dist%info%zs,dist%info%ze
-        do i=dist%info%xs,dist%info%xe
-          j = dist%info%NY
-          if (walls(i,j,k).eq.0) then
-            call BCApplyDirichletNode(bc, fi(:,:,i,j,k), &
-                 -forces(:,:,i,j,k), yp_vals(:,i,k), directions, cardinals, dist)
-          end if
-        end do
-      end do
-    endif
-
-    directions(:) = 0
-    ! ZM BOUNDARY
-    if ((bc%flags(BOUNDARY_ZM).eq.BC_DIRICHLET).and.(dist%info%zs.eq.1)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_ZM, directions, cardinals)
-      do j=dist%info%ys,dist%info%ye
-        do i=dist%info%xs,dist%info%xe
-          k = 1
-          if (walls(i,j,k).eq.0) then
-            call BCApplyDirichletNode(bc, fi(:,:,i,j,k), &
-                 forces(:,:,i,j,k), zm_vals(:,i,j), directions, cardinals, dist)
-          end if
-        end do
-      end do
-    endif
-
-    directions(:) = 0
-    ! ZP BOUNDARY
-    if ((bc%flags(BOUNDARY_ZP).eq.BC_DIRICHLET).and.(dist%info%ze.eq.dist%info%NZ)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_ZP, directions, cardinals)
-      do j=dist%info%ys,dist%info%ye
-        do i=dist%info%xs,dist%info%xe
-          k = dist%info%NZ
-          if (walls(i,j,k).eq.0) then
-            call BCApplyDirichletNode(bc, fi(:,:,i,j,k), &
-                 -forces(:,:,i,j,k), zp_vals(:,i,j), directions, cardinals, dist)
-          end if
-        end do
-      end do
-    endif
-    return
-  end subroutine BCApplyDirichletD3
-
-  subroutine BCApplyDirichletD2(bc, fi, forces, walls, xm_vals, xp_vals, ym_vals, yp_vals, dist)
-    type(bc_type) bc
-    type(distribution_type) dist
-    PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: fi
-    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: forces
-    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
-         dist%info%rgys:dist%info%rgye):: walls
-    PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye):: xm_vals, xp_vals
-    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe):: ym_vals, yp_vals
-
-    PetscInt i,j
-    PetscInt directions(0:dist%b)
-    PetscInt cardinals(1:dist%info%ndims)
-    directions(:) = 0
-
-    ! XM BOUNDARY
-    if ((bc%flags(BOUNDARY_XM).eq.BC_DIRICHLET).and.(dist%info%xs.eq.1)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_XM, directions, cardinals)
-      do j=dist%info%ys,dist%info%ye
-        i = 1
-        if (walls(i,j).eq.0) then
-          call BCApplyDirichletNode(bc, fi(:,:,i,j), forces(:,:,i,j), &
-               xm_vals(:,j), directions, cardinals, dist)
-        end if
-      end do
-    endif
-
-    directions(:) = 0
-    ! XP BOUNDARY
-    if ((bc%flags(BOUNDARY_XP).eq.BC_DIRICHLET).and.(dist%info%xe.eq.dist%info%NX)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_XP, directions, cardinals)
-      do j=dist%info%ys,dist%info%ye
-        i = dist%info%NX
-        if (walls(i,j).eq.0) then
-          call BCApplyDirichletNode(bc, fi(:,:,i,j), -forces(:,:,i,j), &
-               xp_vals(:,j), directions, cardinals, dist)
-        end if
-      end do
-    endif
-
-    directions(:) = 0
-    ! YM BOUNDARY
-    if ((bc%flags(BOUNDARY_YM).eq.BC_DIRICHLET).and.(dist%info%ys.eq.1)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_YM, directions, cardinals)
-      do i=dist%info%xs,dist%info%xe
-        j = 1
-        if (walls(i,j).eq.0) then
-          call BCApplyDirichletNode(bc, fi(:,:,i,j), forces(:,:,i,j), &
-               ym_vals(:,i), directions, cardinals, dist)
-        end if
-      end do
-    endif
-
-    directions(:) = 0
-    ! YP BOUNDARY
-    if ((bc%flags(BOUNDARY_YP).eq.BC_DIRICHLET).and.(dist%info%ye.eq.dist%info%NY)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_YP, directions, cardinals)
-      do i=dist%info%xs,dist%info%xe
-        j = dist%info%NY
-        if (walls(i,j).eq.0) then
-          call BCApplyDirichletNode(bc, fi(:,:,i,j), -forces(:,:,i,j), &
-               yp_vals(:,i), directions, cardinals, dist)
-        end if
-      end do
-    endif
-  end subroutine BCApplyDirichletD2
-
-  subroutine BCApplyFluxD3(bc, fi, forces, walls, xm_vals, xp_vals, &
-       ym_vals, yp_vals, zm_vals, zp_vals, dist)
-    type(bc_type) bc
-    type(distribution_type) dist
-    PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
-    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: forces
-    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
-         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
-    PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye, &
-         dist%info%zs:dist%info%ze):: xm_vals, xp_vals
-    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
-         dist%info%zs:dist%info%ze):: ym_vals, yp_vals
-    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
-         dist%info%ys:dist%info%ye):: zm_vals, zp_vals
-
-    PetscInt i,j,k
-    PetscInt directions(0:dist%b)
-    PetscInt cardinals(1:dist%info%ndims)
-
-    directions(:) = 0
-    ! XM BOUNDARY
-    if ((bc%flags(BOUNDARY_XM).eq.BC_FLUX).and.(dist%info%xs.eq.1)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_XM, directions, cardinals)
-      do k=dist%info%zs,dist%info%ze
-        do j=dist%info%ys,dist%info%ye
-          i = 1
-          if (walls(i,j,k).eq.0) then
-            call BCApplyFluxNode(bc, fi(:,:,i,j,k), forces(:,:,i,j,k), &
-                 xm_vals(:,j,k), directions, cardinals, dist)
-          end if
-        end do
-      end do
-    endif
-
-    directions(:) = 0
-    ! XP BOUNDARY
-    if ((bc%flags(BOUNDARY_XP).eq.BC_FLUX).and.(dist%info%xe.eq.dist%info%NX)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_XP, directions, cardinals)
-      do k=dist%info%zs,dist%info%ze
-        do j=dist%info%ys,dist%info%ye
-          i = dist%info%NX
-          if (walls(i,j,k).eq.0) then
-            call BCApplyFluxNode(bc, fi(:,:,i,j,k), -forces(:,:,i,j,k), &
-                 xp_vals(:,j,k), directions, cardinals, dist)
-          end if
-        end do
-      end do
-    endif
-
-    directions(:) = 0
-    ! YM BOUNDARY
-    if ((bc%flags(BOUNDARY_YM).eq.BC_FLUX).and.(dist%info%ys.eq.1)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_YM, directions, cardinals)
-      do k=dist%info%zs,dist%info%ze
-        do i=dist%info%xs,dist%info%xe
-          j = 1
-          if (walls(i,j,k).eq.0) then
-            call BCApplyFluxNode(bc, fi(:,:,i,j,k), forces(:,:,i,j,k), &
-                 ym_vals(:,i,k), directions, cardinals, dist)
-          end if
-        end do
-      end do
-    endif
-
-    directions(:) = 0
-    ! YP BOUNDARY
-    if ((bc%flags(BOUNDARY_YP).eq.BC_FLUX).and.(dist%info%ye.eq.dist%info%NY)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_YP, directions, cardinals)
-      do k=dist%info%zs,dist%info%ze
-        do i=dist%info%xs,dist%info%xe
-          j = dist%info%NY
-          if (walls(i,j,k).eq.0) then
-            call BCApplyFluxNode(bc, fi(:,:,i,j,k), -forces(:,:,i,j,k), &
-                 yp_vals(:,i,k), directions, cardinals, dist)
-          end if
-        end do
-      end do
-    endif
-
-    directions(:) = 0
-    ! ZM BOUNDARY
-    if ((bc%flags(BOUNDARY_ZM).eq.BC_FLUX).and.(dist%info%zs.eq.1)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_ZM, directions, cardinals)
-      do j=dist%info%ys,dist%info%ye
-        do i=dist%info%xs,dist%info%xe
-          k = 1
-          if (walls(i,j,k).eq.0) then
-            call BCApplyFluxNode(bc, fi(:,:,i,j,k), forces(:,:,i,j,k), &
-                 zm_vals(:,i,j), directions, cardinals, dist)
-          end if
-        end do
-      end do
-    endif
-
-    directions(:) = 0
-    ! ZP BOUNDARY
-    if ((bc%flags(BOUNDARY_ZP).eq.BC_FLUX).and.(dist%info%ze.eq.dist%info%NZ)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_ZP, directions, cardinals)
-      do j=dist%info%ys,dist%info%ye
-        do i=dist%info%xs,dist%info%xe
-          k = dist%info%NZ
-          if (walls(i,j,k).eq.0) then
-            call BCApplyFluxNode(bc, fi(:,:,i,j,k), -forces(:,:,i,j,k), &
-                 zp_vals(:,i,j), directions, cardinals, dist)
-          end if
-        end do
-      end do
-    endif
-    return
-  end subroutine BCApplyFluxD3
-
-  subroutine BCApplyFluxD2(bc, fi, forces, walls, xm_vals, xp_vals, ym_vals, yp_vals, dist)
-    type(bc_type) bc
-    type(distribution_type) dist
-    PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: fi
-    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: forces
-    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
-         dist%info%rgys:dist%info%rgye):: walls
-    PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye):: xm_vals, xp_vals
-    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe):: ym_vals, yp_vals
-
-    PetscInt i,j
-    PetscInt directions(0:dist%b)
-    PetscInt cardinals(1:dist%info%ndims)
-    directions(:) = 0
-
-    ! XM BOUNDARY
-    if ((bc%flags(BOUNDARY_XM).eq.BC_FLUX).and.(dist%info%xs.eq.1)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_XM, directions, cardinals)
-      do j=dist%info%ys,dist%info%ye
-        i = 1
-        if (walls(i,j).eq.0) then
-          call BCApplyFluxNode(bc, fi(:,:,i,j), forces(:,:,i,j), &
-               xm_vals(:,j), directions, cardinals, dist)
-        end if
-      end do
-    endif
-
-    directions(:) = 0
-    ! XP BOUNDARY
-    if ((bc%flags(BOUNDARY_XP).eq.BC_FLUX).and.(dist%info%xe.eq.dist%info%NX)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_XP, directions, cardinals)
-      do j=dist%info%ys,dist%info%ye
-        i = dist%info%NX
-        if (walls(i,j).eq.0) then
-          call BCApplyFluxNode(bc, fi(:,:,i,j), -forces(:,:,i,j), &
-               xp_vals(:,j), directions, cardinals, dist)
-        end if
-      end do
-    endif
-
-    directions(:) = 0
-    ! YM BOUNDARY
-    if ((bc%flags(BOUNDARY_YM).eq.BC_FLUX).and.(dist%info%ys.eq.1)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_YM, directions, cardinals)
-      do i=dist%info%xs,dist%info%xe
-        j = 1
-        if (walls(i,j).eq.0) then
-          call BCApplyFluxNode(bc, fi(:,:,i,j), forces(:,:,i,j), &
-               ym_vals(:,i), directions, cardinals, dist)
-        end if
-      end do
-    endif
-
-    directions(:) = 0
-    ! YP BOUNDARY
-    if ((bc%flags(BOUNDARY_YP).eq.BC_FLUX).and.(dist%info%ye.eq.dist%info%NY)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_YP, directions, cardinals)
-      do i=dist%info%xs,dist%info%xe
-        j = dist%info%NY
-        if (walls(i,j).eq.0) then
-          call BCApplyFluxNode(bc, fi(:,:,i,j), -forces(:,:,i,j), &
-               yp_vals(:,i), directions, cardinals, dist)
-        end if
-      end do
-    endif
-  end subroutine BCApplyFluxD2
-
-  subroutine BCApplyDirichletNode(bc, fi, forces, pvals, directions, cardinals, dist)
-    type(bc_type) bc
-    type(distribution_type) dist
-    PetscScalar,intent(inout),dimension(1:dist%s, 0:dist%disc%b):: fi
-    PetscScalar,intent(in),dimension(1:dist%s, dist%info%ndims):: forces
-    PetscScalar,intent(in),dimension(dist%s,dist%info%ndims):: pvals
-    PetscInt,intent(in),dimension(0:dist%disc%b):: directions
-    PetscInt,intent(in),dimension(1:dist%info%ndims):: cardinals
-
-    PetscScalar, dimension(dist%info%ndims) :: Q, momentum, weightsum
-    PetscInt m,n,p
-    PetscInt local_normal
-
-    ! NOTE ON ASSUMPTIONS:
-    ! -- f*_i(x,t) = f_i(x,t-dt) (see Chang, Liu, and Lin, Comp & Math with Apps 2009)
-    ! -- weights are isotropic (for instance, that weights(12) - weights(11) = 0)
-    ! -- rho*u = F_x/2, i.e. that tangential momentum is due to forces only
-
-    ! calculation is based upon the positive z-direction boundary, and
-    ! all others are rotated to match via directions/cardinals.
-    local_normal = directions(dist%disc%local_normal)
-
-    do m=1,dist%s
-      ! note fi has fi in the interior/defined directions and f* in
-      ! the incoming/unknown directions
-      weightsum = 0.d0
-      do n=1,dist%disc%b
-        if (dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL)) &
-             * dist%disc%ci(n,cardinals(CARDINAL_NORMAL)).eq.1) then
-          ! incoming f_i, as c_i is positive in the inward-normal direction
-          weightsum(cardinals(CARDINAL_NORMAL)) = weightsum(cardinals(CARDINAL_NORMAL)) &
-               + dist%disc%weights(n)
-        end if
-      end do
-
-      Q(cardinals(CARDINAL_NORMAL)) = dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL))&
-           * (pvals(m,1) - sum(fi(m,:))) / weightsum(cardinals(CARDINAL_NORMAL))
-
-      momentum = 0.d0
-      do p=2,dist%info%ndims
-        do n=1,dist%disc%b
-          momentum(cardinals(p)) = momentum(cardinals(p)) + & ! disc%ci(directions(dist%disc%LOCAL_NORMAL),cardinals(CARDINAL_NORMAL)) *
-               fi(m,n)*dist%disc%ci(n, cardinals(p))
-          if ((dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL)) &
-               * dist%disc%ci(n,cardinals(CARDINAL_NORMAL)).eq.1).and. &
-               (dist%disc%ci(n,cardinals(p)).ne.0)) then
-            ! pointed inward and has a component in the p-direction
-            weightsum(cardinals(p)) = weightsum(cardinals(p)) + dist%disc%weights(n)
-          end if
-        end do
-        Q(cardinals(p)) = - momentum(cardinals(p)) / weightsum(cardinals(p))
-      end do
-
-      do n=1,dist%disc%b
-        if (dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL)) &
-             * dist%disc%ci(n,cardinals(CARDINAL_NORMAL)).eq.1) then
-          fi(m,n) = fi(m,n) + dist%disc%weights(n)*sum(dist%disc%ci(n,:)*Q(:))
-        end if
-      end do
-    end do
-  end subroutine BCApplyDirichletNode
-
-  subroutine BCApplyFluxNode(bc, fi, forces, mvals, directions, cardinals, dist)
-    type(bc_type) bc
-    type(distribution_type) dist
-    PetscScalar,intent(inout),dimension(1:dist%s, 0:dist%disc%b):: fi
-    PetscScalar,intent(in),dimension(1:dist%s, dist%info%ndims):: forces
-    PetscScalar,intent(in),dimension(dist%s,dist%info%ndims):: mvals
-    PetscInt,intent(in),dimension(0:dist%disc%b):: directions
-    PetscInt,intent(in),dimension(1:dist%info%ndims):: cardinals
-
-    PetscScalar, dimension(dist%info%ndims) :: Q, momentum, weightsum
-    PetscInt m,n,p
-    PetscInt local_normal
-
-    ! NOTE ON ASSUMPTIONS:
-    ! -- f*_i(x,t) = f_i(x,t-dt) (see Chang, Liu, and Lin, Comp & Math with Apps 2009)
-    ! -- weights are isotropic (for instance, that weights(12) - weights(11) = 0)
-
-    ! calculation is based upon the positive z-direction boundary, and
-    ! all others are rotated to match via directions/cardinals.
-    local_normal = directions(dist%disc%local_normal)
-
-    do m=1,dist%s
-      ! note fi has fi in the interior/defined directions and f* in
-      ! the incoming/unknown directions
-      weightsum = 0.d0
-      momentum = 0.d0
-      do p=1,dist%info%ndims
-        do n=1,dist%disc%b
-          momentum(p) = momentum(p) &
-               + fi(m,n)*dist%disc%ci(n, p)
-          if ((dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL)) &
-               * dist%disc%ci(n,cardinals(CARDINAL_NORMAL)).eq.1).and. &
-               (dist%disc%ci(n,p).ne.0)) then
-            ! points inward and has a component in the p direction
-            weightsum(p) = weightsum(p) + dist%disc%weights(n)
-          end if
-        end do
-        Q(p) = mvals(m,p) - forces(m,p)- momentum(p) / weightsum(p)
-      end do
-
-      do n=1,dist%disc%b
-        if (dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL)) &
-             * dist%disc%ci(n,cardinals(CARDINAL_NORMAL)).eq.1) then
-          fi(m,n) = fi(m,n) + dist%disc%weights(n)*sum(dist%disc%ci(n,:)*Q(:))
-        end if
-      end do
-    end do
-  end subroutine BCApplyFluxNode
-
-  subroutine BCApplyVelocityNode(bc, fi, forces, uvals, directions, cardinals, dist)
-    type(bc_type) bc
-    type(distribution_type) dist
-    PetscScalar,intent(inout),dimension(1:dist%s, 0:dist%disc%b):: fi
-    PetscScalar,intent(in),dimension(1:dist%s, dist%info%ndims):: forces
-    PetscScalar,intent(in),dimension(dist%s,dist%info%ndims):: uvals
-    PetscInt,intent(in),dimension(0:dist%disc%b):: directions
-    PetscInt,intent(in),dimension(1:dist%info%ndims):: cardinals
-
-    PetscScalar, dimension(dist%info%ndims) :: Q, momentum, weightsum
-    PetscScalar rho
-    PetscInt m,n,p
-    PetscInt local_normal
-
-    ! NOTE ON ASSUMPTIONS:
-    ! -- f*_i(x,t) = f_i(x,t-dt) (see Chang, Liu, and Lin, Comp & Math with Apps 2009)
-    ! -- weights are isotropic (for instance, that weights(12) - weights(11) = 0)
-
-    ! calculation is based upon the positive z-direction boundary, and
-    ! all others are rotated to match via directions/cardinals.
-    local_normal = directions(dist%disc%local_normal)
-
-    do m=1,dist%s
-      ! note fi has fi in the interior/defined directions and f* in
-      ! the incoming/unknown directions
-      weightsum = 0.d0
-      momentum = 0.d0
-      do n=1,dist%disc%b
-        momentum(cardinals(CARDINAL_NORMAL)) = momentum(cardinals(CARDINAL_NORMAL)) &
-             + fi(m,n)*dist%disc%ci(n, cardinals(CARDINAL_NORMAL))
-        if (dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL)) &
-             * dist%disc%ci(n,cardinals(CARDINAL_NORMAL)).eq.1) then
-          ! incoming f_i, as c_i is positive in the inward-normal direction
-          weightsum(cardinals(CARDINAL_NORMAL)) = weightsum(cardinals(CARDINAL_NORMAL)) &
-               + dist%disc%weights(n)
-        end if
-      end do
-
-      Q(cardinals(CARDINAL_NORMAL)) =(dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL))&
-           *sum(fi(m,:))*uvals(1,cardinals(CARDINAL_NORMAL)) &
-           - momentum(cardinals(CARDINAL_NORMAL)) - forces(m,cardinals(CARDINAL_NORMAL))) &
-           / (1.d0 - uvals(1,cardinals(CARDINAL_NORMAL))) &
-           / weightsum(cardinals(CARDINAL_NORMAL))
-
-      rho = sum(fi(m,:)) &
-           + weightsum(cardinals(CARDINAL_NORMAL))*Q(cardinals(CARDINAL_NORMAL))
-
-      do p=2,dist%info%ndims
-        do n=1,dist%disc%b
-          momentum(cardinals(p)) = momentum(cardinals(p)) &
-               + fi(m,n)*dist%disc%ci(n, cardinals(p))
-          if ((dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL)) &
-               * dist%disc%ci(n,cardinals(CARDINAL_NORMAL)).eq.1).and. &
-               (dist%disc%ci(n,cardinals(p)).ne.0)) then
-            ! pointed inward and has a component in the p-direction
-            weightsum(cardinals(p)) = weightsum(cardinals(p)) + dist%disc%weights(n)
-          end if
-        end do
-        Q(cardinals(p)) = (rho*uvals(m,cardinals(p)) - forces(m,cardinals(p)) &
-             - momentum(cardinals(p))) / weightsum(cardinals(p))
-      end do
-
-      do n=1,dist%disc%b
-        if (dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL)) &
-             * dist%disc%ci(n,cardinals(CARDINAL_NORMAL)).eq.1) then
-          fi(m,n) = fi(m,n) + dist%disc%weights(n)*sum(dist%disc%ci(n,:)*Q(:))
-        end if
-      end do
-    end do
-  end subroutine BCApplyVelocityNode
-
-
-
-
-
-
-
-  subroutine BCApplyVelocityD3(bc, fi, forces, walls, xm_vals, xp_vals, &
-       ym_vals, yp_vals, zm_vals, zp_vals, dist)
-    type(bc_type) bc
-    type(distribution_type) dist
-    PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
-    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: forces
-    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
-         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
-    PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye, &
-         dist%info%zs:dist%info%ze):: xm_vals, xp_vals
-    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
-         dist%info%zs:dist%info%ze):: ym_vals, yp_vals
-    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
-         dist%info%ys:dist%info%ye):: zm_vals, zp_vals
-
-    PetscInt i,j,k
-    PetscInt directions(0:dist%b)
-    PetscInt cardinals(1:dist%info%ndims)
-
-    directions(:) = 0
-    ! XM BOUNDARY
-    if ((bc%flags(BOUNDARY_XM).eq.BC_VELOCITY).and.(dist%info%xs.eq.1)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_XM, directions, cardinals)
-      do k=dist%info%zs,dist%info%ze
-        do j=dist%info%ys,dist%info%ye
-          i = 1
-          if (walls(i,j,k).eq.0) then
-            call DiscApplyBCVelocityToBoundary(dist%disc, fi(:,:,i,j,k), &
-                 forces(:,:,i,j,k), xm_vals(:,j,k), directions, cardinals, dist)
-          end if
-        end do
-      end do
-    endif
-
-    directions(:) = 0
-    ! XP BOUNDARY
-    if ((bc%flags(BOUNDARY_XP).eq.BC_VELOCITY).and.(dist%info%xe.eq.dist%info%NX)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_XP, directions, cardinals)
-      do k=dist%info%zs,dist%info%ze
-        do j=dist%info%ys,dist%info%ye
-          i = dist%info%NX
-          if (walls(i,j,k).eq.0) then
-            call DiscApplyBCVelocityToBoundary(dist%disc, fi(:,:,i,j,k), &
-                 forces(:,:,i,j,k), xp_vals(:,j,k), directions, cardinals, dist)
-          end if
-        end do
-      end do
-    endif
-
-    directions(:) = 0
-    ! YM BOUNDARY
-    if ((bc%flags(BOUNDARY_YM).eq.BC_VELOCITY).and.(dist%info%ys.eq.1)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_YM, directions, cardinals)
-      do k=dist%info%zs,dist%info%ze
-        do i=dist%info%xs,dist%info%xe
-          j = 1
-          if (walls(i,j,k).eq.0) then
-            call DiscApplyBCVelocityToBoundary(dist%disc, fi(:,:,i,j,k), &
-                 forces(:,:,i,j,k), ym_vals(:,i,k), directions, cardinals, dist)
-          end if
-        end do
-      end do
-    endif
-
-    directions(:) = 0
-    ! YP BOUNDARY
-    if ((bc%flags(BOUNDARY_YP).eq.BC_VELOCITY).and.(dist%info%ye.eq.dist%info%NY)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_YP, directions, cardinals)
-      do k=dist%info%zs,dist%info%ze
-        do i=dist%info%xs,dist%info%xe
-          j = dist%info%NY
-          if (walls(i,j,k).eq.0) then
-            call DiscApplyBCVelocityToBoundary(dist%disc, fi(:,:,i,j,k), &
-                 forces(:,:,i,j,k), yp_vals(:,i,k), directions, cardinals, dist)
-          end if
-        end do
-      end do
-    endif
-
-    directions(:) = 0
-    ! ZM BOUNDARY
-    if ((bc%flags(BOUNDARY_ZM).eq.BC_VELOCITY).and.(dist%info%zs.eq.1)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_ZM, directions, cardinals)
-      do j=dist%info%ys,dist%info%ye
-        do i=dist%info%xs,dist%info%xe
-          k = 1
-          if (walls(i,j,k).eq.0) then
-            call DiscApplyBCVelocityToBoundary(dist%disc, fi(:,:,i,j,k), &
-                 forces(:,:,i,j,k), zm_vals(:,i,j), directions, cardinals, dist)
-          end if
-        end do
-      end do
-    endif
-
-    directions(:) = 0
-    ! ZP BOUNDARY
-    if ((bc%flags(BOUNDARY_ZP).eq.BC_VELOCITY).and.(dist%info%ze.eq.dist%info%NZ)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_ZP, directions, cardinals)
-      do j=dist%info%ys,dist%info%ye
-        do i=dist%info%xs,dist%info%xe
-          k = dist%info%NZ
-          if (walls(i,j,k).eq.0) then
-            call DiscApplyBCVelocityToBoundary(dist%disc, fi(:,:,i,j,k), &
-                 forces(:,:,i,j,k), zp_vals(:,i,j), directions, cardinals, dist)
-          end if
-        end do
-      end do
-    endif
-    return
-  end subroutine BCApplyVelocityD3
-
-  subroutine BCApplyVelocityD2(bc, fi, forces, walls, xm_vals, xp_vals, ym_vals, yp_vals, dist)
-    type(bc_type) bc
-    type(distribution_type) dist
-    PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: fi
-    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: forces
-    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
-         dist%info%rgys:dist%info%rgye):: walls
-    PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye):: xm_vals, xp_vals
-    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe):: ym_vals, yp_vals
-
-    PetscInt i,j
-    PetscInt directions(0:dist%b)
-    PetscInt cardinals(1:dist%info%ndims)
-    directions(:) = 0
-
-    ! XM BOUNDARY
-    if ((bc%flags(BOUNDARY_XM).eq.BC_VELOCITY).and.(dist%info%xs.eq.1)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_XM, directions, cardinals)
-      do j=dist%info%ys,dist%info%ye
-        i = 1
-        if (walls(i,j).eq.0) then
-          call DiscApplyBCVelocityToBoundary(dist%disc, fi(:,:,i,j), &
-               forces(:,:,i,j), xm_vals(:,j), directions, cardinals, dist)
-        end if
-      end do
-    endif
-
-    directions(:) = 0
-    ! XP BOUNDARY
-    if ((bc%flags(BOUNDARY_XP).eq.BC_VELOCITY).and.(dist%info%xe.eq.dist%info%NX)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_XP, directions, cardinals)
-      do j=dist%info%ys,dist%info%ye
-        i = dist%info%NX
-        if (walls(i,j).eq.0) then
-          call DiscApplyBCVelocityToBoundary(dist%disc, fi(:,:,i,j), &
-               forces(:,:,i,j), xp_vals(:,j), directions, cardinals, dist)
-        end if
-      end do
-    endif
-
-    directions(:) = 0
-    ! YM BOUNDARY
-    if ((bc%flags(BOUNDARY_YM).eq.BC_VELOCITY).and.(dist%info%ys.eq.1)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_YM, directions, cardinals)
-      do i=dist%info%xs,dist%info%xe
-        j = 1
-        if (walls(i,j).eq.0) then
-          call DiscApplyBCVelocityToBoundary(dist%disc, fi(:,:,i,j), &
-               forces(:,:,i,j), ym_vals(:,i), directions, cardinals, dist)
-        end if
-      end do
-    endif
-
-    directions(:) = 0
-    ! YP BOUNDARY
-    if ((bc%flags(BOUNDARY_YP).eq.BC_VELOCITY).and.(dist%info%ye.eq.dist%info%NY)) then
-      call DiscSetLocalDirections(dist%disc, BOUNDARY_YP, directions, cardinals)
-      do i=dist%info%xs,dist%info%xe
-        j = dist%info%NY
-        if (walls(i,j).eq.0) then
-          call DiscApplyBCVelocityToBoundary(dist%disc, fi(:,:,i,j), &
-               forces(:,:,i,j), yp_vals(:,i), directions, cardinals, dist)
-        end if
-      end do
-    endif
-  end subroutine BCApplyVelocityD2
 
   subroutine BCApplyPseudoperiodicD3(bc, fi, walls, dist)
     type(bc_type) bc
@@ -1729,256 +944,779 @@ contains
     end if
   end subroutine BCApplyPseudoperiodicD2
 
-  subroutine BCApplyZeroGradientD3(bc, fi, walls, dist)
+  subroutine BCApplyDirichlet(bc, forces, walls, dist)
+    type(bc_type) bc
+    type(distribution_type) dist
+    PetscScalar,dimension(dist%info%rgxyzl):: walls
+    PetscScalar,dimension(dist%s,dist%info%ndims,dist%info%gxyzl):: forces
+
+    select case(dist%info%ndims)
+    case(2)
+      call BCApplyDirichletD2(bc, dist%fi_a, forces, walls, bc%xm_a, bc%xp_a, &
+           bc%ym_a, bc%yp_a, dist)
+    case(3)
+      call BCApplyDirichletD3(bc, dist%fi_a, forces, walls, bc%xm_a, bc%xp_a, &
+           bc%ym_a, bc%yp_a, bc%zm_a, bc%zp_a, dist)
+    end select
+  end subroutine BCApplyDirichlet
+
+  subroutine BCApplyDirichletD3(bc, fi, forces, walls, xm_vals, xp_vals, &
+       ym_vals, yp_vals, zm_vals, zp_vals, dist)
     type(bc_type) bc
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
+    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: forces
     PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
+    PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye, &
+         dist%info%zs:dist%info%ze):: xm_vals, xp_vals
+    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
+         dist%info%zs:dist%info%ze):: ym_vals, yp_vals
+    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
+         dist%info%ys:dist%info%ye):: zm_vals, zp_vals
 
-    PetscInt i,j,k,n
-    PetscScalar tmp
-    PetscErrorCode ierr
+    PetscInt i,j,k
+    PetscInt directions(0:dist%b)
+    PetscInt cardinals(1:dist%info%ndims)
 
+    directions(:) = 0
     ! XM BOUNDARY
-    if ((bc%flags(BOUNDARY_XM).eq.BC_PSEUDOPERIODIC).and.(dist%info%xs.eq.1)) then
-      if (.not.dist%info%periodic(X_DIRECTION)) then
-        call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
-        return
-      end if
+    if ((bc%flags(BOUNDARY_XM).eq.BC_DIRICHLET).and.(dist%info%xs.eq.1)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_XM, directions, cardinals)
       do k=dist%info%zs,dist%info%ze
         do j=dist%info%ys,dist%info%ye
           i = 1
           if (walls(i,j,k).eq.0) then
-            do n=1,dist%b
-              if (dist%disc%ci(n,X_DIRECTION) > 0) then
-                ! has a component in the inward-normal direction
-                tmp = fi(1,n,i,j,k)
-                fi(1,n,i,j,k) = fi(2,n,i,j,k)
-                fi(2,n,i,j,k) = tmp
-              end if
-            end do
+            call BCApplyDirichletNode(bc, fi(:,:,i,j,k), forces(:,:,i,j,k), &
+                 xm_vals(:,j,k), directions, cardinals, dist)
           end if
         end do
       end do
-    end if
+    endif
 
+    directions(:) = 0
     ! XP BOUNDARY
-    if ((bc%flags(BOUNDARY_XP).eq.BC_PSEUDOPERIODIC).and.(dist%info%xe.eq.dist%info%NX)) &
-         then
-      if (.not.dist%info%periodic(X_DIRECTION)) then
-        call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
-        return
-      end if
+    if ((bc%flags(BOUNDARY_XP).eq.BC_DIRICHLET).and.(dist%info%xe.eq.dist%info%NX)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_XP, directions, cardinals)
       do k=dist%info%zs,dist%info%ze
         do j=dist%info%ys,dist%info%ye
           i = dist%info%NX
           if (walls(i,j,k).eq.0) then
-            do n=1,dist%b
-              if (dist%disc%ci(n,X_DIRECTION) < 0) then
-                ! has a component in the inward-normal direction
-                tmp = fi(1,n,i,j,k)
-                fi(1,n,i,j,k) = fi(2,n,i,j,k)
-                fi(2,n,i,j,k) = tmp
-              end if
-            end do
+            call BCApplyDirichletNode(bc, fi(:,:,i,j,k), &
+                 -forces(:,:,i,j,k), xp_vals(:,j,k), directions, cardinals, dist)
           end if
         end do
       end do
-    end if
+    endif
 
+    directions(:) = 0
     ! YM BOUNDARY
-    if ((bc%flags(BOUNDARY_YM).eq.BC_PSEUDOPERIODIC).and.(dist%info%ys.eq.1)) then
-      if (.not.dist%info%periodic(Y_DIRECTION)) then
-        call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
-        return
-      end if
+    if ((bc%flags(BOUNDARY_YM).eq.BC_DIRICHLET).and.(dist%info%ys.eq.1)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_YM, directions, cardinals)
       do k=dist%info%zs,dist%info%ze
         do i=dist%info%xs,dist%info%xe
           j = 1
           if (walls(i,j,k).eq.0) then
-            do n=1,dist%b
-              if (dist%disc%ci(n,Y_DIRECTION) > 0) then
-                ! has a component in the inward-normal direction
-                tmp = fi(1,n,i,j,k)
-                fi(1,n,i,j,k) = fi(2,n,i,j,k)
-                fi(2,n,i,j,k) = tmp
-              end if
-            end do
+            call BCApplyDirichletNode(bc, fi(:,:,i,j,k), &
+                 forces(:,:,i,j,k), ym_vals(:,i,k), directions, cardinals, dist)
           end if
         end do
       end do
-    end if
+    endif
 
-    ! YM BOUNDARY
-    if ((bc%flags(BOUNDARY_YP).eq.BC_PSEUDOPERIODIC).and.(dist%info%ye.eq.dist%info%NY)) &
-         then
-      if (.not.dist%info%periodic(Y_DIRECTION)) then
-        call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
-        return
-      end if
+    directions(:) = 0
+    ! YP BOUNDARY
+    if ((bc%flags(BOUNDARY_YP).eq.BC_DIRICHLET).and.(dist%info%ye.eq.dist%info%NY)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_YP, directions, cardinals)
       do k=dist%info%zs,dist%info%ze
         do i=dist%info%xs,dist%info%xe
           j = dist%info%NY
           if (walls(i,j,k).eq.0) then
-            do n=1,dist%b
-              if (dist%disc%ci(n,Y_DIRECTION) < 0) then
-                ! has a component in the inward-normal direction
-                tmp = fi(1,n,i,j,k)
-                fi(1,n,i,j,k) = fi(2,n,i,j,k)
-                fi(2,n,i,j,k) = tmp
-              end if
-            end do
+            call BCApplyDirichletNode(bc, fi(:,:,i,j,k), &
+                 -forces(:,:,i,j,k), yp_vals(:,i,k), directions, cardinals, dist)
           end if
         end do
       end do
-    end if
+    endif
 
+    directions(:) = 0
     ! ZM BOUNDARY
-    if ((bc%flags(BOUNDARY_ZM).eq.BC_PSEUDOPERIODIC).and.(dist%info%zs.eq.1)) then
-      if (.not.dist%info%periodic(Z_DIRECTION)) then
-        call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_z', ierr)
-        return
-      end if
+    if ((bc%flags(BOUNDARY_ZM).eq.BC_DIRICHLET).and.(dist%info%zs.eq.1)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_ZM, directions, cardinals)
       do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
           k = 1
           if (walls(i,j,k).eq.0) then
-            do n=1,dist%b
-              if (dist%disc%ci(n,Z_DIRECTION) > 0) then
-                ! has a component in the inward-normal direction
-                tmp = fi(1,n,i,j,k)
-                fi(1,n,i,j,k) = fi(2,n,i,j,k)
-                fi(2,n,i,j,k) = tmp
-              end if
-            end do
+            call BCApplyDirichletNode(bc, fi(:,:,i,j,k), &
+                 forces(:,:,i,j,k), zm_vals(:,i,j), directions, cardinals, dist)
           end if
         end do
       end do
-    end if
+    endif
 
-    ! ZM BOUNDARY
-    if ((bc%flags(BOUNDARY_ZP).eq.BC_PSEUDOPERIODIC).and.(dist%info%ze.eq.dist%info%NZ)) &
-         then
-      if (.not.dist%info%periodic(Z_DIRECTION)) then
-        call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_z', ierr)
-        return
-      end if
+    directions(:) = 0
+    ! ZP BOUNDARY
+    if ((bc%flags(BOUNDARY_ZP).eq.BC_DIRICHLET).and.(dist%info%ze.eq.dist%info%NZ)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_ZP, directions, cardinals)
       do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
           k = dist%info%NZ
           if (walls(i,j,k).eq.0) then
-            do n=1,dist%b
-              if (dist%disc%ci(n,Z_DIRECTION) < 0) then
-                ! has a component in the inward-normal direction
-                tmp = fi(1,n,i,j,k)
-                fi(1,n,i,j,k) = fi(2,n,i,j,k)
-                fi(2,n,i,j,k) = tmp
-              end if
-            end do
+            call BCApplyDirichletNode(bc, fi(:,:,i,j,k), &
+                 -forces(:,:,i,j,k), zp_vals(:,i,j), directions, cardinals, dist)
           end if
         end do
       end do
-    end if
-  end subroutine BCApplyZeroGradientD3
+    endif
+    return
+  end subroutine BCApplyDirichletD3
 
-  subroutine BCApplyZeroGradientD2(bc, fi, walls, dist)
+  subroutine BCApplyDirichletD2(bc, fi, forces, walls, xm_vals, xp_vals, ym_vals, yp_vals, dist)
     type(bc_type) bc
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: fi
+    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: forces
     PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye):: walls
+    PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye):: xm_vals, xp_vals
+    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe):: ym_vals, yp_vals
 
-    PetscInt i,j,n
-    PetscScalar tmp
-    PetscErrorCode ierr
+    PetscInt i,j
+    PetscInt directions(0:dist%b)
+    PetscInt cardinals(1:dist%info%ndims)
+    directions(:) = 0
 
     ! XM BOUNDARY
-    if ((bc%flags(BOUNDARY_XM).eq.BC_PSEUDOPERIODIC).and.(dist%info%xs.eq.1)) then
-      if (.not.dist%info%periodic(X_DIRECTION)) then
-        call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
-        return
-      end if
+    if ((bc%flags(BOUNDARY_XM).eq.BC_DIRICHLET).and.(dist%info%xs.eq.1)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_XM, directions, cardinals)
       do j=dist%info%ys,dist%info%ye
         i = 1
         if (walls(i,j).eq.0) then
-          do n=1,dist%b
-            if (dist%disc%ci(n,X_DIRECTION) > 0) then
-              ! has a component in the inward-normal direction
-              tmp = fi(1,n,i,j)
-              fi(1,n,i,j) = fi(2,n,i,j)
-              fi(2,n,i,j) = tmp
-            end if
-          end do
+          call BCApplyDirichletNode(bc, fi(:,:,i,j), forces(:,:,i,j), &
+               xm_vals(:,j), directions, cardinals, dist)
         end if
       end do
-    end if
+    endif
 
+    directions(:) = 0
     ! XP BOUNDARY
-    if ((bc%flags(BOUNDARY_XP).eq.BC_PSEUDOPERIODIC).and.(dist%info%xe.eq.dist%info%NX)) &
-         then
-      if (.not.dist%info%periodic(X_DIRECTION)) then
-        call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
-        return
-      end if
+    if ((bc%flags(BOUNDARY_XP).eq.BC_DIRICHLET).and.(dist%info%xe.eq.dist%info%NX)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_XP, directions, cardinals)
       do j=dist%info%ys,dist%info%ye
         i = dist%info%NX
         if (walls(i,j).eq.0) then
-          do n=1,dist%b
-            if (dist%disc%ci(n,X_DIRECTION) < 0) then
-              ! has a component in the inward-normal direction
-              tmp = fi(1,n,i,j)
-              fi(1,n,i,j) = fi(2,n,i,j)
-              fi(2,n,i,j) = tmp
-            end if
-          end do
+          call BCApplyDirichletNode(bc, fi(:,:,i,j), -forces(:,:,i,j), &
+               xp_vals(:,j), directions, cardinals, dist)
         end if
       end do
-    end if
+    endif
 
+    directions(:) = 0
     ! YM BOUNDARY
-    if ((bc%flags(BOUNDARY_YM).eq.BC_PSEUDOPERIODIC).and.(dist%info%ys.eq.1)) then
-      if (.not.dist%info%periodic(Y_DIRECTION)) then
-        call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
-        return
-      end if
+    if ((bc%flags(BOUNDARY_YM).eq.BC_DIRICHLET).and.(dist%info%ys.eq.1)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_YM, directions, cardinals)
       do i=dist%info%xs,dist%info%xe
         j = 1
         if (walls(i,j).eq.0) then
-          do n=1,dist%b
-            if (dist%disc%ci(n,Y_DIRECTION) > 0) then
-              ! has a component in the inward-normal direction
-              tmp = fi(1,n,i,j)
-              fi(1,n,i,j) = fi(2,n,i,j)
-              fi(2,n,i,j) = tmp
-            end if
-          end do
+          call BCApplyDirichletNode(bc, fi(:,:,i,j), forces(:,:,i,j), &
+               ym_vals(:,i), directions, cardinals, dist)
         end if
       end do
-    end if
+    endif
 
-    ! YM BOUNDARY
-    if ((bc%flags(BOUNDARY_YP).eq.BC_PSEUDOPERIODIC).and.(dist%info%ye.eq.dist%info%NY)) &
-         then
-      if (.not.dist%info%periodic(Y_DIRECTION)) then
-        call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
-        return
-      end if
+    directions(:) = 0
+    ! YP BOUNDARY
+    if ((bc%flags(BOUNDARY_YP).eq.BC_DIRICHLET).and.(dist%info%ye.eq.dist%info%NY)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_YP, directions, cardinals)
       do i=dist%info%xs,dist%info%xe
         j = dist%info%NY
         if (walls(i,j).eq.0) then
-          do n=1,dist%b
-            if (dist%disc%ci(n,Y_DIRECTION) < 0) then
-              ! has a component in the inward-normal direction
-              tmp = fi(1,n,i,j)
-              fi(1,n,i,j) = fi(2,n,i,j)
-              fi(2,n,i,j) = tmp
-            end if
-          end do
+          call BCApplyDirichletNode(bc, fi(:,:,i,j), -forces(:,:,i,j), &
+               yp_vals(:,i), directions, cardinals, dist)
         end if
       end do
-    end if
-  end subroutine BCApplyZeroGradientD2
+    endif
+  end subroutine BCApplyDirichletD2
+
+  subroutine BCApplyDirichletNode(bc, fi, forces, pvals, directions, cardinals, dist)
+    type(bc_type) bc
+    type(distribution_type) dist
+    PetscScalar,intent(inout),dimension(1:dist%s, 0:dist%disc%b):: fi
+    PetscScalar,intent(in),dimension(1:dist%s, dist%info%ndims):: forces
+    PetscScalar,intent(in),dimension(dist%s,dist%info%ndims):: pvals
+    PetscInt,intent(in),dimension(0:dist%disc%b):: directions
+    PetscInt,intent(in),dimension(1:dist%info%ndims):: cardinals
+
+    PetscScalar, dimension(dist%info%ndims) :: Q, momentum, weightsum
+    PetscInt m,n,p
+    PetscInt local_normal
+
+    ! NOTE ON ASSUMPTIONS:
+    ! -- f*_i(x,t) = f_i(x,t-dt) (see Chang, Liu, and Lin, Comp & Math with Apps 2009)
+    ! -- weights are isotropic (for instance, that weights(12) - weights(11) = 0)
+    ! -- rho*u = F_x/2, i.e. that tangential momentum is due to forces only
+
+    ! calculation is based upon the positive z-direction boundary, and
+    ! all others are rotated to match via directions/cardinals.
+    local_normal = directions(dist%disc%local_normal)
+
+    do m=1,dist%s
+      ! note fi has fi in the interior/defined directions and f* in
+      ! the incoming/unknown directions
+      weightsum = 0.d0
+      do n=1,dist%disc%b
+        if (dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL)) &
+             * dist%disc%ci(n,cardinals(CARDINAL_NORMAL)).eq.1) then
+          ! incoming f_i, as c_i is positive in the inward-normal direction
+          weightsum(cardinals(CARDINAL_NORMAL)) = weightsum(cardinals(CARDINAL_NORMAL)) &
+               + dist%disc%weights(n)
+        end if
+      end do
+
+      Q(cardinals(CARDINAL_NORMAL)) = dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL))&
+           * (pvals(m,1) - sum(fi(m,:))) / weightsum(cardinals(CARDINAL_NORMAL))
+
+      momentum = 0.d0
+      do p=2,dist%info%ndims
+        do n=1,dist%disc%b
+          momentum(cardinals(p)) = momentum(cardinals(p)) + & ! disc%ci(directions(dist%disc%LOCAL_NORMAL),cardinals(CARDINAL_NORMAL)) *
+               fi(m,n)*dist%disc%ci(n, cardinals(p))
+          if ((dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL)) &
+               * dist%disc%ci(n,cardinals(CARDINAL_NORMAL)).eq.1).and. &
+               (dist%disc%ci(n,cardinals(p)).ne.0)) then
+            ! pointed inward and has a component in the p-direction
+            weightsum(cardinals(p)) = weightsum(cardinals(p)) + dist%disc%weights(n)
+          end if
+        end do
+        Q(cardinals(p)) = - momentum(cardinals(p)) / weightsum(cardinals(p))
+      end do
+
+      do n=1,dist%disc%b
+        if (dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL)) &
+             * dist%disc%ci(n,cardinals(CARDINAL_NORMAL)).eq.1) then
+          fi(m,n) = fi(m,n) + dist%disc%weights(n)*sum(dist%disc%ci(n,:)*Q(:))
+        end if
+      end do
+    end do
+  end subroutine BCApplyDirichletNode
+
+  subroutine BCApplyNeumann(bc, forces, walls, dist)
+    type(bc_type) bc
+    type(distribution_type) dist
+    PetscScalar,dimension(dist%s,dist%info%ndims,dist%info%gxyzl):: forces
+    PetscScalar,dimension(dist%info%rgxyzl):: walls
+
+    select case(dist%info%ndims)
+    case(2)
+      call BCApplyNeumannD2(bc, dist%fi_a, forces, walls, bc%xm_a, bc%xp_a, &
+           bc%ym_a, bc%yp_a, dist)
+    case(3)
+      call BCApplyNeumannD3(bc, dist%fi_a, forces, walls, bc%xm_a, bc%xp_a, &
+           bc%ym_a, bc%yp_a, bc%zm_a, bc%zp_a, dist)
+    end select
+  end subroutine BCApplyNeumann
+
+  subroutine BCApplyNeumannD3(bc, fi, forces, walls, xm_vals, xp_vals, &
+       ym_vals, yp_vals, zm_vals, zp_vals, dist)
+    type(bc_type) bc
+    type(distribution_type) dist
+    PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
+    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: forces
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
+    PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye, &
+         dist%info%zs:dist%info%ze):: xm_vals, xp_vals
+    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
+         dist%info%zs:dist%info%ze):: ym_vals, yp_vals
+    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
+         dist%info%ys:dist%info%ye):: zm_vals, zp_vals
+
+    PetscInt i,j,k
+    PetscInt directions(0:dist%b)
+    PetscInt cardinals(1:dist%info%ndims)
+
+    directions(:) = 0
+    ! XM BOUNDARY
+    if ((bc%flags(BOUNDARY_XM).eq.BC_FLUX).and.(dist%info%xs.eq.1)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_XM, directions, cardinals)
+      do k=dist%info%zs,dist%info%ze
+        do j=dist%info%ys,dist%info%ye
+          i = 1
+          if (walls(i,j,k).eq.0) then
+            call BCApplyNeumannNode(bc, fi(:,:,i,j,k), forces(:,:,i,j,k), &
+                 xm_vals(:,j,k), directions, cardinals, dist)
+          end if
+        end do
+      end do
+    endif
+
+    directions(:) = 0
+    ! XP BOUNDARY
+    if ((bc%flags(BOUNDARY_XP).eq.BC_FLUX).and.(dist%info%xe.eq.dist%info%NX)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_XP, directions, cardinals)
+      do k=dist%info%zs,dist%info%ze
+        do j=dist%info%ys,dist%info%ye
+          i = dist%info%NX
+          if (walls(i,j,k).eq.0) then
+            call BCApplyNeumannNode(bc, fi(:,:,i,j,k), -forces(:,:,i,j,k), &
+                 xp_vals(:,j,k), directions, cardinals, dist)
+          end if
+        end do
+      end do
+    endif
+
+    directions(:) = 0
+    ! YM BOUNDARY
+    if ((bc%flags(BOUNDARY_YM).eq.BC_FLUX).and.(dist%info%ys.eq.1)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_YM, directions, cardinals)
+      do k=dist%info%zs,dist%info%ze
+        do i=dist%info%xs,dist%info%xe
+          j = 1
+          if (walls(i,j,k).eq.0) then
+            call BCApplyNeumannNode(bc, fi(:,:,i,j,k), forces(:,:,i,j,k), &
+                 ym_vals(:,i,k), directions, cardinals, dist)
+          end if
+        end do
+      end do
+    endif
+
+    directions(:) = 0
+    ! YP BOUNDARY
+    if ((bc%flags(BOUNDARY_YP).eq.BC_FLUX).and.(dist%info%ye.eq.dist%info%NY)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_YP, directions, cardinals)
+      do k=dist%info%zs,dist%info%ze
+        do i=dist%info%xs,dist%info%xe
+          j = dist%info%NY
+          if (walls(i,j,k).eq.0) then
+            call BCApplyNeumannNode(bc, fi(:,:,i,j,k), -forces(:,:,i,j,k), &
+                 yp_vals(:,i,k), directions, cardinals, dist)
+          end if
+        end do
+      end do
+    endif
+
+    directions(:) = 0
+    ! ZM BOUNDARY
+    if ((bc%flags(BOUNDARY_ZM).eq.BC_FLUX).and.(dist%info%zs.eq.1)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_ZM, directions, cardinals)
+      do j=dist%info%ys,dist%info%ye
+        do i=dist%info%xs,dist%info%xe
+          k = 1
+          if (walls(i,j,k).eq.0) then
+            call BCApplyNeumannNode(bc, fi(:,:,i,j,k), forces(:,:,i,j,k), &
+                 zm_vals(:,i,j), directions, cardinals, dist)
+          end if
+        end do
+      end do
+    endif
+
+    directions(:) = 0
+    ! ZP BOUNDARY
+    if ((bc%flags(BOUNDARY_ZP).eq.BC_FLUX).and.(dist%info%ze.eq.dist%info%NZ)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_ZP, directions, cardinals)
+      do j=dist%info%ys,dist%info%ye
+        do i=dist%info%xs,dist%info%xe
+          k = dist%info%NZ
+          if (walls(i,j,k).eq.0) then
+            call BCApplyNeumannNode(bc, fi(:,:,i,j,k), -forces(:,:,i,j,k), &
+                 zp_vals(:,i,j), directions, cardinals, dist)
+          end if
+        end do
+      end do
+    endif
+    return
+  end subroutine BCApplyNeumannD3
+
+  subroutine BCApplyNeumannD2(bc, fi, forces, walls, xm_vals, xp_vals, ym_vals, yp_vals, dist)
+    type(bc_type) bc
+    type(distribution_type) dist
+    PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: fi
+    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: forces
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
+    PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye):: xm_vals, xp_vals
+    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe):: ym_vals, yp_vals
+
+    PetscInt i,j
+    PetscInt directions(0:dist%b)
+    PetscInt cardinals(1:dist%info%ndims)
+    directions(:) = 0
+
+    ! XM BOUNDARY
+    if ((bc%flags(BOUNDARY_XM).eq.BC_FLUX).and.(dist%info%xs.eq.1)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_XM, directions, cardinals)
+      do j=dist%info%ys,dist%info%ye
+        i = 1
+        if (walls(i,j).eq.0) then
+          call BCApplyNeumannNode(bc, fi(:,:,i,j), forces(:,:,i,j), &
+               xm_vals(:,j), directions, cardinals, dist)
+        end if
+      end do
+    endif
+
+    directions(:) = 0
+    ! XP BOUNDARY
+    if ((bc%flags(BOUNDARY_XP).eq.BC_FLUX).and.(dist%info%xe.eq.dist%info%NX)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_XP, directions, cardinals)
+      do j=dist%info%ys,dist%info%ye
+        i = dist%info%NX
+        if (walls(i,j).eq.0) then
+          call BCApplyNeumannNode(bc, fi(:,:,i,j), -forces(:,:,i,j), &
+               xp_vals(:,j), directions, cardinals, dist)
+        end if
+      end do
+    endif
+
+    directions(:) = 0
+    ! YM BOUNDARY
+    if ((bc%flags(BOUNDARY_YM).eq.BC_FLUX).and.(dist%info%ys.eq.1)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_YM, directions, cardinals)
+      do i=dist%info%xs,dist%info%xe
+        j = 1
+        if (walls(i,j).eq.0) then
+          call BCApplyNeumannNode(bc, fi(:,:,i,j), forces(:,:,i,j), &
+               ym_vals(:,i), directions, cardinals, dist)
+        end if
+      end do
+    endif
+
+    directions(:) = 0
+    ! YP BOUNDARY
+    if ((bc%flags(BOUNDARY_YP).eq.BC_FLUX).and.(dist%info%ye.eq.dist%info%NY)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_YP, directions, cardinals)
+      do i=dist%info%xs,dist%info%xe
+        j = dist%info%NY
+        if (walls(i,j).eq.0) then
+          call BCApplyNeumannNode(bc, fi(:,:,i,j), -forces(:,:,i,j), &
+               yp_vals(:,i), directions, cardinals, dist)
+        end if
+      end do
+    endif
+  end subroutine BCApplyNeumannD2
+
+  subroutine BCApplyNeumannNode(bc, fi, forces, mvals, directions, cardinals, dist)
+    type(bc_type) bc
+    type(distribution_type) dist
+    PetscScalar,intent(inout),dimension(1:dist%s, 0:dist%disc%b):: fi
+    PetscScalar,intent(in),dimension(1:dist%s, dist%info%ndims):: forces
+    PetscScalar,intent(in),dimension(dist%s,dist%info%ndims):: mvals
+    PetscInt,intent(in),dimension(0:dist%disc%b):: directions
+    PetscInt,intent(in),dimension(1:dist%info%ndims):: cardinals
+
+    PetscScalar, dimension(dist%info%ndims) :: Q, momentum, weightsum
+    PetscInt m,n,p
+    PetscInt local_normal
+
+    ! NOTE ON ASSUMPTIONS:
+    ! -- f*_i(x,t) = f_i(x,t-dt) (see Chang, Liu, and Lin, Comp & Math with Apps 2009)
+    ! -- weights are isotropic (for instance, that weights(12) - weights(11) = 0)
+
+    ! calculation is based upon the positive z-direction boundary, and
+    ! all others are rotated to match via directions/cardinals.
+    local_normal = directions(dist%disc%local_normal)
+
+    do m=1,dist%s
+      ! note fi has fi in the interior/defined directions and f* in
+      ! the incoming/unknown directions
+      weightsum = 0.d0
+      momentum = 0.d0
+      do p=1,dist%info%ndims
+        do n=1,dist%disc%b
+          momentum(p) = momentum(p) &
+               + fi(m,n)*dist%disc%ci(n, p)
+          if ((dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL)) &
+               * dist%disc%ci(n,cardinals(CARDINAL_NORMAL)).eq.1).and. &
+               (dist%disc%ci(n,p).ne.0)) then
+            ! points inward and has a component in the p direction
+            weightsum(p) = weightsum(p) + dist%disc%weights(n)
+          end if
+        end do
+        Q(p) = mvals(m,p) - forces(m,p)- momentum(p) / weightsum(p)
+      end do
+
+      do n=1,dist%disc%b
+        if (dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL)) &
+             * dist%disc%ci(n,cardinals(CARDINAL_NORMAL)).eq.1) then
+          fi(m,n) = fi(m,n) + dist%disc%weights(n)*sum(dist%disc%ci(n,:)*Q(:))
+        end if
+      end do
+    end do
+  end subroutine BCApplyNeumannNode
+
+  subroutine BCApplyVelocity(bc, forces, walls, dist)
+    type(bc_type) bc
+    type(distribution_type) dist
+    PetscScalar,dimension(dist%s,dist%info%ndims,dist%info%gxyzl):: forces
+    PetscScalar,dimension(dist%info%rgxyzl):: walls
+
+    select case(dist%info%ndims)
+    case(2)
+      call BCApplyVelocityD2(bc, dist%fi_a, forces, walls, bc%xm_a, bc%xp_a, &
+           bc%ym_a, bc%yp_a, dist)
+    case(3)
+      call BCApplyVelocityD3(bc, dist%fi_a, forces, walls, bc%xm_a, bc%xp_a, &
+           bc%ym_a, bc%yp_a, bc%zm_a, bc%zp_a, dist)
+    end select
+  end subroutine BCApplyVelocity
+
+  subroutine BCApplyVelocityD3(bc, fi, forces, walls, xm_vals, xp_vals, &
+       ym_vals, yp_vals, zm_vals, zp_vals, dist)
+    type(bc_type) bc
+    type(distribution_type) dist
+    PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: fi
+    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: forces
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
+    PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye, &
+         dist%info%zs:dist%info%ze):: xm_vals, xp_vals
+    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
+         dist%info%zs:dist%info%ze):: ym_vals, yp_vals
+    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
+         dist%info%ys:dist%info%ye):: zm_vals, zp_vals
+
+    PetscInt i,j,k
+    PetscInt directions(0:dist%b)
+    PetscInt cardinals(1:dist%info%ndims)
+
+    directions(:) = 0
+    ! XM BOUNDARY
+    if ((bc%flags(BOUNDARY_XM).eq.BC_VELOCITY).and.(dist%info%xs.eq.1)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_XM, directions, cardinals)
+      do k=dist%info%zs,dist%info%ze
+        do j=dist%info%ys,dist%info%ye
+          i = 1
+          if (walls(i,j,k).eq.0) then
+            call BCApplyVelocityNode(bc, fi(:,:,i,j,k), forces(:,:,i,j,k), &
+                 xm_vals(:,j,k), directions, cardinals, dist)
+          end if
+        end do
+      end do
+    endif
+
+    directions(:) = 0
+    ! XP BOUNDARY
+    if ((bc%flags(BOUNDARY_XP).eq.BC_VELOCITY).and.(dist%info%xe.eq.dist%info%NX)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_XP, directions, cardinals)
+      do k=dist%info%zs,dist%info%ze
+        do j=dist%info%ys,dist%info%ye
+          i = dist%info%NX
+          if (walls(i,j,k).eq.0) then
+            call BCApplyVelocityNode(bc, fi(:,:,i,j,k), -forces(:,:,i,j,k), &
+                 xp_vals(:,j,k), directions, cardinals, dist)
+          end if
+        end do
+      end do
+    endif
+
+    directions(:) = 0
+    ! YM BOUNDARY
+    if ((bc%flags(BOUNDARY_YM).eq.BC_VELOCITY).and.(dist%info%ys.eq.1)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_YM, directions, cardinals)
+      do k=dist%info%zs,dist%info%ze
+        do i=dist%info%xs,dist%info%xe
+          j = 1
+          if (walls(i,j,k).eq.0) then
+            call BCApplyVelocityNode(bc, fi(:,:,i,j,k), forces(:,:,i,j,k), &
+                 ym_vals(:,i,k), directions, cardinals, dist)
+          end if
+        end do
+      end do
+    endif
+
+    directions(:) = 0
+    ! YP BOUNDARY
+    if ((bc%flags(BOUNDARY_YP).eq.BC_VELOCITY).and.(dist%info%ye.eq.dist%info%NY)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_YP, directions, cardinals)
+      do k=dist%info%zs,dist%info%ze
+        do i=dist%info%xs,dist%info%xe
+          j = dist%info%NY
+          if (walls(i,j,k).eq.0) then
+            call BCApplyVelocityNode(bc, fi(:,:,i,j,k), -forces(:,:,i,j,k), &
+                 yp_vals(:,i,k), directions, cardinals, dist)
+          end if
+        end do
+      end do
+    endif
+
+    directions(:) = 0
+    ! ZM BOUNDARY
+    if ((bc%flags(BOUNDARY_ZM).eq.BC_VELOCITY).and.(dist%info%zs.eq.1)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_ZM, directions, cardinals)
+      do j=dist%info%ys,dist%info%ye
+        do i=dist%info%xs,dist%info%xe
+          k = 1
+          if (walls(i,j,k).eq.0) then
+            call BCApplyVelocityNode(bc, fi(:,:,i,j,k), forces(:,:,i,j,k), &
+                 zm_vals(:,i,j), directions, cardinals, dist)
+          end if
+        end do
+      end do
+    endif
+
+    directions(:) = 0
+    ! ZP BOUNDARY
+    if ((bc%flags(BOUNDARY_ZP).eq.BC_VELOCITY).and.(dist%info%ze.eq.dist%info%NZ)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_ZP, directions, cardinals)
+      do j=dist%info%ys,dist%info%ye
+        do i=dist%info%xs,dist%info%xe
+          k = dist%info%NZ
+          if (walls(i,j,k).eq.0) then
+            call BCApplyVelocityNode(bc, fi(:,:,i,j,k), -forces(:,:,i,j,k), &
+                 zp_vals(:,i,j), directions, cardinals, dist)
+          end if
+        end do
+      end do
+    endif
+    return
+  end subroutine BCApplyVelocityD3
+
+  subroutine BCApplyVelocityD2(bc, fi, forces, walls, xm_vals, xp_vals, ym_vals, yp_vals, dist)
+    type(bc_type) bc
+    type(distribution_type) dist
+    PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: fi
+    PetscScalar,dimension(dist%s,dist%info%ndims, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: forces
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
+    PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye):: xm_vals, xp_vals
+    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe):: ym_vals, yp_vals
+
+    PetscInt i,j
+    PetscInt directions(0:dist%b)
+    PetscInt cardinals(1:dist%info%ndims)
+    directions(:) = 0
+
+    ! XM BOUNDARY
+    if ((bc%flags(BOUNDARY_XM).eq.BC_VELOCITY).and.(dist%info%xs.eq.1)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_XM, directions, cardinals)
+      do j=dist%info%ys,dist%info%ye
+        i = 1
+        if (walls(i,j).eq.0) then
+          call BCApplyVelocityNode(bc, fi(:,:,i,j), forces(:,:,i,j), &
+               xm_vals(:,j), directions, cardinals, dist)
+        end if
+      end do
+    endif
+
+    directions(:) = 0
+    ! XP BOUNDARY
+    if ((bc%flags(BOUNDARY_XP).eq.BC_VELOCITY).and.(dist%info%xe.eq.dist%info%NX)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_XP, directions, cardinals)
+      do j=dist%info%ys,dist%info%ye
+        i = dist%info%NX
+        if (walls(i,j).eq.0) then
+          call BCApplyVelocityNode(bc, fi(:,:,i,j), -forces(:,:,i,j), &
+               xp_vals(:,j), directions, cardinals, dist)
+        end if
+      end do
+    endif
+
+    directions(:) = 0
+    ! YM BOUNDARY
+    if ((bc%flags(BOUNDARY_YM).eq.BC_VELOCITY).and.(dist%info%ys.eq.1)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_YM, directions, cardinals)
+      do i=dist%info%xs,dist%info%xe
+        j = 1
+        if (walls(i,j).eq.0) then
+          call BCApplyVelocityNode(bc, fi(:,:,i,j), forces(:,:,i,j), &
+               ym_vals(:,i), directions, cardinals, dist)
+        end if
+      end do
+    endif
+
+    directions(:) = 0
+    ! YP BOUNDARY
+    if ((bc%flags(BOUNDARY_YP).eq.BC_VELOCITY).and.(dist%info%ye.eq.dist%info%NY)) then
+      call DiscSetLocalDirections(dist%disc, BOUNDARY_YP, directions, cardinals)
+      do i=dist%info%xs,dist%info%xe
+        j = dist%info%NY
+        if (walls(i,j).eq.0) then
+          call BCApplyVelocityNode(bc, fi(:,:,i,j), -forces(:,:,i,j), &
+               yp_vals(:,i), directions, cardinals, dist)
+        end if
+      end do
+    endif
+  end subroutine BCApplyVelocityD2
+
+  subroutine BCApplyVelocityNode(bc, fi, forces, uvals, directions, cardinals, dist)
+    type(bc_type) bc
+    type(distribution_type) dist
+    PetscScalar,intent(inout),dimension(1:dist%s, 0:dist%disc%b):: fi
+    PetscScalar,intent(in),dimension(1:dist%s, dist%info%ndims):: forces
+    PetscScalar,intent(in),dimension(dist%s,dist%info%ndims):: uvals
+    PetscInt,intent(in),dimension(0:dist%disc%b):: directions
+    PetscInt,intent(in),dimension(1:dist%info%ndims):: cardinals
+
+    PetscScalar, dimension(dist%info%ndims) :: Q, momentum, weightsum
+    PetscScalar rho
+    PetscInt m,n,p
+    PetscInt local_normal
+
+    ! NOTE ON ASSUMPTIONS:
+    ! -- f*_i(x,t) = f_i(x,t-dt) (see Chang, Liu, and Lin, Comp & Math with Apps 2009)
+    ! -- weights are isotropic (for instance, that weights(12) - weights(11) = 0)
+
+    ! calculation is based upon the positive z-direction boundary, and
+    ! all others are rotated to match via directions/cardinals.
+    local_normal = directions(dist%disc%local_normal)
+
+    do m=1,dist%s
+      ! note fi has fi in the interior/defined directions and f* in
+      ! the incoming/unknown directions
+      weightsum = 0.d0
+      momentum = 0.d0
+      do n=1,dist%disc%b
+        momentum(cardinals(CARDINAL_NORMAL)) = momentum(cardinals(CARDINAL_NORMAL)) &
+             + fi(m,n)*dist%disc%ci(n, cardinals(CARDINAL_NORMAL))
+        if (dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL)) &
+             * dist%disc%ci(n,cardinals(CARDINAL_NORMAL)).eq.1) then
+          ! incoming f_i, as c_i is positive in the inward-normal direction
+          weightsum(cardinals(CARDINAL_NORMAL)) = weightsum(cardinals(CARDINAL_NORMAL)) &
+               + dist%disc%weights(n)
+        end if
+      end do
+
+      Q(cardinals(CARDINAL_NORMAL)) =(dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL))&
+           *sum(fi(m,:))*uvals(1,cardinals(CARDINAL_NORMAL)) &
+           - momentum(cardinals(CARDINAL_NORMAL)) - forces(m,cardinals(CARDINAL_NORMAL))) &
+           / (1.d0 - uvals(1,cardinals(CARDINAL_NORMAL))) &
+           / weightsum(cardinals(CARDINAL_NORMAL))
+
+      rho = sum(fi(m,:)) &
+           + weightsum(cardinals(CARDINAL_NORMAL))*Q(cardinals(CARDINAL_NORMAL))
+
+      do p=2,dist%info%ndims
+        do n=1,dist%disc%b
+          momentum(cardinals(p)) = momentum(cardinals(p)) &
+               + fi(m,n)*dist%disc%ci(n, cardinals(p))
+          if ((dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL)) &
+               * dist%disc%ci(n,cardinals(CARDINAL_NORMAL)).eq.1).and. &
+               (dist%disc%ci(n,cardinals(p)).ne.0)) then
+            ! pointed inward and has a component in the p-direction
+            weightsum(cardinals(p)) = weightsum(cardinals(p)) + dist%disc%weights(n)
+          end if
+        end do
+        Q(cardinals(p)) = (rho*uvals(m,cardinals(p)) - forces(m,cardinals(p)) &
+             - momentum(cardinals(p))) / weightsum(cardinals(p))
+      end do
+
+      do n=1,dist%disc%b
+        if (dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL)) &
+             * dist%disc%ci(n,cardinals(CARDINAL_NORMAL)).eq.1) then
+          fi(m,n) = fi(m,n) + dist%disc%weights(n)*sum(dist%disc%ci(n,:)*Q(:))
+        end if
+      end do
+    end do
+  end subroutine BCApplyVelocityNode
 end module LBM_BC_module
