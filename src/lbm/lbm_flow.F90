@@ -42,8 +42,11 @@ module LBM_Flow_module
      type(component_type),pointer,dimension(:):: components
      type(grid_type),pointer:: grid
      type(distribution_type),pointer:: distribution
+
      type(bc_type),pointer:: bc
-     
+     PetscInt, dimension(6):: bc_flags
+     PetscScalar,allocatable,dimension(:,:) :: bc_data
+
      PetscBool io_fi
      PetscBool io_last_fi
      PetscBool io_rho
@@ -63,7 +66,7 @@ module LBM_Flow_module
      PetscScalar,pointer,dimension(:,:,:):: fi_eq
      PetscScalar,pointer,dimension(:,:,:):: forces
      PetscScalar,pointer,dimension(:,:):: psi_of_rho
-     character(len=MAXWORDLENGTH) name       
+     character(len=MAXWORDLENGTH) name
 
      PetscBool :: body_forces
      PetscBool :: fluidfluid_forces
@@ -228,13 +231,49 @@ contains
     end do
 
     flow%fluidsolid_forces = options%flow_fluidsolid_forces
-    
+
     ! set up the vectors for holding boundary data
-    ! dimension 
+    ! dimension
     call BCSetSizes(flow%bc, options%ndims*options%ncomponents)
     call BCSetFromOptions(flow%bc, options, ierr)
+    allocate(flow%bc_data(flow%dist%s,6))
 
-    ! parse all flow boundary conditions
+    ! parse flow boundary conditions
+    bcvalue = PETSC_FALSE
+    call OptionsGetBool(options, "-bc_density_xm", "use density BC", bcvalue, flag, ierr)
+    if (bcvalue) then
+      flow%bc%flags(BOUNDARY_XM) = BC_DIRICHLET
+      flow%bc_flags(BOUNDARY_XM) = BC_DENSITY
+      flow%bc_data(:,BOUNDARY_XM) = -1.d0
+      if (flow%dist%s.eq.1) then
+        call OptionsGetScalar(options, "-bc_density_xm_value", "density", &
+             flow%bc_data(1,BOUNDARY_XM), flag, ierr)
+      else
+        do m=1,flow%dist%s
+          call OptionsGetScalar(options, "-bc_density_xm_"//flow%components(m)%name, &
+               "density", flow%bc_data(m,BOUNDARY_XM), flag, ierr)
+        end do
+      end if
+      if (MINVALUE(flow%bc_data(:,BOUNDARY_XM)) < 0.d0) then
+        call LBMWarn("Density BC on boundary XM not set -- be sure to set in"// &
+             " initialize_bcs hook!", ierr)
+      end if
+    endif
+
+
+
+
+
+
+
+    bcvalue = PETSC_FALSE
+    call OptionsGetBool(options, "-bc_pressure_inlet_xm", &
+         "use pressure and mass fraction BC", bcvalue, flag, ierr)
+    if (bcvalue) then
+      flow%bc%flags(BOUNDARY_XM) = BC_DIRICHLET
+      flow%bc_flags(BOUNDARY_XM) = BC_DENSITY
+    endif
+
     if (help) call PetscPrintf(options%comm, "-bc_pressure_{xyz}{mp}: use pressure bcs\n",&
          ierr)
     if (help) call PetscPrintf(options%comm, "-bc_velocity_{xyz}{mp}: use total"//&
@@ -309,7 +348,7 @@ contains
     bcvalue = PETSC_FALSE
     call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_yp', bcvalue, flag, ierr)
     if (bcvalue) flow%bc%flags(BOUNDARY_YP) = BC_DIRICHLET
-    
+
     bcvalue = PETSC_FALSE
     call PetscOptionsGetBool(options%my_prefix, '-bc_flux_yp', bcvalue, flag, ierr)
     if (bcvalue) flow%bc%flags(BOUNDARY_YP) = BC_FLUX
@@ -438,7 +477,7 @@ contains
            flow%components(lcv)%viscosity = flow%grid%length_scale * &
                 flow%grid%length_scale * &
                 (flow%components(1)%relax%tau - 0.5)/(3.*flow%time_scale)
-        else 
+        else
           consistent_tau = (3.*flow%time_scale*flow%components(lcv)%viscosity) &
                 /(flow%grid%length_scale* &
                 flow%grid%length_scale) + 0.5
@@ -474,7 +513,7 @@ contains
         end if
       end do
     end if
-    
+
     if (flow%grid%info%rank .eq. 0) then
        print*, 'Scale report from LBM:'
        print*, '  length scale [m]:', flow%grid%length_scale
@@ -484,7 +523,7 @@ contains
     end if
   end subroutine FlowSetPhysicalScales
 
-  subroutine FlowSetUp(flow) 
+  subroutine FlowSetUp(flow)
     type(flow_type) flow
     PetscInt lcv
     PetscErrorCode ierr
@@ -826,7 +865,7 @@ contains
 
     PetscInt i,j,m,d
     PetscScalar mm(1:flow%ncomponents)
-    
+
     do m=1,flow%ncomponents
        mm(m) = flow%components(m)%mm
     end do
@@ -847,7 +886,7 @@ contains
        do m=1,flow%ncomponents
          u(m,:,i,j) = u(m,:,i,j) + .5*forces(m,:,i,j)
        end do
- 
+
        do d=1,flow%ndims
           velt(d,i,j) = sum(u(:,d,i,j)*mm(:))/rhot(i,j)
        end do
@@ -1138,7 +1177,9 @@ contains
     do lcv_side=1,flow%ndims*2
       if ((flow%bc_flags(lcv_side).eq.BC_PRESSURE_OUTLET).and. &
            .not.flow%bc_done(BC_PRESSURE_OUTLET)) then
-        call FlowUpdateBCPressureOutlet(flow, walls)
+        if (flow%dist%s /= 1) then
+          call FlowUpdateBCPressureOutlet(flow, walls)
+        end if
         flow%bc_done(BC_PRESSURE_OUTLET) = PETSC_TRUE
       else if ((flow%bc_flags(lcv_side).eq.BC_FLUX_OUTLET).and. &
            .not.flow%bc_done(BC_FLUX_OUTLET)) then
@@ -1157,14 +1198,492 @@ contains
     type(flow_type) flow
     type(walls_type) walls
 
+    if ((DABS(flow%components(1)%gf(1)) > eps) .or. &
+        (DABS(flow%components(1)%gf(1) > eps)) .or. &
+        flow%use_nonideal_eos) then
+      call LBMError(PETSC_COMM_SELF, 1, &
+           "Pressure outlet not implemented for non-ideal EOS or g11 or g22 /= 0", ierr)
+    end if
+
     select case(flow%ndims)
     case (2)
-      call FlowUpdateBCPressureOutletD2(flow)
-
+      call FlowUpdateBCPressureOutletD2(flow, walls%walls_a, flow%dist%rho_a, &
+           bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, flow%dist)
     case (3)
+      call FlowUpdateBCPressureOutletD2(flow, walls%walls_a, flow%dist%rho_a, &
+           bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, bc%zm_a, bc%zp_a, flow%dist)
     end select
   end subroutine FlowUpdateBCPressureOutlet
 
+  subroutine FlowUpdateBCPressureOutletD2(flow, walls, rho, xm_vals, xp_vals, &
+           ym_vals, yp_vals, dist)
+    type(flow_type) flow
+    type(distribution_type) dist
+    PetscScalar,dimension(dist%s, dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: rho
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
+    PetscScalar,dimension(flow%bc%nbcs,dist%info%ys:dist%info%ye):: xm_vals, xp_vals
+    PetscScalar,dimension(flow%bc%nbcs,dist%info%xs:dist%info%xe):: ym_vals, yp_vals
+
+    PetscInt i,j
+    PetscScalar rho1frac
+
+    ! Enforce the condition that rho1/rho_tot is fixed
+
+    ! xm boundary
+    if ((flow%bc_flags(BOUNDARY_XM).eq.BC_PRESSURE_OUTLET).and.(dist%info%xs.eq.1)) then
+      i = 1
+      do j=dist%info%ys,dist%info%ye
+        if (walls(i,j,k).eq.0) then
+          if (walls(i+1,j,k).eq.0) then
+            rho1frac = rho(1,i+1,j)/sum(rho(:,i+1,j)
+          else
+            rho1frac = rho(1,i,j)/sum(rho(:,i,j)
+          endif
+          call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_XM), &
+               rho1frac, xm_vals(:,j))
+        endif
+      end do
+    endif
+
+    ! xp boundary
+    if ((flow%bc_flags(BOUNDARY_XP).eq.BC_PRESSURE_OUTLET).and. &
+         (dist%info%xe.eq.dist%info%NX)) then
+      i = dist%info%NX
+      do j=dist%info%ys,dist%info%ye
+        if (walls(i,j,k).eq.0) then
+          if (walls(i-1,j,k).eq.0) then
+            rho1frac = rho(1,i-1,j)/sum(rho(:,i-1,j)
+          else
+            rho1frac = rho(1,i,j)/sum(rho(:,i,j)
+          endif
+          call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_XP), &
+               rho1frac, xp_vals(:,j))
+        end if
+      end do
+    endif
+
+    ! ym boundary
+    if ((flow%bc_flags(BOUNDARY_YM).eq.BC_PRESSURE_OUTLET).and.(dist%info%ys.eq.1)) then
+      j = 1
+      do i=dist%info%xs,dist%info%xe
+        if (walls(i,j,k).eq.0) then
+          if (walls(i,j+1,k).eq.0) then
+            rho1frac = rho(1,i,j+1)/sum(rho(:,i,j+1)
+          else
+            rho1frac = rho(1,i,j)/sum(rho(:,i,j)
+          endif
+          call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_YM), &
+               rho1frac, ym_vals(:,i))
+        end if
+      end do
+    endif
+
+    ! yp boundary
+    if ((flow%bc_flags(BOUNDARY_YP).eq.BC_PRESSURE_OUTLET).and. &
+         (dist%info%ye.eq.dist%info%NY)) then
+      j = dist%info%NY
+      do i=dist%info%xs,dist%info%xe
+        if (walls(i,j,k).eq.0) then
+          if (walls(i,j-1,k).eq.0) then
+            rho1frac = rho(1,i,j-1)/sum(rho(:,i,j-1)
+          else
+            rho1frac = rho(1,i,j)/sum(rho(:,i,j)
+          endif
+          call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_YP), &
+               rho1frac, yp_vals(:,i))
+        endif
+      end do
+    endif
+  end subroutine FlowUpdateBCPressureOutletD2
+
+  subroutine FlowUpdateBCPressureOutletD3(flow, walls, rho, xm_vals, xp_vals, &
+           ym_vals, yp_vals, zm_vals, zp_vals, dist)
+    type(flow_type) flow
+    type(distribution_type) dist
+    PetscScalar,dimension(dist%s, dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye,dist%info%rgzs:dist%info%rgze):: rho
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye,dist%info%rgzs:dist%info%rgze):: walls
+    PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye, &
+         dist%info%zs:dist%info%ze):: xm_vals, xp_vals
+    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
+         dist%info%zs:dist%info%ze):: ym_vals, yp_vals
+    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
+         dist%info%ys:dist%info%ye):: zm_vals, zp_vals
+
+    PetscInt i,j,k
+    PetscScalar rho1frac
+
+    ! Enforce the condition that rho1/rho_tot is fixed
+
+    ! xm boundary
+    if ((flow%bc_flags(BOUNDARY_XM).eq.BC_PRESSURE_OUTLET).and.(dist%info%xs.eq.1)) then
+      i = 1
+      do k=dist%info%zs,dist%info%ze
+      do j=dist%info%ys,dist%info%ye
+        if (walls(i,j,k).eq.0) then
+          if (walls(i+1,j,k).eq.0) then
+            rho1frac = rho(1,i+1,j,k)/sum(rho(:,i+1,j,k)
+          else
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+          end if
+          call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_XM), &
+               rho1frac, xm_vals(:,j,k))
+        endif
+      end do
+      end do
+    endif
+
+    ! xp boundary
+    if ((flow%bc_flags(BOUNDARY_XP).eq.BC_PRESSURE_OUTLET).and. &
+         (dist%info%xe.eq.dist%info%NX)) then
+      i = dist%info%NX
+      do k=dist%info%zs,dist%info%ze
+      do j=dist%info%ys,dist%info%ye
+        if (walls(i,j,k).eq.0) then
+          if (walls(i-1,j,k).eq.0) then
+            rho1frac = rho(1,i-1,j,k)/sum(rho(:,i-1,j,k)
+          else
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+          end if
+          call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_XP), &
+               rho1frac, xp_vals(:,j,k))
+        end if
+      end do
+      end do
+    endif
+
+    ! ym boundary
+    if ((flow%bc_flags(BOUNDARY_YM).eq.BC_PRESSURE_OUTLET).and.(dist%info%ys.eq.1)) then
+      j = 1
+      do k=dist%info%zs,dist%info%ze
+      do i=dist%info%xs,dist%info%xe
+        if (walls(i,j,k).eq.0) then
+          if (walls(i,j+1,k).eq.0) then
+            rho1frac = rho(1,i,j+1,k)/sum(rho(:,i,j+1,k)
+          else
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+          end if
+          call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_YM), &
+               rho1frac, ym_vals(:,i,k))
+        end if
+      end do
+      end do
+    endif
+
+    ! yp boundary
+    if ((flow%bc_flags(BOUNDARY_YP).eq.BC_PRESSURE_OUTLET).and. &
+         (dist%info%ye.eq.dist%info%NY)) then
+      j = dist%info%NY
+      do k=dist%info%zs,dist%info%ze
+      do i=dist%info%xs,dist%info%xe
+        if (walls(i,j,k).eq.0) then
+          if (walls(i,j-1,k).eq.0) then
+            rho1frac = rho(1,i,j-1,k)/sum(rho(:,i,j-1,k)
+          else
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+          end if
+          call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_YP), &
+               rho1frac, yp_vals(:,i,k))
+        endif
+      end do
+      end do
+    endif
+
+    ! zm boundary
+    if ((flow%bc_flags(BOUNDARY_ZM).eq.BC_PRESSURE_OUTLET).and.(dist%info%zs.eq.1)) then
+      k = 1
+      do j=dist%info%ys,dist%info%ye
+      do i=dist%info%xs,dist%info%xe
+        if (walls(i,j,k).eq.0) then
+          if (walls(i,j,k+1).eq.0) then
+            rho1frac = rho(1,i,j,k+1)/sum(rho(:,i,j,k+1)
+          else
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+          end if
+          call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_ZM), &
+               rho1frac, zm_vals(:,i,j))
+        end if
+      end do
+      end do
+    endif
+
+    ! zp boundary
+    if ((flow%bc_flags(BOUNDARY_ZP).eq.BC_PRESSURE_OUTLET).and. &
+         (dist%info%ze.eq.dist%info%NZ)) then
+      k = dist%info%NZ
+      do j=dist%info%ys,dist%info%ye
+      do i=dist%info%xs,dist%info%xe
+        if (walls(i,j,k).eq.0) then
+          if (walls(i,j,k-1).eq.0) then
+            rho1frac = rho(1,i,j,k-1)/sum(rho(:,i,j,k-1)
+          else
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+          end if
+          call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_ZP), &
+               rho1frac, zp_vals(:,i,j))
+        endif
+      end do
+      end do
+    endif
+  end subroutine FlowUpdateBCPressureOutletD3
+
+  subroutine FlowUpdateDensityFromPressure(flow, pressure, rho1frac, rho)
+    type(flow_type) flow
+    PetscScalar pressure, rho1frac
+    PetscScalar,dimension(2) rho
+    PetscScalar alpha
+    PetscScalar eps = 1.d-10
+    PetscErrorCode ierr
+
+    if (rho1frac < eps) then
+      rho(1) = 0.d0
+      rho(2) = pressure/3.d0
+    else if (rho1frac > 1-eps) then
+      rho(1) = pressure/3.d0
+      rho(2) = 0.d0
+    else
+      alpha = 1.d0/(1.d0/rho1frac - 1.d0)
+
+      rho(1) = (-(1.d0 + alpha)/3.d0 + DSQRT((1.d0 + alpha)/3.d0*(1.d0 + alpha)/3.d0&
+                 + 4.*flow%disc%c_0 *flow%components(2)%gf(1)*alpha*pressure)) / &
+                 (2*flow%disc%c_0*flow%components(2)%gf(1))
+      rho(2) = rho(1)/alpha
+    end if
+  end subroutine FlowUpdateDensityFromPressure
+
+  subroutine FlowUpdateBCFluxOutlet(flow, walls)
+    type(flow_type) flow
+    type(walls_type) walls
+
+    select case(flow%ndims)
+    case (2)
+      call FlowUpdateBCFluxOutletD2(flow, walls%walls_a, flow%dist%rho_a, &
+           bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, flow%dist)
+    case (3)
+      call FlowUpdateBCFluxOutletD2(flow, walls%walls_a, flow%dist%rho_a, &
+           bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, flow%dist)
+    end select
+  end subroutine FlowUpdateBCFluxOutlet
+
+  subroutine FlowUpdateBCFluxOutletD2(flow, walls, rho, xm_vals, xp_vals, &
+           ym_vals, yp_vals, dist)
+    type(flow_type) flow
+    type(distribution_type) dist
+    PetscScalar,dimension(dist%s, dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: rho
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: walls
+    PetscScalar,dimension(flow%dist%s,flow%ndims, &
+         dist%info%ys:dist%info%ye):: xm_vals, xp_vals
+    PetscScalar,dimension(flow%dist%s,flow%ndims, &
+         dist%info%xs:dist%info%xe):: ym_vals, yp_vals
+
+    PetscInt i,j
+    PetscScalar rho1frac
+
+    ! Enforce the condition that rho1/rho_tot is fixed
+
+    ! xm boundary
+    if ((flow%bc_flags(BOUNDARY_XM).eq.BC_PRESSURE_OUTLET).and.(dist%info%xs.eq.1)) then
+      i = 1
+      do j=dist%info%ys,dist%info%ye
+        if (walls(i,j,k).eq.0) then
+          if (walls(i+1,j,k).eq.0) then
+            rho1frac = rho(1,i+1,j)/sum(rho(:,i+1,j)
+          else
+            rho1frac = rho(1,i,j)/sum(rho(:,i,j)
+          endif
+          xm_vals(1,j) = rho1frac*flow%bc_data(1,BOUNDARY_XM)
+          xm_vals(2,j) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_XM)
+        endif
+      end do
+    endif
+
+    ! xp boundary
+    if ((flow%bc_flags(BOUNDARY_XP).eq.BC_PRESSURE_OUTLET).and. &
+         (dist%info%xe.eq.dist%info%NX)) then
+      i = dist%info%NX
+      do j=dist%info%ys,dist%info%ye
+        if (walls(i,j,k).eq.0) then
+          if (walls(i-1,j,k).eq.0) then
+            rho1frac = rho(1,i-1,j)/sum(rho(:,i-1,j)
+          else
+            rho1frac = rho(1,i,j)/sum(rho(:,i,j)
+          endif
+          xp_vals(1,j) = rho1frac*flow%bc_data(1,BOUNDARY_XP)
+          xp_vals(2,j) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_XP)
+        end if
+      end do
+    endif
+
+    ! ym boundary
+    if ((flow%bc_flags(BOUNDARY_YM).eq.BC_PRESSURE_OUTLET).and.(dist%info%ys.eq.1)) then
+      j = 1
+      do i=dist%info%xs,dist%info%xe
+        if (walls(i,j,k).eq.0) then
+          if (walls(i,j+1,k).eq.0) then
+            rho1frac = rho(1,i,j+1)/sum(rho(:,i,j+1)
+          else
+            rho1frac = rho(1,i,j)/sum(rho(:,i,j)
+          endif
+          ym_vals(1,i) = rho1frac*flow%bc_data(1,BOUNDARY_YM)
+          ym_vals(2,i) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_YM)
+        end if
+      end do
+    endif
+
+    ! yp boundary
+    if ((flow%bc_flags(BOUNDARY_YP).eq.BC_PRESSURE_OUTLET).and. &
+         (dist%info%ye.eq.dist%info%NY)) then
+      j = dist%info%NY
+      do i=dist%info%xs,dist%info%xe
+        if (walls(i,j,k).eq.0) then
+          if (walls(i,j-1,k).eq.0) then
+            rho1frac = rho(1,i,j-1)/sum(rho(:,i,j-1)
+          else
+            rho1frac = rho(1,i,j)/sum(rho(:,i,j)
+          endif
+          yp_vals(1,i) = rho1frac*flow%bc_data(1,BOUNDARY_YP)
+          yp_vals(2,i) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_YP)
+        endif
+      end do
+    endif
+  end subroutine FlowUpdateBCFluxOutletD2
+
+  subroutine FlowUpdateBCFluxOutletD3(flow, walls, rho, xm_vals, xp_vals, &
+           ym_vals, yp_vals, zm_vals, zp_vals, dist)
+    type(flow_type) flow
+    type(distribution_type) dist
+    PetscScalar,dimension(dist%s, dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye,dist%info%rgzs:dist%info%rgze):: rho
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye,dist%info%rgzs:dist%info%rgze):: walls
+    PetscScalar,dimension(flow%dist%s,flow%ndims,dist%info%ys:dist%info%ye, &
+         dist%info%zs:dist%info%ze):: xm_vals, xp_vals
+    PetscScalar,dimension(flow%dist%s,flow%ndims,dist%info%xs:dist%info%xe, &
+         dist%info%zs:dist%info%ze):: ym_vals, yp_vals
+    PetscScalar,dimension(flow%dist%s,flow%ndims,dist%info%xs:dist%info%xe, &
+         dist%info%ys:dist%info%ye):: zm_vals, zp_vals
+
+    PetscInt i,j,k
+    PetscScalar rho1frac
+
+    ! Enforce the condition that rho1/rho_tot is fixed
+
+    ! xm boundary
+    if ((flow%bc_flags(BOUNDARY_XM).eq.BC_PRESSURE_OUTLET).and.(dist%info%xs.eq.1)) then
+      i = 1
+      do k=dist%info%zs,dist%info%ze
+      do j=dist%info%ys,dist%info%ye
+        if (walls(i,j,k).eq.0) then
+          if (walls(i+1,j,k).eq.0) then
+            rho1frac = rho(1,i+1,j,k)/sum(rho(:,i+1,j,k)
+          else
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+          end if
+          xm_vals(1,X_DIRECTION,j,k) = rho1frac*flow%bc_data(1,BOUNDARY_XM)
+          xm_vals(2,X_DIRECTION,j,k) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_XM)
+        endif
+      end do
+      end do
+    endif
+
+    ! xp boundary
+    if ((flow%bc_flags(BOUNDARY_XP).eq.BC_PRESSURE_OUTLET).and. &
+         (dist%info%xe.eq.dist%info%NX)) then
+      i = dist%info%NX
+      do k=dist%info%zs,dist%info%ze
+      do j=dist%info%ys,dist%info%ye
+        if (walls(i,j,k).eq.0) then
+          if (walls(i-1,j,k).eq.0) then
+            rho1frac = rho(1,i-1,j,k)/sum(rho(:,i-1,j,k)
+          else
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+          end if
+          xp_vals(1,X_DIRECTION,j,k) = rho1frac*flow%bc_data(1,BOUNDARY_XP)
+          xp_vals(2,X_DIRECTION,j,k) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_XP)
+        end if
+      end do
+      end do
+    endif
+
+    ! ym boundary
+    if ((flow%bc_flags(BOUNDARY_YM).eq.BC_PRESSURE_OUTLET).and.(dist%info%ys.eq.1)) then
+      j = 1
+      do k=dist%info%zs,dist%info%ze
+      do i=dist%info%xs,dist%info%xe
+        if (walls(i,j,k).eq.0) then
+          if (walls(i,j+1,k).eq.0) then
+            rho1frac = rho(1,i,j+1,k)/sum(rho(:,i,j+1,k)
+          else
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+          end if
+          ym_vals(1,Y_DIRECTION,i,k) = rho1frac*flow%bc_data(1,BOUNDARY_YM)
+          ym_vals(2,Y_DIRECTION,i,k) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_YM)
+        end if
+      end do
+      end do
+    endif
+
+    ! yp boundary
+    if ((flow%bc_flags(BOUNDARY_YP).eq.BC_PRESSURE_OUTLET).and. &
+         (dist%info%ye.eq.dist%info%NY)) then
+      j = dist%info%NY
+      do k=dist%info%zs,dist%info%ze
+      do i=dist%info%xs,dist%info%xe
+        if (walls(i,j,k).eq.0) then
+          if (walls(i,j-1,k).eq.0) then
+            rho1frac = rho(1,i,j-1,k)/sum(rho(:,i,j-1,k)
+          else
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+          end if
+          yp_vals(1,Y_DIRECTION,i,k) = rho1frac*flow%bc_data(1,BOUNDARY_YP)
+          yp_vals(2,Y_DIRECTION,i,k) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_YP)
+        endif
+      end do
+      end do
+    endif
+
+    ! zm boundary
+    if ((flow%bc_flags(BOUNDARY_ZM).eq.BC_PRESSURE_OUTLET).and.(dist%info%zs.eq.1)) then
+      k = 1
+      do j=dist%info%ys,dist%info%ye
+      do i=dist%info%xs,dist%info%xe
+        if (walls(i,j,k).eq.0) then
+          if (walls(i,j,k+1).eq.0) then
+            rho1frac = rho(1,i,j,k+1)/sum(rho(:,i,j,k+1)
+          else
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+          end if
+          zm_vals(1,Z_DIRECTION,i,j) = rho1frac*flow%bc_data(1,BOUNDARY_ZM)
+          zm_vals(2,Z_DIRECTION,i,j) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_ZM)
+        end if
+      end do
+      end do
+    endif
+
+    ! zp boundary
+    if ((flow%bc_flags(BOUNDARY_ZP).eq.BC_PRESSURE_OUTLET).and. &
+         (dist%info%ze.eq.dist%info%NZ)) then
+      k = dist%info%NZ
+      do j=dist%info%ys,dist%info%ye
+      do i=dist%info%xs,dist%info%xe
+        if (walls(i,j,k).eq.0) then
+          if (walls(i,j,k-1).eq.0) then
+            rho1frac = rho(1,i,j,k-1)/sum(rho(:,i,j,k-1)
+          else
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+          end if
+          zp_vals(1,Z_DIRECTION,i,j) = rho1frac*flow%bc_data(1,BOUNDARY_ZP)
+          zp_vals(2,Z_DIRECTION,i,j) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_ZP)
+        endif
+      end do
+      end do
+    endif
+  end subroutine FlowUpdateBCFluxOutletD3
 
   subroutine print_a_few(fi, rho, u, forces, walls, dist, istep)
     type(distribution_type) dist
