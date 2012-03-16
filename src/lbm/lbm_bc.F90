@@ -53,17 +53,11 @@ module LBM_BC_module
        BCSetFromOptions, &
        BCSetUp, &
        BCSetValues, &
-       BCZeroForces, &
        BCGetArrays, &
        BCRestoreArrays, &
        BCPreStream, &
        BCApplyDirichletToRho, &
-       BCApply, &
-       BCApplyPseudoperiodic, &
-       BCApplyDirichlet, &
-       BCApplyFlux, &
-       BCApplyVelocity, &
-       BCApplyZeroGradient
+       BCApply
 contains
 
   ! constructor
@@ -242,98 +236,6 @@ contains
     if (bc%zp /= 0) call VecRestoreArrayF90(bc%zp, bc%zp_a, ierr)
   end subroutine BCRestoreArrays
 
-  subroutine BCZeroForces(bc, forces, dist)
-    type(bc_type) bc
-    type(distribution_type) dist
-    PetscScalar,dimension(1:dist%s, 1:dist%info%ndims, 1:dist%info%gxyzl):: forces
-    select case(dist%info%ndims)
-    case(2)
-      call BCZeroForcesD2(bc, forces, dist)
-    case(3)
-      call BCZeroForcesD3(bc, forces, dist)
-    end select
-  end subroutine BCZeroForces
-
-  subroutine BCZeroForcesD3(bc, forces, dist)
-    type(bc_type) bc
-    type(distribution_type) dist
-    PetscScalar,dimension(1:dist%s, 1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: forces
-
-    ! -- x
-    if ((dist%info%xs.eq.1).and.((bc%flags(BOUNDARY_XM).eq.BC_FLUX).or.&
-         (bc%flags(BOUNDARY_XM).eq.BC_VELOCITY).or.&
-         (bc%flags(BOUNDARY_XM).eq.BC_DIRICHLET))) then
-      forces(:,:,1,:,:) = 0
-    endif
-
-    if ((dist%info%xe.eq.dist%info%NX).and.((bc%flags(BOUNDARY_XP).eq.BC_FLUX).or. &
-         (bc%flags(BOUNDARY_XP).eq.BC_VELOCITY).or.&
-         (bc%flags(BOUNDARY_XP).eq.BC_DIRICHLET))) then
-      forces(:,:,dist%info%NX,:,:) = 0
-    endif
-
-    ! -- y
-    if ((dist%info%ys.eq.1).and.((bc%flags(BOUNDARY_YM).eq.BC_FLUX).or.&
-         (bc%flags(BOUNDARY_YM).eq.BC_VELOCITY).or.&
-         (bc%flags(BOUNDARY_YM).eq.BC_DIRICHLET))) then
-      forces(:,:,:,1,:) = 0
-    endif
-
-    if ((dist%info%ye.eq.dist%info%NY).and.((bc%flags(BOUNDARY_YP).eq.BC_FLUX).or. &
-         (bc%flags(BOUNDARY_YP).eq.BC_VELOCITY).or.&
-         (bc%flags(BOUNDARY_YP).eq.BC_DIRICHLET))) then
-      forces(:,:,:,dist%info%NY,:) = 0
-    endif
-
-    ! -- z
-    if ((dist%info%zs.eq.1).and.((bc%flags(BOUNDARY_ZM).eq.BC_FLUX).or.&
-         (bc%flags(BOUNDARY_ZM).eq.BC_VELOCITY).or.&
-         (bc%flags(BOUNDARY_ZM).eq.BC_DIRICHLET))) then
-      forces(:,:,:,:,1) = 0
-    endif
-
-    if ((dist%info%ze.eq.dist%info%NZ).and.((bc%flags(BOUNDARY_ZP).eq.BC_FLUX).or. &
-         (bc%flags(BOUNDARY_ZP).eq.BC_VELOCITY).or.&
-         (bc%flags(BOUNDARY_ZP).eq.BC_DIRICHLET))) then
-      forces(:,:,:,:,dist%info%NZ) = 0
-    endif
-
-  end subroutine BCZeroForcesD3
-
-  subroutine BCZeroForcesD2(bc, forces, dist)
-    type(bc_type) bc
-    type(distribution_type) dist
-    PetscScalar,dimension(1:dist%s, 1:dist%info%ndims, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: forces
-
-    ! -- x
-    if ((dist%info%xs.eq.1).and.((bc%flags(BOUNDARY_XM).eq.BC_FLUX).or.&
-         (bc%flags(BOUNDARY_XM).eq.BC_VELOCITY).or.&
-         (bc%flags(BOUNDARY_XM).eq.BC_DIRICHLET))) then
-      forces(:,:,1,:) = 0
-    endif
-
-    if ((dist%info%xe.eq.dist%info%NX).and.((bc%flags(BOUNDARY_XP).eq.BC_FLUX).or. &
-         (bc%flags(BOUNDARY_XP).eq.BC_VELOCITY).or.&
-         (bc%flags(BOUNDARY_XP).eq.BC_DIRICHLET))) then
-      forces(:,:,dist%info%NX,:) = 0
-    endif
-
-    ! -- y
-    if ((dist%info%ys.eq.1).and.((bc%flags(BOUNDARY_YM).eq.BC_FLUX).or.&
-         (bc%flags(BOUNDARY_YM).eq.BC_VELOCITY).or.&
-         (bc%flags(BOUNDARY_YM).eq.BC_DIRICHLET))) then
-      forces(:,:,:,1) = 0
-    endif
-
-    if ((dist%info%ye.eq.dist%info%NY).and.((bc%flags(BOUNDARY_YP).eq.BC_FLUX).or. &
-         (bc%flags(BOUNDARY_YP).eq.BC_VELOCITY).or.&
-         (bc%flags(BOUNDARY_YP).eq.BC_DIRICHLET))) then
-      forces(:,:,:,dist%info%NY) = 0
-    endif
-  end subroutine BCZeroForcesD2
-
   subroutine BCApplyDirichletToRho(bc, walls, dist)
     type(bc_type) bc
     type(distribution_type) dist
@@ -472,7 +374,7 @@ contains
     PetscInt lcv_sides
 
     do lcv_sides = 1,6
-      if (bc%flags(lcv_sides).eq.BC_FLUX .or. &
+      if (bc%flags(lcv_sides).eq.BC_NEUMANN .or. &
            bc%flags(lcv_sides).eq.BC_VELOCITY .or. &
            bc%flags(lcv_sides).eq.BC_DIRICHLET) then
 
@@ -648,9 +550,9 @@ contains
     do lcv_sides = 1,6
       if (.not.bcs_done(bc%flags(lcv_sides))) then
         select case (bc%flags(lcv_sides))
-        case (BC_PSEUDOPERIODIC)         ! pseudo-periodic
-          call BCApplyPseudoperiodic(bc, walls, dist)
-        case (BC_DIRICHLET)         ! dirichlet conc/pressure
+        case (BC_REFLECTING)
+          call BCApplyReflecting(bc, walls, dist)
+        case (BC_DIRICHLET)
           call BCApplyDirichlet(bc, forces, walls, dist)
         case (BC_NEUMANN)
           call BCApplyNeumann(bc, forces, walls, dist)
@@ -662,29 +564,23 @@ contains
     enddo
   end subroutine BCApply
 
-  subroutine BCApplyPseudoperiodic(bc, walls, dist)
+  subroutine BCApplyReflecting(bc, walls, dist)
     type(bc_type) bc
     type(distribution_type) dist
     PetscScalar,dimension(dist%info%rgxyzl):: walls
     PetscErrorCode ierr
 
-    ! first, check to make sure number of components = 2
-    if (dist%s /= 2) then
-      call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic only makes sense for two-component', ierr)
-      return
-    end if
-
     select case(dist%info%ndims)
     case(3)
-      call BCApplyPseudoperiodicD3(bc, dist%fi_a, walls, dist)
+      call BCApplyReflectingD3(bc, dist%fi_a, walls, dist)
     case(D2Q9_DISCRETIZATION)
-      call BCApplyPseudoperiodicD2(bc, dist%fi_a, walls, dist)
+      call BCApplyReflectingD2(bc, dist%fi_a, walls, dist)
     case DEFAULT
       call LBMError(PETSC_COMM_SELF, 1, 'invalid discretization in LBM', ierr)
     end select
-  end subroutine BCApplyPseudoperiodic
+  end subroutine BCApplyReflecting
 
-  subroutine BCApplyPseudoperiodicD3(bc, fi, walls, dist)
+  subroutine BCApplyReflectingD3(bc, fi, walls, dist)
     type(bc_type) bc
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
@@ -693,152 +589,152 @@ contains
          dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: walls
     PetscErrorCode ierr
 
-    PetscInt i,j,k,n
+    PetscInt i,j,k,n,p
     PetscScalar tmp
 
     ! XM BOUNDARY
-    if ((bc%flags(BOUNDARY_XM).eq.BC_PSEUDOPERIODIC).and.(dist%info%xs.eq.1)) then
-      if (.not.dist%info%periodic(X_DIRECTION)) then
-        call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
-        return
-      end if
+    if ((bc%flags(BOUNDARY_XM).eq.BC_REFLECTING).and.(dist%info%xs.eq.1)) then
       do k=dist%info%zs,dist%info%ze
-        do j=dist%info%ys,dist%info%ye
-          i = 1
-          if (walls(i,j,k).eq.0) then
-            do n=1,dist%b
-              if (dist%disc%ci(n,X_DIRECTION) > 0) then
-                ! has a component in the inward-normal direction
-                tmp = fi(1,n,i,j,k)
-                fi(1,n,i,j,k) = fi(2,n,i,j,k)
-                fi(2,n,i,j,k) = tmp
-              end if
-            end do
-          end if
-        end do
+      do j=dist%info%ys,dist%info%ye
+        i = 1
+        if (walls(i,j,k).eq.0) then
+          do n=1,dist%b
+            if (dist%disc%ci(n,X_DIRECTION) > 0) then
+              ! has a component in the inward-normal direction
+              do p=1,dist%b
+                if ((dist%disc%ci(n,Y_DIRECTION).eq.dist%disc%ci(p,Y_DIRECTION)).and. &
+                    (dist%disc%ci(n,Z_DIRECTION).eq.dist%disc%ci(p,Z_DIRECTION)).and. &
+                    (dist%disc%ci(n,X_DIRECTION).eq.-dist%disc%ci(p,Z_DIRECTION))) then
+                  fi(:,n,i,j,k) = fi(:,p,i,j,k)
+                end if
+              end do
+            end if
+          end do
+        end if
+      end do
       end do
     end if
 
     ! XP BOUNDARY
-    if ((bc%flags(BOUNDARY_XP).eq.BC_PSEUDOPERIODIC).and.(dist%info%xe.eq.dist%info%NX)) &
-         then
-      if (.not.dist%info%periodic(X_DIRECTION)) then
-        call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
-        return
-      end if
+    if ((bc%flags(BOUNDARY_XP).eq.BC_REFLECTING).and. &
+         (dist%info%xe.eq.dist%info%NX)) then
       do k=dist%info%zs,dist%info%ze
-        do j=dist%info%ys,dist%info%ye
-          i = dist%info%NX
-          if (walls(i,j,k).eq.0) then
-            do n=1,dist%b
-              if (dist%disc%ci(n,X_DIRECTION) < 0) then
-                ! has a component in the inward-normal direction
-                tmp = fi(1,n,i,j,k)
-                fi(1,n,i,j,k) = fi(2,n,i,j,k)
-                fi(2,n,i,j,k) = tmp
-              end if
-            end do
-          end if
-        end do
+      do j=dist%info%ys,dist%info%ye
+        i = dist%info%NX
+        if (walls(i,j,k).eq.0) then
+          do n=1,dist%b
+            if (dist%disc%ci(n,X_DIRECTION) < 0) then
+              ! has a component in the inward-normal direction
+              do p=1,dist%b
+                if ((dist%disc%ci(n,Y_DIRECTION).eq.dist%disc%ci(p,Y_DIRECTION)).and. &
+                    (dist%disc%ci(n,Z_DIRECTION).eq.dist%disc%ci(p,Z_DIRECTION)).and. &
+                    (dist%disc%ci(n,X_DIRECTION).eq.-dist%disc%ci(p,X_DIRECTION))) then
+                  fi(:,n,i,j,k) = fi(:,p,i,j,k)
+                end if
+              end do
+            end if
+          end do
+        end if
+      end do
       end do
     end if
 
     ! YM BOUNDARY
-    if ((bc%flags(BOUNDARY_YM).eq.BC_PSEUDOPERIODIC).and.(dist%info%ys.eq.1)) then
-      if (.not.dist%info%periodic(Y_DIRECTION)) then
-        call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
-        return
-      end if
+    if ((bc%flags(BOUNDARY_YM).eq.BC_REFLECTING).and.(dist%info%ys.eq.1)) then
       do k=dist%info%zs,dist%info%ze
-        do i=dist%info%xs,dist%info%xe
-          j = 1
-          if (walls(i,j,k).eq.0) then
-            do n=1,dist%b
-              if (dist%disc%ci(n,Y_DIRECTION) > 0) then
-                ! has a component in the inward-normal direction
-                tmp = fi(1,n,i,j,k)
-                fi(1,n,i,j,k) = fi(2,n,i,j,k)
-                fi(2,n,i,j,k) = tmp
-              end if
-            end do
-          end if
-        end do
+      do i=dist%info%xs,dist%info%xe
+        j = 1
+        if (walls(i,j,k).eq.0) then
+          do n=1,dist%b
+            if (dist%disc%ci(n,Y_DIRECTION) > 0) then
+              ! has a component in the inward-normal direction
+              do p=1,dist%b
+                if ((dist%disc%ci(n,X_DIRECTION).eq.dist%disc%ci(p,X_DIRECTION)).and. &
+                    (dist%disc%ci(n,Z_DIRECTION).eq.dist%disc%ci(p,Z_DIRECTION)).and. &
+                    (dist%disc%ci(n,Y_DIRECTION).eq.-dist%disc%ci(p,Y_DIRECTION))) then
+                  fi(:,n,i,j,k) = fi(:,p,i,j,k)
+                end if
+              end do
+            end if
+          end do
+        end if
+      end do
       end do
     end if
 
-    ! YM BOUNDARY
-    if ((bc%flags(BOUNDARY_YP).eq.BC_PSEUDOPERIODIC).and.(dist%info%ye.eq.dist%info%NY)) &
-         then
-      if (.not.dist%info%periodic(Y_DIRECTION)) then
-        call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
-        return
-      end if
+    ! YP BOUNDARY
+    if ((bc%flags(BOUNDARY_YP).eq.BC_REFLECTING).and. &
+         (dist%info%ye.eq.dist%info%NY)) then
       do k=dist%info%zs,dist%info%ze
-        do i=dist%info%xs,dist%info%xe
-          j = dist%info%NY
-          if (walls(i,j,k).eq.0) then
-            do n=1,dist%b
-              if (dist%disc%ci(n,Y_DIRECTION) < 0) then
-                ! has a component in the inward-normal direction
-                tmp = fi(1,n,i,j,k)
-                fi(1,n,i,j,k) = fi(2,n,i,j,k)
-                fi(2,n,i,j,k) = tmp
-              end if
-            end do
-          end if
-        end do
+      do i=dist%info%xs,dist%info%xe
+        j = dist%info%NY
+        if (walls(i,j,k).eq.0) then
+          do n=1,dist%b
+            if (dist%disc%ci(n,Y_DIRECTION) < 0) then
+              ! has a component in the inward-normal direction
+              do p=1,dist%b
+                if ((dist%disc%ci(n,X_DIRECTION).eq.dist%disc%ci(p,X_DIRECTION)).and. &
+                    (dist%disc%ci(n,Z_DIRECTION).eq.dist%disc%ci(p,Z_DIRECTION)).and. &
+                    (dist%disc%ci(n,Y_DIRECTION).eq.-dist%disc%ci(p,Y_DIRECTION))) then
+                  fi(:,n,i,j,k) = fi(:,p,i,j,k)
+                end if
+              end do
+            end if
+          end do
+        end if
+      end do
       end do
     end if
 
     ! ZM BOUNDARY
-    if ((bc%flags(BOUNDARY_ZM).eq.BC_PSEUDOPERIODIC).and.(dist%info%zs.eq.1)) then
-      if (.not.dist%info%periodic(Z_DIRECTION)) then
-        call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_z', ierr)
-        return
-      end if
+    if ((bc%flags(BOUNDARY_ZM).eq.BC_REFLECTING).and.(dist%info%zs.eq.1)) then
       do j=dist%info%ys,dist%info%ye
-        do i=dist%info%xs,dist%info%xe
-          k = 1
-          if (walls(i,j,k).eq.0) then
-            do n=1,dist%b
-              if (dist%disc%ci(n,Z_DIRECTION) > 0) then
-                ! has a component in the inward-normal direction
-                tmp = fi(1,n,i,j,k)
-                fi(1,n,i,j,k) = fi(2,n,i,j,k)
-                fi(2,n,i,j,k) = tmp
-              end if
-            end do
-          end if
-        end do
+      do i=dist%info%xs,dist%info%xe
+        k = 1
+        if (walls(i,j,k).eq.0) then
+          do n=1,dist%b
+            if (dist%disc%ci(n,Z_DIRECTION) > 0) then
+              ! has a component in the inward-normal direction
+              do p=1,dist%b
+                if ((dist%disc%ci(n,X_DIRECTION).eq.dist%disc%ci(p,X_DIRECTION)).and. &
+                    (dist%disc%ci(n,Y_DIRECTION).eq.dist%disc%ci(p,Y_DIRECTION)).and. &
+                    (dist%disc%ci(n,Z_DIRECTION).eq.-dist%disc%ci(p,Z_DIRECTION))) then
+                  fi(:,n,i,j,k) = fi(:,p,i,j,k)
+                end if
+              end do
+            end if
+          end do
+        end if
+      end do
       end do
     end if
 
-    ! ZM BOUNDARY
-    if ((bc%flags(BOUNDARY_ZP).eq.BC_PSEUDOPERIODIC).and.(dist%info%ze.eq.dist%info%NZ)) &
-         then
-      if (.not.dist%info%periodic(Z_DIRECTION)) then
-        call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_z', ierr)
-        return
-      end if
+    ! ZP BOUNDARY
+    if ((bc%flags(BOUNDARY_ZP).eq.BC_REFLECTING).and. &
+         (dist%info%ze.eq.dist%info%NZ)) then
       do j=dist%info%ys,dist%info%ye
-        do i=dist%info%xs,dist%info%xe
-          k = dist%info%NZ
-          if (walls(i,j,k).eq.0) then
-            do n=1,dist%b
-              if (dist%disc%ci(n,Z_DIRECTION) < 0) then
-                ! has a component in the inward-normal direction
-                tmp = fi(1,n,i,j,k)
-                fi(1,n,i,j,k) = fi(2,n,i,j,k)
-                fi(2,n,i,j,k) = tmp
-              end if
-            end do
-          end if
-        end do
+      do i=dist%info%xs,dist%info%xe
+        k = dist%info%NZ
+        if (walls(i,j,k).eq.0) then
+          do n=1,dist%b
+            if (dist%disc%ci(n,Z_DIRECTION) < 0) then
+              ! has a component in the inward-normal direction
+              do p=1,dist%b
+                if ((dist%disc%ci(n,X_DIRECTION).eq.dist%disc%ci(p,X_DIRECTION)).and. &
+                    (dist%disc%ci(n,Y_DIRECTION).eq.dist%disc%ci(p,Y_DIRECTION)).and. &
+                    (dist%disc%ci(n,Z_DIRECTION).eq.-dist%disc%ci(p,Z_DIRECTION))) then
+                  fi(:,n,i,j,k) = fi(:,p,i,j,k)
+                end if
+              end do
+            end if
+          end do
+        end if
+      end do
       end do
     end if
-  end subroutine BCApplyPseudoperiodicD3
+  end subroutine BCApplyReflectingD3
 
-  subroutine BCApplyPseudoperiodicD2(bc, fi, walls, dist)
+  subroutine BCApplyReflectingD2(bc, fi, walls, dist)
     type(bc_type) bc
     type(distribution_type) dist
     PetscScalar,dimension(1:dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
@@ -847,24 +743,24 @@ contains
          dist%info%rgys:dist%info%rgye):: walls
     PetscErrorCode ierr
 
-    PetscInt i,j,n
+    PetscInt i,j,n,p
     PetscScalar tmp
 
+
     ! XM BOUNDARY
-    if ((bc%flags(BOUNDARY_XM).eq.BC_PSEUDOPERIODIC).and.(dist%info%xs.eq.1)) then
-      if (.not.dist%info%periodic(X_DIRECTION)) then
-        call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
-        return
-      end if
+    if ((bc%flags(BOUNDARY_XM).eq.BC_REFLECTING).and.(dist%info%xs.eq.1)) then
       do j=dist%info%ys,dist%info%ye
         i = 1
         if (walls(i,j).eq.0) then
           do n=1,dist%b
             if (dist%disc%ci(n,X_DIRECTION) > 0) then
               ! has a component in the inward-normal direction
-              tmp = fi(1,n,i,j)
-              fi(1,n,i,j) = fi(2,n,i,j)
-              fi(2,n,i,j) = tmp
+              do p=1,dist%b
+                if ((dist%disc%ci(n,Y_DIRECTION).eq.dist%disc%ci(p,Y_DIRECTION)).and. &
+                    (dist%disc%ci(n,X_DIRECTION).eq.-dist%disc%ci(p,Z_DIRECTION))) then
+                  fi(:,n,i,j) = fi(:,p,i,j)
+                end if
+              end do
             end if
           end do
         end if
@@ -872,21 +768,20 @@ contains
     end if
 
     ! XP BOUNDARY
-    if ((bc%flags(BOUNDARY_XP).eq.BC_PSEUDOPERIODIC).and.(dist%info%xe.eq.dist%info%NX)) &
-         then
-      if (.not.dist%info%periodic(X_DIRECTION)) then
-        call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_x', ierr)
-        return
-      end if
+    if ((bc%flags(BOUNDARY_XP).eq.BC_REFLECTING).and. &
+         (dist%info%xe.eq.dist%info%NX)) then
       do j=dist%info%ys,dist%info%ye
         i = dist%info%NX
         if (walls(i,j).eq.0) then
           do n=1,dist%b
             if (dist%disc%ci(n,X_DIRECTION) < 0) then
               ! has a component in the inward-normal direction
-              tmp = fi(1,n,i,j)
-              fi(1,n,i,j) = fi(2,n,i,j)
-              fi(2,n,i,j) = tmp
+              do p=1,dist%b
+                if ((dist%disc%ci(n,Y_DIRECTION).eq.dist%disc%ci(p,Y_DIRECTION)).and. &
+                    (dist%disc%ci(n,X_DIRECTION).eq.-dist%disc%ci(p,X_DIRECTION))) then
+                  fi(:,n,i,j) = fi(:,p,i,j)
+                end if
+              end do
             end if
           end do
         end if
@@ -894,48 +789,46 @@ contains
     end if
 
     ! YM BOUNDARY
-    if ((bc%flags(BOUNDARY_YM).eq.BC_PSEUDOPERIODIC).and.(dist%info%ys.eq.1)) then
-      if (.not.dist%info%periodic(Y_DIRECTION)) then
-        call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
-        return
-      end if
+    if ((bc%flags(BOUNDARY_YM).eq.BC_REFLECTING).and.(dist%info%ys.eq.1)) then
       do i=dist%info%xs,dist%info%xe
         j = 1
         if (walls(i,j).eq.0) then
           do n=1,dist%b
             if (dist%disc%ci(n,Y_DIRECTION) > 0) then
               ! has a component in the inward-normal direction
-              tmp = fi(1,n,i,j)
-              fi(1,n,i,j) = fi(2,n,i,j)
-              fi(2,n,i,j) = tmp
+              do p=1,dist%b
+                if ((dist%disc%ci(n,X_DIRECTION).eq.dist%disc%ci(p,X_DIRECTION)).and. &
+                    (dist%disc%ci(n,Y_DIRECTION).eq.-dist%disc%ci(p,Y_DIRECTION))) then
+                  fi(:,n,i,j) = fi(:,p,i,j)
+                end if
+              end do
             end if
           end do
         end if
       end do
     end if
 
-    ! YM BOUNDARY
-    if ((bc%flags(BOUNDARY_YP).eq.BC_PSEUDOPERIODIC).and.(dist%info%ye.eq.dist%info%NY)) &
-         then
-      if (.not.dist%info%periodic(Y_DIRECTION)) then
-        call LBMError(PETSC_COMM_SELF, 1, 'pseudoperiodic also must get -bc_periodic_y', ierr)
-        return
-      end if
+    ! YP BOUNDARY
+    if ((bc%flags(BOUNDARY_YP).eq.BC_REFLECTING).and. &
+         (dist%info%ye.eq.dist%info%NY)) then
       do i=dist%info%xs,dist%info%xe
         j = dist%info%NY
         if (walls(i,j).eq.0) then
           do n=1,dist%b
             if (dist%disc%ci(n,Y_DIRECTION) < 0) then
               ! has a component in the inward-normal direction
-              tmp = fi(1,n,i,j)
-              fi(1,n,i,j) = fi(2,n,i,j)
-              fi(2,n,i,j) = tmp
+              do p=1,dist%b
+                if ((dist%disc%ci(n,X_DIRECTION).eq.dist%disc%ci(p,X_DIRECTION)).and. &
+                    (dist%disc%ci(n,Y_DIRECTION).eq.-dist%disc%ci(p,Y_DIRECTION))) then
+                  fi(:,n,i,j) = fi(:,p,i,j)
+                end if
+              end do
             end if
           end do
         end if
       end do
     end if
-  end subroutine BCApplyPseudoperiodicD2
+  end subroutine BCApplyReflectingD2
 
   subroutine BCApplyDirichlet(bc, forces, walls, dist)
     type(bc_type) bc
@@ -1236,7 +1129,7 @@ contains
 
     directions(:) = 0
     ! XM BOUNDARY
-    if ((bc%flags(BOUNDARY_XM).eq.BC_FLUX).and.(dist%info%xs.eq.1)) then
+    if ((bc%flags(BOUNDARY_XM).eq.BC_NEUMANN).and.(dist%info%xs.eq.1)) then
       call DiscSetLocalDirections(dist%disc, BOUNDARY_XM, directions, cardinals)
       do k=dist%info%zs,dist%info%ze
         do j=dist%info%ys,dist%info%ye
@@ -1251,7 +1144,7 @@ contains
 
     directions(:) = 0
     ! XP BOUNDARY
-    if ((bc%flags(BOUNDARY_XP).eq.BC_FLUX).and.(dist%info%xe.eq.dist%info%NX)) then
+    if ((bc%flags(BOUNDARY_XP).eq.BC_NEUMANN).and.(dist%info%xe.eq.dist%info%NX)) then
       call DiscSetLocalDirections(dist%disc, BOUNDARY_XP, directions, cardinals)
       do k=dist%info%zs,dist%info%ze
         do j=dist%info%ys,dist%info%ye
@@ -1266,7 +1159,7 @@ contains
 
     directions(:) = 0
     ! YM BOUNDARY
-    if ((bc%flags(BOUNDARY_YM).eq.BC_FLUX).and.(dist%info%ys.eq.1)) then
+    if ((bc%flags(BOUNDARY_YM).eq.BC_NEUMANN).and.(dist%info%ys.eq.1)) then
       call DiscSetLocalDirections(dist%disc, BOUNDARY_YM, directions, cardinals)
       do k=dist%info%zs,dist%info%ze
         do i=dist%info%xs,dist%info%xe
@@ -1281,7 +1174,7 @@ contains
 
     directions(:) = 0
     ! YP BOUNDARY
-    if ((bc%flags(BOUNDARY_YP).eq.BC_FLUX).and.(dist%info%ye.eq.dist%info%NY)) then
+    if ((bc%flags(BOUNDARY_YP).eq.BC_NEUMANN).and.(dist%info%ye.eq.dist%info%NY)) then
       call DiscSetLocalDirections(dist%disc, BOUNDARY_YP, directions, cardinals)
       do k=dist%info%zs,dist%info%ze
         do i=dist%info%xs,dist%info%xe
@@ -1296,7 +1189,7 @@ contains
 
     directions(:) = 0
     ! ZM BOUNDARY
-    if ((bc%flags(BOUNDARY_ZM).eq.BC_FLUX).and.(dist%info%zs.eq.1)) then
+    if ((bc%flags(BOUNDARY_ZM).eq.BC_NEUMANN).and.(dist%info%zs.eq.1)) then
       call DiscSetLocalDirections(dist%disc, BOUNDARY_ZM, directions, cardinals)
       do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
@@ -1311,7 +1204,7 @@ contains
 
     directions(:) = 0
     ! ZP BOUNDARY
-    if ((bc%flags(BOUNDARY_ZP).eq.BC_FLUX).and.(dist%info%ze.eq.dist%info%NZ)) then
+    if ((bc%flags(BOUNDARY_ZP).eq.BC_NEUMANN).and.(dist%info%ze.eq.dist%info%NZ)) then
       call DiscSetLocalDirections(dist%disc, BOUNDARY_ZP, directions, cardinals)
       do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
@@ -1344,7 +1237,7 @@ contains
     directions(:) = 0
 
     ! XM BOUNDARY
-    if ((bc%flags(BOUNDARY_XM).eq.BC_FLUX).and.(dist%info%xs.eq.1)) then
+    if ((bc%flags(BOUNDARY_XM).eq.BC_NEUMANN).and.(dist%info%xs.eq.1)) then
       call DiscSetLocalDirections(dist%disc, BOUNDARY_XM, directions, cardinals)
       do j=dist%info%ys,dist%info%ye
         i = 1
@@ -1357,7 +1250,7 @@ contains
 
     directions(:) = 0
     ! XP BOUNDARY
-    if ((bc%flags(BOUNDARY_XP).eq.BC_FLUX).and.(dist%info%xe.eq.dist%info%NX)) then
+    if ((bc%flags(BOUNDARY_XP).eq.BC_NEUMANN).and.(dist%info%xe.eq.dist%info%NX)) then
       call DiscSetLocalDirections(dist%disc, BOUNDARY_XP, directions, cardinals)
       do j=dist%info%ys,dist%info%ye
         i = dist%info%NX
@@ -1370,7 +1263,7 @@ contains
 
     directions(:) = 0
     ! YM BOUNDARY
-    if ((bc%flags(BOUNDARY_YM).eq.BC_FLUX).and.(dist%info%ys.eq.1)) then
+    if ((bc%flags(BOUNDARY_YM).eq.BC_NEUMANN).and.(dist%info%ys.eq.1)) then
       call DiscSetLocalDirections(dist%disc, BOUNDARY_YM, directions, cardinals)
       do i=dist%info%xs,dist%info%xe
         j = 1
@@ -1383,7 +1276,7 @@ contains
 
     directions(:) = 0
     ! YP BOUNDARY
-    if ((bc%flags(BOUNDARY_YP).eq.BC_FLUX).and.(dist%info%ye.eq.dist%info%NY)) then
+    if ((bc%flags(BOUNDARY_YP).eq.BC_NEUMANN).and.(dist%info%ye.eq.dist%info%NY)) then
       call DiscSetLocalDirections(dist%disc, BOUNDARY_YP, directions, cardinals)
       do i=dist%info%xs,dist%info%xe
         j = dist%info%NY
