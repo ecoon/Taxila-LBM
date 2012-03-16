@@ -45,6 +45,7 @@ module LBM_Flow_module
 
      type(bc_type),pointer:: bc
      PetscInt, dimension(6):: bc_flags
+     PetscBool, dimension(15):: bc_done
      PetscScalar,allocatable,dimension(:,:) :: bc_data
 
      PetscBool io_fi
@@ -190,7 +191,7 @@ contains
     PetscScalar gravity(options%ndims)
     PetscScalar,parameter:: eps=1.e-15 ! slightly larger than machine epsilon
     PetscBool flag
-    character[size=MAXWORDLENGTH] boundaryname
+    character(len=3) boundaryname
 
     flag = PETSC_FALSE
     flow%ncomponents = options%ncomponents
@@ -214,7 +215,7 @@ contains
     ! set up control for forcing terms
     gravity(:) = 0.
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
-    if (help) call PetscPrintf(options%comm, "-gvt=<0,0,0>: gravity\n", ierr)
+    if (help) call PetscPrintf(flow%comm, "-gvt=<0,0,0>: gravity\n", ierr)
     nmax = flow%ndims
     call PetscOptionsGetRealArray(options%my_prefix, '-gvt', gravity, &
          nmax, flow%body_forces, ierr)
@@ -323,7 +324,7 @@ contains
              flow%components(lcv)%relax%tau = consistent_tau
 
           else if (abs(flow%components(lcv)%relax%tau - consistent_tau) > eps) then
-             call LBMError(options%comm, 1, &
+             call LBMError(flow%comm, 1, &
                   'Viscosities and relaxation times specified '// &
                   'for components are not consistent.', ierr)
           else
@@ -343,7 +344,7 @@ contains
              flow%components(lcv)%mm = consistent_mm
 
           else if (abs(flow%components(lcv)%mm - consistent_mm) > eps) then
-             call LBMError(options%comm, 1, &
+             call LBMError(flow%comm, 1, &
                   'Densities and molecular masses specified '// &
                   'for components are not consistent.', ierr)
           else
@@ -384,10 +385,10 @@ contains
     select case(flow%ndims)
     case(2)
       call FlowSetUpBCsD2(flow, flow%bc%xm_a, flow%bc%xp_a, &
-           flow%bc%ym_a, flow%bc%yp_a)
+           flow%bc%ym_a, flow%bc%yp_a, flow%distribution)
     case(3)
-      call FlowSetUpBCsD3(flow, flow%bc%xm_a, flow%bc%xp_a, &
-           flow%bc%ym_a, flow%bc%yp_a, flow%bc%zm_a, flow%bc%zp_a)
+      call FlowSetUpBCsD3(flow, flow%bc%xm_a, flow%bc%xp_a, flow%bc%ym_a, &
+           flow%bc%yp_a, flow%bc%zm_a, flow%bc%zp_a, flow%distribution)
     end select
 
     ! allocate, initialize workspace
@@ -1013,40 +1014,65 @@ contains
     end do
   end subroutine FlowCollisionD2
 
-  subroutine FlowParseBC(flow, options, boundary, name)
+  subroutine FlowParseBC(flow, options, boundary, bname)
+    use LBM_Options_module
+
     type(flow_type) flow
     type(options_type) options
     PetscInt boundary
-    character[size=MAXWORDLENGTH] name
+    character(len=3):: bname
 
-    PetscBool done, bcvalue
-    PetscInt bccount
+    PetscBool done, bcvalue, flag
+    PetscInt bccount, m
+    PetscErrorCode ierr
 
     done = PETSC_FALSE
 
-    ! density boundary condition
+    ! periodic boundary condition
     bcvalue = PETSC_FALSE
-    call OptionsGetBool(options, "-bc_density_"//trim(name),"provide density", &
+    call OptionsGetBool(options, "-bc_periodic_"//bname(1:1), "periodic in x", &
          bcvalue, flag, ierr)
     if (bcvalue) then
+      done = PETSC_TRUE
+      flow%bc%flags(BOUNDARY) = BC_PERIODIC
+      flow%bc_flags(BOUNDARY) = BC_PERIODIC
+    end if
+
+    ! reflecting boundary condition... much like a "no stick" BC
+    bcvalue = PETSC_FALSE
+    call OptionsGetBool(options, "-bc_reflecting_"//trim(bname), "reflecting bc", &
+         bcvalue, flag, ierr)
+    if (bcvalue) then
+      done = PETSC_TRUE
+      flow%bc%flags(BOUNDARY) = BC_REFLECTING
+      flow%bc_flags(BOUNDARY) = BC_REFLECTING
+    end if
+
+    ! density boundary condition
+    bcvalue = PETSC_FALSE
+    call OptionsGetBool(options, "-bc_density_"//trim(bname),"provide density", &
+         bcvalue, flag, ierr)
+    if (bcvalue) then
+      if (done) call LBMError(flow%comm, 1, &
+           "Multiple BCs provided for boundary "//trim(bname), ierr)
       done = PETSC_TRUE
       flow%bc%flags(boundary) = BC_DIRICHLET
       flow%bc_flags(boundary) = BC_DENSITY
       flow%bc_data(:,boundary) = -1.d0
 
-      if (flow%dist%s.eq.1) then
-        call OptionsGetReal(options, "-bc_density_"//trim(name)//"_value", &
+      if (flow%distribution%s.eq.1) then
+        call OptionsGetReal(options, "-bc_density_"//trim(bname)//"_value", &
              "density", flow%bc_data(1,boundary), flag, ierr)
-        if (.not.flag) call LBMWarn(options%comm, "Density BC on boundary "&
-             //trim(name)//" not set in input file!", ierr)
+        if (.not.flag) call LBMWarn(flow%comm, "Density BC on boundary "&
+             //trim(bname)//" not set in input file!", ierr)
       else
-        do m=1,flow%dist%s
-          call OptionsGetReal(options, "-bc_density_"//trim(name)//"_"// &
-               flow%components(m)%name, "density", flow%bc_data(m,boundary), &
+        do m=1,flow%distribution%s
+          call OptionsGetReal(options, "-bc_density_"//trim(bname)//"_"// &
+               trim(flow%components(m)%name), "density", flow%bc_data(m,boundary), &
                flag, ierr)
           if (.not.flag) then
-            call LBMWarn(options%comm, "Density BC on boundary "// &
-                 trim(name)//" not set in input file!", ierr)
+            call LBMWarn(flow%comm, "Density BC on boundary "// &
+                 trim(bname)//" not set in input file!", ierr)
           endif
         end do
       end if
@@ -1054,95 +1080,95 @@ contains
 
     ! pressure on the inlet provides pressure and rho1/rho_total
     bcvalue = PETSC_FALSE
-    call OptionsGetBool(options,"-bc_pressure_inlet_"//trim(name), &
+    call OptionsGetBool(options,"-bc_pressure_inlet_"//trim(bname), &
          "provide pressure (and rho_1/rho_t if two-component)", &
          bcvalue, flag, ierr)
     if (bcvalue) then
-      if (done) call LBMError(options%comm, 1, &
-           "Multiple BCs provided for boundary "//trim(name), ierr)
+      if (done) call LBMError(flow%comm, 1, &
+           "Multiple BCs provided for boundary "//trim(bname), ierr)
       done = PETSC_TRUE
       flow%bc%flags(boundary) = BC_DIRICHLET
       flow%bc_flags(boundary) = BC_PRESSURE_INLET
       flow%bc_data(:,boundary) = -1.d0
 
-      call OptionsGetReal(options, "-bc_pressure_"//trim(name)//"_value", &
+      call OptionsGetReal(options, "-bc_pressure_"//trim(bname)//"_value", &
            "pressure", flow%bc_data(1,boundary), flag, ierr)
       if (.not.flag) then
-        call LBMWarn(options%comm, "Pressure BC on boundary "//trim(name)//&
+        call LBMWarn(flow%comm, "Pressure BC on boundary "//trim(bname)//&
            " not set in input file!", ierr)
       end if
-      if (flow%dist%s > 1) then
-        call OptionsGetReal(options, "-bc_rho1_fraction_"//trim(name)// &
+      if (flow%distribution%s > 1) then
+        call OptionsGetReal(options, "-bc_rho1_fraction_"//trim(bname)// &
              "_value", "mass fraction of rho1, rho1/sum(rho)", &
              flow%bc_data(1,boundary), flag, ierr)
         if (.not.flag) then
-          call LBMWarn(options%comm, &
+          call LBMWarn(flow%comm, &
                "Mass fraction for pressure BC on boundary " &
-               //trim(name)//" not set in input file!", ierr)
+               //trim(bname)//" not set in input file!", ierr)
         end if
       endif
     end if
 
     ! pressure on the outlet provides pressure only
     bcvalue = PETSC_FALSE
-    call OptionsGetBool(options,"-bc_pressure_outlet_"//trim(name), &
+    call OptionsGetBool(options,"-bc_pressure_outlet_"//trim(bname), &
          "provide pressure only", &
          bcvalue, flag, ierr)
     if (bcvalue) then
-      if (done) call LBMError(options%comm, 1, &
-           "Multiple BCs provided for boundary "//trim(name), ierr)
+      if (done) call LBMError(flow%comm, 1, &
+           "Multiple BCs provided for boundary "//trim(bname), ierr)
       done = PETSC_TRUE
       flow%bc%flags(boundary) = BC_DIRICHLET
       flow%bc_flags(boundary) = BC_PRESSURE_OUTLET
       flow%bc_data(:,boundary) = -1.d0
 
-      call OptionsGetReal(options, "-bc_pressure_"//trim(name)//"_value", &
+      call OptionsGetReal(options, "-bc_pressure_"//trim(bname)//"_value", &
            "pressure", flow%bc_data(1,boundary), flag, ierr)
       if (.not.flag) then
-        call LBMWarn(options%comm, "Pressure BC on boundary "//trim(name)// &
+        call LBMWarn(flow%comm, "Pressure BC on boundary "//trim(bname)// &
            " not set in input file!", ierr)
       end if
     end if
 
     ! momentum boundary condition
     bcvalue = PETSC_FALSE
-    call OptionsGetBool(options, "-bc_momentum_"//trim(name), &
+    call OptionsGetBool(options, "-bc_momentum_"//trim(bname), &
          "provide all components of rho*u", bcvalue, flag, ierr)
     if (bcvalue) then
-      if (done) call LBMError(options%comm, 1, &
-           "Multiple BCs provided for boundary "//trim(name), ierr)
+      if (done) call LBMError(flow%comm, 1, &
+           "Multiple BCs provided for boundary "//trim(bname), ierr)
       done = PETSC_TRUE
       flow%bc%flags(boundary) = BC_NEUMANN
       flow%bc_flags(boundary) = BC_MOMENTUM
       flow%bc_data(:,boundary) = -1.d0
 
-      if (flow%dist%s.eq.1) then
+      if (flow%distribution%s.eq.1) then
         bccount = flow%ndims
-        call OptionsGetRealArray(options,"-bc_momentum_"//trim(name)//"_value",&
+        call OptionsGetRealArray(options,"-bc_momentum_"//trim(bname)//"_value",&
              "list of momentums in x,y,(z) directions", &
              flow%bc_data(:,boundary), bccount, flag, ierr)
         if (.not.flag) then
-          call LBMWarn(options%comm, "Density BC on boundary "//trim(name)// &
+          call LBMWarn(flow%comm, "Density BC on boundary "//trim(bname)// &
                " not set in input file!", ierr)
         else if (bccount /= flow%ndims) then
-          call LBMError("Momentum BC on boundary "//trim(name)// &
+          call LBMError(flow%comm,1,"Momentum BC on boundary "//trim(bname)// &
                " was provided the wrong number of components.", ierr)
         end if
       else
-        do m=1,flow%dist%s
+        do m=1,flow%distribution%s
           bccount = flow%ndims
-          call OptionsGetRealArray(options,"-bc_momentum_"//trim(name)// &
-               "_"//flow%components(m)%name, &
+          call OptionsGetRealArray(options,"-bc_momentum_"//trim(bname)// &
+               "_"//trim(flow%components(m)%name), &
                "list of momentums in x,y,(z) directions", &
                flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims,boundary), &
                bccount, flag, ierr)
           if (.not.flag) then
-            call LBMWarn(options%comm, "Momentum BC on boundary " &
-                 //trim(name)//" not set in input file!", ierr)
+            call LBMWarn(flow%comm, "Momentum BC on boundary " &
+                 //trim(bname)//" not set in input file!", ierr)
           else if (bccount /= flow%ndims) then
-            call LBMError(options%comm, 1, "Momentum BC on boundary "// &
-                 trim(name)//" for component "//flow%comonents(m)%name// &
-                 " was provided the wrong number of components.", ierr)
+            call LBMError(flow%comm, 1, "Momentum BC on boundary "// &
+                 trim(bname)//" for component "//trim(flow%components(m)%name)&
+                 //" was provided the wrong number of components.", ierr)
           end if
         end do
       end if
@@ -1150,76 +1176,76 @@ contains
 
     ! flux inlet provides total flux and rho1/rho_total
     bcvalue = PETSC_FALSE
-    call OptionsGetBool(options,"-bc_flux_inlet_"//trim(name), &
+    call OptionsGetBool(options,"-bc_flux_inlet_"//trim(bname), &
          "provide total flux (and rho_1/rho_t if two-component)", &
          bcvalue, flag, ierr)
     if (bcvalue) then
-      if (done) call LBMError(options%comm, 1, &
-           "Multiple BCs provided for boundary "//trim(name), ierr)
+      if (done) call LBMError(flow%comm, 1, &
+           "Multiple BCs provided for boundary "//trim(bname), ierr)
       done = PETSC_TRUE
       flow%bc%flags(boundary) = BC_NEUMANN
       flow%bc_flags(boundary) = BC_FLUX_INLET
       flow%bc_data(:,boundary) = -1.d0
 
-      call OptionsGetReal(options, "-bc_flux_inlet_"//trim(name)//"_value", &
+      call OptionsGetReal(options, "-bc_flux_inlet_"//trim(bname)//"_value", &
            "flux", flow%bc_data(1,boundary), flag, ierr)
       if (.not.flag) then
-        call LBMWarn(options%comm, "Flux inlet BC on boundary "//trim(name)// &
+        call LBMWarn(flow%comm, "Flux inlet BC on boundary "//trim(bname)// &
            " not set in input file!", ierr)
       end if
 
-      if (flow%dist%s > 1) then
-        call OptionsGetReal(options, "-bc_rho1_fraction_"//trim(name)// &
+      if (flow%distribution%s > 1) then
+        call OptionsGetReal(options, "-bc_rho1_fraction_"//trim(bname)// &
              "_value", "mass fraction of rho1, rho1/sum(rho)", &
              flow%bc_data(1,boundary), flag, ierr)
         if (.not.flag) then
-          call LBMWarn(options%comm, "Mass fraction for flux BC on boundary "&
-             //trim(name)//" not set in input file!", ierr)
+          call LBMWarn(flow%comm, "Mass fraction for flux BC on boundary "&
+             //trim(bname)//" not set in input file!", ierr)
         end if
       endif
     end if
 
     ! flux outlet provides total flux
     bcvalue = PETSC_FALSE
-    call OptionsGetBool(options,"-bc_flux_outlet_"//trim(name), &
+    call OptionsGetBool(options,"-bc_flux_outlet_"//trim(bname), &
          "provide total flux", bcvalue, flag, ierr)
     if (bcvalue) then
-      if (done) call LBMError(options%comm, 1, &
-           "Multiple BCs provided for boundary "//trim(name), ierr)
+      if (done) call LBMError(flow%comm, 1, &
+           "Multiple BCs provided for boundary "//trim(bname), ierr)
       done = PETSC_TRUE
       flow%bc%flags(boundary) = BC_NEUMANN
       flow%bc_flags(boundary) = BC_FLUX_OUTLET
       flow%bc_data(:,boundary) = -1.d0
 
-      call OptionsGetReal(options, "-bc_flux_outlet_"//trim(name)//"_value", &
+      call OptionsGetReal(options, "-bc_flux_outlet_"//trim(bname)//"_value", &
            "flux", flow%bc_data(1,boundary), flag, ierr)
       if (.not.flag) then
-        call LBMWarn(options%comm, "Flux outlet BC on boundary "//trim(name)// &
+        call LBMWarn(flow%comm, "Flux outlet BC on boundary "//trim(bname)// &
              " not set in input file!", ierr)
       end if
     end if
 
     ! velocity provides total velocities
     bcvalue = PETSC_FALSE
-    call OptionsGetBool(options,"-bc_velocity_"//trim(name), &
+    call OptionsGetBool(options,"-bc_velocity_"//trim(bname), &
          "provide velocity", bcvalue, flag, ierr)
     if (bcvalue) then
-      if (done) call LBMError(options%comm, 1, &
-           "Multiple BCs provided for boundary "//trim(name), ierr)
+      if (done) call LBMError(flow%comm, 1, &
+           "Multiple BCs provided for boundary "//trim(bname), ierr)
       done = PETSC_TRUE
       flow%bc%flags(boundary) = BC_VELOCITY
       flow%bc_flags(boundary) = BC_VELOCITY
       flow%bc_data(:,boundary) = -1.d0
 
       bccount = flow%ndims
-      call OptionsGetRealArray(options, "-bc_velocity_"//trim(name)//"_values",&
+      call OptionsGetRealArray(options, "-bc_velocity_"//trim(bname)//"_values",&
            "velocity in x,y,(z) directions", flow%bc_data(:,boundary), bccount,&
            flag, ierr)
       if (.not.flag) then
-        call LBMWarn(options%comm, "Velocity BC on boundary "//trim(name)// &
+        call LBMWarn(flow%comm, "Velocity BC on boundary "//trim(bname)// &
              " not set in input file!", ierr)
       else if (bccount /= flow%ndims) then
-        call LBMError("Velocity BC on boundary "//trim(name)// &
+        call LBMError(flow%comm, 1, "Velocity BC on boundary "//trim(bname)// &
              " was provided the wrong number of components.", ierr)
       end if
     endif
@@ -1229,18 +1255,20 @@ contains
        zm_vals, zp_vals, dist)
     type(flow_type) flow
     type(distribution_type) dist
-    PetscScalar,dimension(flow%dist%s,flow%ndims,dist%info%ys:dist%info%ye, &
+    PetscScalar,dimension(dist%s,flow%ndims,dist%info%ys:dist%info%ye, &
          dist%info%zs:dist%info%ze):: xm_vals, xp_vals
-    PetscScalar,dimension(flow%dist%s,flow%ndims,dist%info%xs:dist%info%xe, &
+    PetscScalar,dimension(dist%s,flow%ndims,dist%info%xs:dist%info%xe, &
          dist%info%zs:dist%info%ze):: ym_vals, yp_vals
-    PetscScalar,dimension(flow%dist%s,flow%ndims,dist%info%xs:dist%info%xe, &
+    PetscScalar,dimension(dist%s,flow%ndims,dist%info%xs:dist%info%xe, &
          dist%info%ys:dist%info%ye):: zm_vals, zp_vals
 
     PetscScalar density(dist%s)
+    PetscInt i,j,k,m
+    PetscErrorCode ierr
 
     ! xm boundary
     if (dist%info%xs.eq.1) then
-      select case(flow%bc_flags(BOUNDARY_XM)
+      select case(flow%bc_flags(BOUNDARY_XM))
       case(BC_DENSITY)
         do k=dist%info%zs,dist%info%ze
         do j=dist%info%ys,dist%info%ye
@@ -1266,7 +1294,7 @@ contains
         do k=dist%info%zs,dist%info%ze
         do j=dist%info%ys,dist%info%ye
           do m=1,dist%s
-            xm_vals(m,1,j,k) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+            xm_vals(m,:,j,k) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
                  BOUNDARY_XM)
           end do
         end do
@@ -1297,7 +1325,7 @@ contains
           xm_vals(1,X_DIRECTION,j,k) = flow%bc_data(1,BOUNDARY_XM)
         end do
         end do
-      case(BC_VELOCITY_OUTLET)
+      case(BC_VELOCITY)
         do k=dist%info%zs,dist%info%ze
         do j=dist%info%ys,dist%info%ye
           xm_vals(1,:,j,k) = flow%bc_data(1:flow%ndims,BOUNDARY_XM)
@@ -1308,7 +1336,7 @@ contains
 
     ! xp boundary
     if (dist%info%xe.eq.dist%info%NX) then
-      select case(flow%bc_flags(BOUNDARY_XP)
+      select case(flow%bc_flags(BOUNDARY_XP))
       case(BC_DENSITY)
         do k=dist%info%zs,dist%info%ze
         do j=dist%info%ys,dist%info%ye
@@ -1334,7 +1362,7 @@ contains
         do k=dist%info%zs,dist%info%ze
         do j=dist%info%ys,dist%info%ye
           do m=1,dist%s
-            xp_vals(m,1,j,k) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+            xp_vals(m,:,j,k) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
                  BOUNDARY_XP)
           end do
         end do
@@ -1365,7 +1393,7 @@ contains
           xp_vals(1,X_DIRECTION,j,k) = flow%bc_data(1,BOUNDARY_XP)
         end do
         end do
-      case(BC_VELOCITY_OUTLET)
+      case(BC_VELOCITY)
         do k=dist%info%zs,dist%info%ze
         do j=dist%info%ys,dist%info%ye
           xp_vals(1,:,j,k) = flow%bc_data(1:flow%ndims,BOUNDARY_XP)
@@ -1376,7 +1404,7 @@ contains
 
     ! ym boundary
     if (dist%info%ys.eq.1) then
-      select case(flow%bc_flags(BOUNDARY_YM)
+      select case(flow%bc_flags(BOUNDARY_YM))
       case(BC_DENSITY)
         do k=dist%info%zs,dist%info%ze
         do i=dist%info%xs,dist%info%xe
@@ -1402,7 +1430,7 @@ contains
         do k=dist%info%zs,dist%info%ze
         do i=dist%info%xs,dist%info%xe
           do m=1,dist%s
-            ym_vals(m,1,i,k) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+            ym_vals(m,:,i,k) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
                  BOUNDARY_YM)
           end do
         end do
@@ -1433,7 +1461,7 @@ contains
           ym_vals(1,Y_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_YM)
         end do
         end do
-      case(BC_VELOCITY_OUTLET)
+      case(BC_VELOCITY)
         do k=dist%info%zs,dist%info%ze
         do i=dist%info%xs,dist%info%xe
           ym_vals(1,:,i,k) = flow%bc_data(1:flow%ndims,BOUNDARY_YM)
@@ -1444,7 +1472,7 @@ contains
 
     ! yp boundary
     if (dist%info%ye.eq.dist%info%NY) then
-      select case(flow%bc_flags(BOUNDARY_YP)
+      select case(flow%bc_flags(BOUNDARY_YP))
       case(BC_DENSITY)
         do k=dist%info%zs,dist%info%ze
         do i=dist%info%xs,dist%info%xe
@@ -1470,7 +1498,7 @@ contains
         do k=dist%info%zs,dist%info%ze
         do i=dist%info%xs,dist%info%xe
           do m=1,dist%s
-            yp_vals(m,1,i,k) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+            yp_vals(m,:,i,k) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
                  BOUNDARY_YP)
           end do
         end do
@@ -1501,7 +1529,7 @@ contains
           yp_vals(1,Y_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_YP)
         end do
         end do
-      case(BC_VELOCITY_OUTLET)
+      case(BC_VELOCITY)
         do k=dist%info%zs,dist%info%ze
         do i=dist%info%xs,dist%info%xe
           yp_vals(1,:,i,k) = flow%bc_data(1:flow%ndims,BOUNDARY_YP)
@@ -1512,9 +1540,9 @@ contains
 
     ! zm boundary
     if (dist%info%zs.eq.1) then
-      select case(flow%bc_flags(BOUNDARY_ZM)
+      select case(flow%bc_flags(BOUNDARY_ZM))
       case(BC_DENSITY)
-        do j=dist%info%ys:dist%info%ye
+        do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
           zm_vals(:,1,i,k) = flow%bc_data(1:dist%s,BOUNDARY_ZM)
         end do
@@ -1523,35 +1551,35 @@ contains
         density(:) = 0.d0
         call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_ZM), &
              flow%bc_data(2,BOUNDARY_ZM), density)
-        do j=dist%info%ys:dist%info%ye
+        do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
           zm_vals(:,1,i,k) = density
         end do
         end do
       case(BC_PRESSURE_OUTLET)
-        do j=dist%info%ys:dist%info%ye
+        do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
           zm_vals(1,1,i,k) = flow%bc_data(1,BOUNDARY_ZM)
         end do
         end do
       case(BC_MOMENTUM)
-        do j=dist%info%ys:dist%info%ye
+        do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
           do m=1,dist%s
-            zm_vals(m,1,i,k) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+            zm_vals(m,:,i,k) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
                  BOUNDARY_ZM)
           end do
         end do
         end do
       case(BC_FLUX_INLET)
         if (dist%s.eq.1) then
-          do j=dist%info%ys:dist%info%ye
+          do j=dist%info%ys,dist%info%ye
           do i=dist%info%xs,dist%info%xe
             zm_vals(1,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZM)
           end do
           end do
         else if (dist%s.eq.2) then
-          do j=dist%info%ys:dist%info%ye
+          do j=dist%info%ys,dist%info%ye
           do i=dist%info%xs,dist%info%xe
             zm_vals(1,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZM) &
                  * flow%bc_data(2,BOUNDARY_ZM)
@@ -1564,13 +1592,13 @@ contains
                "BC flux inlet only implemented for 1 or 2 components.", ierr)
         end if
       case(BC_FLUX_OUTLET)
-        do j=dist%info%ys:dist%info%ye
+        do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
           zm_vals(1,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZM)
         end do
         end do
-      case(BC_VELOCITY_OUTLET)
-        do j=dist%info%ys:dist%info%ye
+      case(BC_VELOCITY)
+        do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
           zm_vals(1,:,i,k) = flow%bc_data(1:flow%ndims,BOUNDARY_ZM)
         end do
@@ -1580,9 +1608,9 @@ contains
 
     ! zp boundary
     if (dist%info%ze.eq.dist%info%NZ) then
-      select case(flow%bc_flags(BOUNDARY_ZP)
+      select case(flow%bc_flags(BOUNDARY_ZP))
       case(BC_DENSITY)
-        do j=dist%info%ys:dist%info%ye
+        do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
           zp_vals(:,1,i,k) = flow%bc_data(1:dist%s,BOUNDARY_ZP)
         end do
@@ -1591,35 +1619,35 @@ contains
         density(:) = 0.d0
         call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_ZP), &
              flow%bc_data(2,BOUNDARY_ZP), density)
-        do j=dist%info%ys:dist%info%ye
+        do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
           zp_vals(:,1,i,k) = density
         end do
         end do
       case(BC_PRESSURE_OUTLET)
-        do j=dist%info%ys:dist%info%ye
+        do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
           zp_vals(1,1,i,k) = flow%bc_data(1,BOUNDARY_ZP)
         end do
         end do
       case(BC_MOMENTUM)
-        do j=dist%info%ys:dist%info%ye
+        do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
           do m=1,dist%s
-            zp_vals(m,1,i,k) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+            zp_vals(m,:,i,k) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
                  BOUNDARY_ZP)
           end do
         end do
         end do
       case(BC_FLUX_INLET)
         if (dist%s.eq.1) then
-          do j=dist%info%ys:dist%info%ye
+          do j=dist%info%ys,dist%info%ye
           do i=dist%info%xs,dist%info%xe
             zp_vals(1,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZP)
           end do
           end do
         else if (dist%s.eq.2) then
-          do j=dist%info%ys:dist%info%ye
+          do j=dist%info%ys,dist%info%ye
           do i=dist%info%xs,dist%info%xe
             zp_vals(1,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZP) &
                  * flow%bc_data(2,BOUNDARY_ZP)
@@ -1632,13 +1660,13 @@ contains
                "BC flux inlet only implemented for 1 or 2 components.", ierr)
         end if
       case(BC_FLUX_OUTLET)
-        do j=dist%info%ys:dist%info%ye
+        do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
           zp_vals(1,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZP)
         end do
         end do
-      case(BC_VELOCITY_OUTLET)
-        do j=dist%info%ys:dist%info%ye
+      case(BC_VELOCITY)
+        do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
           zp_vals(1,:,i,k) = flow%bc_data(1:flow%ndims,BOUNDARY_ZP)
         end do
@@ -1650,16 +1678,18 @@ contains
   subroutine FlowSetUpBCsD2(flow, xm_vals, xp_vals, ym_vals, yp_vals, dist)
     type(flow_type) flow
     type(distribution_type) dist
-    PetscScalar,dimension(flow%dist%s,flow%ndims, &
+    PetscScalar,dimension(dist%s,flow%ndims, &
          dist%info%ys:dist%info%ye):: xm_vals, xp_vals
-    PetscScalar,dimension(flow%dist%s,flow%ndims, &
+    PetscScalar,dimension(dist%s,flow%ndims, &
          dist%info%xs:dist%info%xe):: ym_vals, yp_vals
 
     PetscScalar density(dist%s)
+    PetscInt i,j,m
+    PetscErrorCode ierr
 
     ! xm boundary
     if (dist%info%xs.eq.1) then
-      select case(flow%bc_flags(BOUNDARY_XM)
+      select case(flow%bc_flags(BOUNDARY_XM))
       case(BC_DENSITY)
         do j=dist%info%ys,dist%info%ye
           xm_vals(:,1,j) = flow%bc_data(1:dist%s,BOUNDARY_XM)
@@ -1678,7 +1708,7 @@ contains
       case(BC_MOMENTUM)
         do j=dist%info%ys,dist%info%ye
           do m=1,dist%s
-            xm_vals(m,1,j) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+            xm_vals(m,:,j) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
                  BOUNDARY_XM)
           end do
         end do
@@ -1702,7 +1732,7 @@ contains
         do j=dist%info%ys,dist%info%ye
           xm_vals(1,X_DIRECTION,j) = flow%bc_data(1,BOUNDARY_XM)
         end do
-      case(BC_VELOCITY_OUTLET)
+      case(BC_VELOCITY)
         do j=dist%info%ys,dist%info%ye
           xm_vals(1,:,j) = flow%bc_data(1:flow%ndims,BOUNDARY_XM)
         end do
@@ -1711,7 +1741,7 @@ contains
 
     ! xp boundary
     if (dist%info%xe.eq.dist%info%NX) then
-      select case(flow%bc_flags(BOUNDARY_XP)
+      select case(flow%bc_flags(BOUNDARY_XP))
       case(BC_DENSITY)
         do j=dist%info%ys,dist%info%ye
           xp_vals(:,1,j) = flow%bc_data(1:dist%s,BOUNDARY_XP)
@@ -1730,7 +1760,7 @@ contains
       case(BC_MOMENTUM)
         do j=dist%info%ys,dist%info%ye
           do m=1,dist%s
-            xp_vals(m,1,j) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+            xp_vals(m,:,j) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
                  BOUNDARY_XP)
           end do
         end do
@@ -1754,7 +1784,7 @@ contains
         do j=dist%info%ys,dist%info%ye
           xp_vals(1,X_DIRECTION,j) = flow%bc_data(1,BOUNDARY_XP)
         end do
-      case(BC_VELOCITY_OUTLET)
+      case(BC_VELOCITY)
         do j=dist%info%ys,dist%info%ye
           xp_vals(1,:,j) = flow%bc_data(1:flow%ndims,BOUNDARY_XP)
         end do
@@ -1763,7 +1793,7 @@ contains
 
     ! ym boundary
     if (dist%info%ys.eq.1) then
-      select case(flow%bc_flags(BOUNDARY_YM)
+      select case(flow%bc_flags(BOUNDARY_YM))
       case(BC_DENSITY)
         do i=dist%info%xs,dist%info%xe
           ym_vals(:,1,i) = flow%bc_data(1:dist%s,BOUNDARY_YM)
@@ -1782,7 +1812,7 @@ contains
       case(BC_MOMENTUM)
         do i=dist%info%xs,dist%info%xe
           do m=1,dist%s
-            ym_vals(m,1,i) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+            ym_vals(m,:,i) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
                  BOUNDARY_YM)
           end do
         end do
@@ -1806,7 +1836,7 @@ contains
         do i=dist%info%xs,dist%info%xe
           ym_vals(1,Y_DIRECTION,i) = flow%bc_data(1,BOUNDARY_YM)
         end do
-      case(BC_VELOCITY_OUTLET)
+      case(BC_VELOCITY)
         do i=dist%info%xs,dist%info%xe
           ym_vals(1,:,i) = flow%bc_data(1:flow%ndims,BOUNDARY_YM)
         end do
@@ -1815,7 +1845,7 @@ contains
 
     ! yp boundary
     if (dist%info%ye.eq.dist%info%NY) then
-      select case(flow%bc_flags(BOUNDARY_YP)
+      select case(flow%bc_flags(BOUNDARY_YP))
       case(BC_DENSITY)
         do i=dist%info%xs,dist%info%xe
           yp_vals(:,1,i) = flow%bc_data(1:dist%s,BOUNDARY_YP)
@@ -1834,7 +1864,7 @@ contains
       case(BC_MOMENTUM)
         do i=dist%info%xs,dist%info%xe
           do m=1,dist%s
-            yp_vals(m,1,i) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+            yp_vals(m,:,i) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
                  BOUNDARY_YP)
           end do
         end do
@@ -1858,7 +1888,7 @@ contains
         do i=dist%info%xs,dist%info%xe
           yp_vals(1,Y_DIRECTION,i) = flow%bc_data(1,BOUNDARY_YP)
         end do
-      case(BC_VELOCITY_OUTLET)
+      case(BC_VELOCITY)
         do i=dist%info%xs,dist%info%xe
           yp_vals(1,:,i) = flow%bc_data(1:flow%ndims,BOUNDARY_YP)
         end do
@@ -1870,6 +1900,8 @@ contains
     type(flow_type) flow
     type(walls_type) walls
 
+    PetscInt lcv_side
+
     ! Calculate rho, using the streamed values for internal, the rho
     ! boundary condition for Dirichlet BCs, and f^* as the previous
     ! timestep value.  Then calculate forces from that rho.
@@ -1879,7 +1911,7 @@ contains
     do lcv_side=1,flow%ndims*2
       if ((flow%bc_flags(lcv_side).eq.BC_PRESSURE_OUTLET).and. &
            .not.flow%bc_done(BC_PRESSURE_OUTLET)) then
-        if (flow%dist%s /= 1) then
+        if (flow%distribution%s /= 1) then
           call FlowUpdateBCPressureOutlet(flow, walls)
         end if
         flow%bc_done(BC_PRESSURE_OUTLET) = PETSC_TRUE
@@ -1900,8 +1932,11 @@ contains
     type(flow_type) flow
     type(walls_type) walls
 
+    PetscErrorCode ierr
+    PetscScalar,parameter:: eps=1.e-10 ! slightly larger than machine epsilon
+
     if ((DABS(flow%components(1)%gf(1)) > eps) .or. &
-        (DABS(flow%components(1)%gf(1) > eps)) .or. &
+        (DABS(flow%components(1)%gf(1)) > eps) .or. &
         flow%use_nonideal_eos) then
       call LBMError(PETSC_COMM_SELF, 1, &
            "Pressure outlet not implemented for non-ideal EOS or g11 or g22 /= 0", ierr)
@@ -1909,11 +1944,14 @@ contains
 
     select case(flow%ndims)
     case (2)
-      call FlowUpdateBCPressureOutletD2(flow, walls%walls_a, flow%dist%rho_a, &
-           bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, flow%dist)
+      call FlowUpdateBCPressureOutletD2(flow, walls%walls_a, &
+           flow%distribution%rho_a, flow%bc%xm_a, flow%bc%xp_a, &
+           flow%bc%ym_a, flow%bc%yp_a, flow%distribution)
     case (3)
-      call FlowUpdateBCPressureOutletD2(flow, walls%walls_a, flow%dist%rho_a, &
-           bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, bc%zm_a, bc%zp_a, flow%dist)
+      call FlowUpdateBCPressureOutletD3(flow, walls%walls_a, &
+           flow%distribution%rho_a, flow%bc%xm_a, flow%bc%xp_a, &
+           flow%bc%ym_a, flow%bc%yp_a, flow%bc%zm_a, flow%bc%zp_a, &
+           flow%distribution)
     end select
   end subroutine FlowUpdateBCPressureOutlet
 
@@ -1937,11 +1975,11 @@ contains
     if ((flow%bc_flags(BOUNDARY_XM).eq.BC_PRESSURE_OUTLET).and.(dist%info%xs.eq.1)) then
       i = 1
       do j=dist%info%ys,dist%info%ye
-        if (walls(i,j,k).eq.0) then
-          if (walls(i+1,j,k).eq.0) then
-            rho1frac = rho(1,i+1,j)/sum(rho(:,i+1,j)
+        if (walls(i,j).eq.0) then
+          if (walls(i+1,j).eq.0) then
+            rho1frac = rho(1,i+1,j)/sum(rho(:,i+1,j))
           else
-            rho1frac = rho(1,i,j)/sum(rho(:,i,j)
+            rho1frac = rho(1,i,j)/sum(rho(:,i,j))
           endif
           call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_XM), &
                rho1frac, xm_vals(:,j))
@@ -1954,11 +1992,11 @@ contains
          (dist%info%xe.eq.dist%info%NX)) then
       i = dist%info%NX
       do j=dist%info%ys,dist%info%ye
-        if (walls(i,j,k).eq.0) then
-          if (walls(i-1,j,k).eq.0) then
-            rho1frac = rho(1,i-1,j)/sum(rho(:,i-1,j)
+        if (walls(i,j).eq.0) then
+          if (walls(i-1,j).eq.0) then
+            rho1frac = rho(1,i-1,j)/sum(rho(:,i-1,j))
           else
-            rho1frac = rho(1,i,j)/sum(rho(:,i,j)
+            rho1frac = rho(1,i,j)/sum(rho(:,i,j))
           endif
           call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_XP), &
                rho1frac, xp_vals(:,j))
@@ -1970,11 +2008,11 @@ contains
     if ((flow%bc_flags(BOUNDARY_YM).eq.BC_PRESSURE_OUTLET).and.(dist%info%ys.eq.1)) then
       j = 1
       do i=dist%info%xs,dist%info%xe
-        if (walls(i,j,k).eq.0) then
-          if (walls(i,j+1,k).eq.0) then
-            rho1frac = rho(1,i,j+1)/sum(rho(:,i,j+1)
+        if (walls(i,j).eq.0) then
+          if (walls(i,j+1).eq.0) then
+            rho1frac = rho(1,i,j+1)/sum(rho(:,i,j+1))
           else
-            rho1frac = rho(1,i,j)/sum(rho(:,i,j)
+            rho1frac = rho(1,i,j)/sum(rho(:,i,j))
           endif
           call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_YM), &
                rho1frac, ym_vals(:,i))
@@ -1987,11 +2025,11 @@ contains
          (dist%info%ye.eq.dist%info%NY)) then
       j = dist%info%NY
       do i=dist%info%xs,dist%info%xe
-        if (walls(i,j,k).eq.0) then
-          if (walls(i,j-1,k).eq.0) then
-            rho1frac = rho(1,i,j-1)/sum(rho(:,i,j-1)
+        if (walls(i,j).eq.0) then
+          if (walls(i,j-1).eq.0) then
+            rho1frac = rho(1,i,j-1)/sum(rho(:,i,j-1))
           else
-            rho1frac = rho(1,i,j)/sum(rho(:,i,j)
+            rho1frac = rho(1,i,j)/sum(rho(:,i,j))
           endif
           call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_YP), &
                rho1frac, yp_vals(:,i))
@@ -2008,11 +2046,11 @@ contains
          dist%info%rgys:dist%info%rgye,dist%info%rgzs:dist%info%rgze):: rho
     PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye,dist%info%rgzs:dist%info%rgze):: walls
-    PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye, &
+    PetscScalar,dimension(flow%bc%nbcs,dist%info%ys:dist%info%ye, &
          dist%info%zs:dist%info%ze):: xm_vals, xp_vals
-    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
+    PetscScalar,dimension(flow%bc%nbcs,dist%info%xs:dist%info%xe, &
          dist%info%zs:dist%info%ze):: ym_vals, yp_vals
-    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
+    PetscScalar,dimension(flow%bc%nbcs,dist%info%xs:dist%info%xe, &
          dist%info%ys:dist%info%ye):: zm_vals, zp_vals
 
     PetscInt i,j,k
@@ -2027,9 +2065,9 @@ contains
       do j=dist%info%ys,dist%info%ye
         if (walls(i,j,k).eq.0) then
           if (walls(i+1,j,k).eq.0) then
-            rho1frac = rho(1,i+1,j,k)/sum(rho(:,i+1,j,k)
+            rho1frac = rho(1,i+1,j,k)/sum(rho(:,i+1,j,k))
           else
-            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k))
           end if
           call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_XM), &
                rho1frac, xm_vals(:,j,k))
@@ -2046,9 +2084,9 @@ contains
       do j=dist%info%ys,dist%info%ye
         if (walls(i,j,k).eq.0) then
           if (walls(i-1,j,k).eq.0) then
-            rho1frac = rho(1,i-1,j,k)/sum(rho(:,i-1,j,k)
+            rho1frac = rho(1,i-1,j,k)/sum(rho(:,i-1,j,k))
           else
-            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k))
           end if
           call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_XP), &
                rho1frac, xp_vals(:,j,k))
@@ -2064,9 +2102,9 @@ contains
       do i=dist%info%xs,dist%info%xe
         if (walls(i,j,k).eq.0) then
           if (walls(i,j+1,k).eq.0) then
-            rho1frac = rho(1,i,j+1,k)/sum(rho(:,i,j+1,k)
+            rho1frac = rho(1,i,j+1,k)/sum(rho(:,i,j+1,k))
           else
-            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k))
           end if
           call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_YM), &
                rho1frac, ym_vals(:,i,k))
@@ -2083,9 +2121,9 @@ contains
       do i=dist%info%xs,dist%info%xe
         if (walls(i,j,k).eq.0) then
           if (walls(i,j-1,k).eq.0) then
-            rho1frac = rho(1,i,j-1,k)/sum(rho(:,i,j-1,k)
+            rho1frac = rho(1,i,j-1,k)/sum(rho(:,i,j-1,k))
           else
-            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k))
           end if
           call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_YP), &
                rho1frac, yp_vals(:,i,k))
@@ -2101,9 +2139,9 @@ contains
       do i=dist%info%xs,dist%info%xe
         if (walls(i,j,k).eq.0) then
           if (walls(i,j,k+1).eq.0) then
-            rho1frac = rho(1,i,j,k+1)/sum(rho(:,i,j,k+1)
+            rho1frac = rho(1,i,j,k+1)/sum(rho(:,i,j,k+1))
           else
-            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k))
           end if
           call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_ZM), &
                rho1frac, zm_vals(:,i,j))
@@ -2120,9 +2158,9 @@ contains
       do i=dist%info%xs,dist%info%xe
         if (walls(i,j,k).eq.0) then
           if (walls(i,j,k-1).eq.0) then
-            rho1frac = rho(1,i,j,k-1)/sum(rho(:,i,j,k-1)
+            rho1frac = rho(1,i,j,k-1)/sum(rho(:,i,j,k-1))
           else
-            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k))
           end if
           call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_ZP), &
                rho1frac, zp_vals(:,i,j))
@@ -2135,10 +2173,10 @@ contains
   subroutine FlowUpdateDensityFromPressure(flow, pressure, rho1frac, rho)
     type(flow_type) flow
     PetscScalar pressure, rho1frac
-    PetscScalar,dimension(2) rho
+    PetscScalar,dimension(2) :: rho
     PetscScalar alpha
-    PetscScalar eps = 1.d-10
     PetscErrorCode ierr
+    PetscScalar :: eps = 1.d-10
 
     if (rho1frac < eps) then
       rho(1) = 0.d0
@@ -2162,11 +2200,14 @@ contains
 
     select case(flow%ndims)
     case (2)
-      call FlowUpdateBCFluxOutletD2(flow, walls%walls_a, flow%dist%rho_a, &
-           bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, flow%dist)
+      call FlowUpdateBCFluxOutletD2(flow, walls%walls_a, &
+           flow%distribution%rho_a, flow%bc%xm_a, flow%bc%xp_a, &
+           flow%bc%ym_a, flow%bc%yp_a, flow%distribution)
     case (3)
-      call FlowUpdateBCFluxOutletD2(flow, walls%walls_a, flow%dist%rho_a, &
-           bc%xm_a, bc%xp_a, bc%ym_a, bc%yp_a, flow%dist)
+      call FlowUpdateBCFluxOutletD3(flow, walls%walls_a, &
+           flow%distribution%rho_a, flow%bc%xm_a, flow%bc%xp_a, &
+           flow%bc%ym_a, flow%bc%yp_a, flow%bc%zm_a, flow%bc%zp_a, &
+           flow%distribution)
     end select
   end subroutine FlowUpdateBCFluxOutlet
 
@@ -2178,9 +2219,9 @@ contains
          dist%info%rgys:dist%info%rgye):: rho
     PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye):: walls
-    PetscScalar,dimension(flow%dist%s,flow%ndims, &
+    PetscScalar,dimension(dist%s,flow%ndims, &
          dist%info%ys:dist%info%ye):: xm_vals, xp_vals
-    PetscScalar,dimension(flow%dist%s,flow%ndims, &
+    PetscScalar,dimension(dist%s,flow%ndims, &
          dist%info%xs:dist%info%xe):: ym_vals, yp_vals
 
     PetscInt i,j
@@ -2192,14 +2233,14 @@ contains
     if ((flow%bc_flags(BOUNDARY_XM).eq.BC_PRESSURE_OUTLET).and.(dist%info%xs.eq.1)) then
       i = 1
       do j=dist%info%ys,dist%info%ye
-        if (walls(i,j,k).eq.0) then
-          if (walls(i+1,j,k).eq.0) then
-            rho1frac = rho(1,i+1,j)/sum(rho(:,i+1,j)
+        if (walls(i,j).eq.0) then
+          if (walls(i+1,j).eq.0) then
+            rho1frac = rho(1,i+1,j)/sum(rho(:,i+1,j))
           else
-            rho1frac = rho(1,i,j)/sum(rho(:,i,j)
+            rho1frac = rho(1,i,j)/sum(rho(:,i,j))
           endif
-          xm_vals(1,j) = rho1frac*flow%bc_data(1,BOUNDARY_XM)
-          xm_vals(2,j) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_XM)
+          xm_vals(1,X_DIRECTION,j) = rho1frac*flow%bc_data(1,BOUNDARY_XM)
+          xm_vals(2,X_DIRECTION,j) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_XM)
         endif
       end do
     endif
@@ -2209,14 +2250,14 @@ contains
          (dist%info%xe.eq.dist%info%NX)) then
       i = dist%info%NX
       do j=dist%info%ys,dist%info%ye
-        if (walls(i,j,k).eq.0) then
-          if (walls(i-1,j,k).eq.0) then
-            rho1frac = rho(1,i-1,j)/sum(rho(:,i-1,j)
+        if (walls(i,j).eq.0) then
+          if (walls(i-1,j).eq.0) then
+            rho1frac = rho(1,i-1,j)/sum(rho(:,i-1,j))
           else
-            rho1frac = rho(1,i,j)/sum(rho(:,i,j)
+            rho1frac = rho(1,i,j)/sum(rho(:,i,j))
           endif
-          xp_vals(1,j) = rho1frac*flow%bc_data(1,BOUNDARY_XP)
-          xp_vals(2,j) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_XP)
+          xp_vals(1,X_DIRECTION,j) = rho1frac*flow%bc_data(1,BOUNDARY_XP)
+          xp_vals(2,X_DIRECTION,j) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_XP)
         end if
       end do
     endif
@@ -2225,14 +2266,14 @@ contains
     if ((flow%bc_flags(BOUNDARY_YM).eq.BC_PRESSURE_OUTLET).and.(dist%info%ys.eq.1)) then
       j = 1
       do i=dist%info%xs,dist%info%xe
-        if (walls(i,j,k).eq.0) then
-          if (walls(i,j+1,k).eq.0) then
-            rho1frac = rho(1,i,j+1)/sum(rho(:,i,j+1)
+        if (walls(i,j).eq.0) then
+          if (walls(i,j+1).eq.0) then
+            rho1frac = rho(1,i,j+1)/sum(rho(:,i,j+1))
           else
-            rho1frac = rho(1,i,j)/sum(rho(:,i,j)
+            rho1frac = rho(1,i,j)/sum(rho(:,i,j))
           endif
-          ym_vals(1,i) = rho1frac*flow%bc_data(1,BOUNDARY_YM)
-          ym_vals(2,i) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_YM)
+          ym_vals(1,Y_DIRECTION,i) = rho1frac*flow%bc_data(1,BOUNDARY_YM)
+          ym_vals(2,Y_DIRECTION,i) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_YM)
         end if
       end do
     endif
@@ -2242,14 +2283,14 @@ contains
          (dist%info%ye.eq.dist%info%NY)) then
       j = dist%info%NY
       do i=dist%info%xs,dist%info%xe
-        if (walls(i,j,k).eq.0) then
-          if (walls(i,j-1,k).eq.0) then
-            rho1frac = rho(1,i,j-1)/sum(rho(:,i,j-1)
+        if (walls(i,j).eq.0) then
+          if (walls(i,j-1).eq.0) then
+            rho1frac = rho(1,i,j-1)/sum(rho(:,i,j-1))
           else
-            rho1frac = rho(1,i,j)/sum(rho(:,i,j)
+            rho1frac = rho(1,i,j)/sum(rho(:,i,j))
           endif
-          yp_vals(1,i) = rho1frac*flow%bc_data(1,BOUNDARY_YP)
-          yp_vals(2,i) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_YP)
+          yp_vals(1,Y_DIRECTION,i) = rho1frac*flow%bc_data(1,BOUNDARY_YP)
+          yp_vals(2,Y_DIRECTION,i) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_YP)
         endif
       end do
     endif
@@ -2263,11 +2304,11 @@ contains
          dist%info%rgys:dist%info%rgye,dist%info%rgzs:dist%info%rgze):: rho
     PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
          dist%info%rgys:dist%info%rgye,dist%info%rgzs:dist%info%rgze):: walls
-    PetscScalar,dimension(flow%dist%s,flow%ndims,dist%info%ys:dist%info%ye, &
+    PetscScalar,dimension(dist%s,flow%ndims,dist%info%ys:dist%info%ye, &
          dist%info%zs:dist%info%ze):: xm_vals, xp_vals
-    PetscScalar,dimension(flow%dist%s,flow%ndims,dist%info%xs:dist%info%xe, &
+    PetscScalar,dimension(dist%s,flow%ndims,dist%info%xs:dist%info%xe, &
          dist%info%zs:dist%info%ze):: ym_vals, yp_vals
-    PetscScalar,dimension(flow%dist%s,flow%ndims,dist%info%xs:dist%info%xe, &
+    PetscScalar,dimension(dist%s,flow%ndims,dist%info%xs:dist%info%xe, &
          dist%info%ys:dist%info%ye):: zm_vals, zp_vals
 
     PetscInt i,j,k
@@ -2282,9 +2323,9 @@ contains
       do j=dist%info%ys,dist%info%ye
         if (walls(i,j,k).eq.0) then
           if (walls(i+1,j,k).eq.0) then
-            rho1frac = rho(1,i+1,j,k)/sum(rho(:,i+1,j,k)
+            rho1frac = rho(1,i+1,j,k)/sum(rho(:,i+1,j,k))
           else
-            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k))
           end if
           xm_vals(1,X_DIRECTION,j,k) = rho1frac*flow%bc_data(1,BOUNDARY_XM)
           xm_vals(2,X_DIRECTION,j,k) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_XM)
@@ -2301,9 +2342,9 @@ contains
       do j=dist%info%ys,dist%info%ye
         if (walls(i,j,k).eq.0) then
           if (walls(i-1,j,k).eq.0) then
-            rho1frac = rho(1,i-1,j,k)/sum(rho(:,i-1,j,k)
+            rho1frac = rho(1,i-1,j,k)/sum(rho(:,i-1,j,k))
           else
-            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k))
           end if
           xp_vals(1,X_DIRECTION,j,k) = rho1frac*flow%bc_data(1,BOUNDARY_XP)
           xp_vals(2,X_DIRECTION,j,k) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_XP)
@@ -2319,9 +2360,9 @@ contains
       do i=dist%info%xs,dist%info%xe
         if (walls(i,j,k).eq.0) then
           if (walls(i,j+1,k).eq.0) then
-            rho1frac = rho(1,i,j+1,k)/sum(rho(:,i,j+1,k)
+            rho1frac = rho(1,i,j+1,k)/sum(rho(:,i,j+1,k))
           else
-            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k))
           end if
           ym_vals(1,Y_DIRECTION,i,k) = rho1frac*flow%bc_data(1,BOUNDARY_YM)
           ym_vals(2,Y_DIRECTION,i,k) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_YM)
@@ -2338,9 +2379,9 @@ contains
       do i=dist%info%xs,dist%info%xe
         if (walls(i,j,k).eq.0) then
           if (walls(i,j-1,k).eq.0) then
-            rho1frac = rho(1,i,j-1,k)/sum(rho(:,i,j-1,k)
+            rho1frac = rho(1,i,j-1,k)/sum(rho(:,i,j-1,k))
           else
-            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k))
           end if
           yp_vals(1,Y_DIRECTION,i,k) = rho1frac*flow%bc_data(1,BOUNDARY_YP)
           yp_vals(2,Y_DIRECTION,i,k) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_YP)
@@ -2356,9 +2397,9 @@ contains
       do i=dist%info%xs,dist%info%xe
         if (walls(i,j,k).eq.0) then
           if (walls(i,j,k+1).eq.0) then
-            rho1frac = rho(1,i,j,k+1)/sum(rho(:,i,j,k+1)
+            rho1frac = rho(1,i,j,k+1)/sum(rho(:,i,j,k+1))
           else
-            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k))
           end if
           zm_vals(1,Z_DIRECTION,i,j) = rho1frac*flow%bc_data(1,BOUNDARY_ZM)
           zm_vals(2,Z_DIRECTION,i,j) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_ZM)
@@ -2375,9 +2416,9 @@ contains
       do i=dist%info%xs,dist%info%xe
         if (walls(i,j,k).eq.0) then
           if (walls(i,j,k-1).eq.0) then
-            rho1frac = rho(1,i,j,k-1)/sum(rho(:,i,j,k-1)
+            rho1frac = rho(1,i,j,k-1)/sum(rho(:,i,j,k-1))
           else
-            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k)
+            rho1frac = rho(1,i,j,k)/sum(rho(:,i,j,k))
           end if
           zp_vals(1,Z_DIRECTION,i,j) = rho1frac*flow%bc_data(1,BOUNDARY_ZP)
           zp_vals(2,Z_DIRECTION,i,j) = (1.d0-rho1frac)*flow%bc_data(1,BOUNDARY_ZP)
