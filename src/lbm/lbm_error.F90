@@ -23,7 +23,8 @@ module LBM_Error_module
   private
 #include "lbm_definitions.h"
 
-  public LBMError
+  public LBMError, &
+       LBMWarn
 
 contains
   subroutine LBMError(comm, code, message, ierr)
@@ -42,4 +43,20 @@ contains
     SETERRQ(comm, code, message, ierr)
     return
   end subroutine LBMError
+
+  subroutine LBMWarn(comm, message, ierr)
+    MPI_Comm comm
+    character(len=*):: message
+    PetscErrorCode ierr
+
+    PetscMPIInt rank, size
+    character(len=MAXSTRINGLENGTH):: fullmessage
+
+    call mpi_comm_rank(comm, rank, ierr)
+    if (rank.eq.0) then
+      write(fullmessage, "(a,I0,a,I0,a)"), "WARNING:"//message
+      print*, fullmessage
+    end if
+    return
+  end subroutine LBMWarn
 end module LBM_Error_module

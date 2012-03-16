@@ -173,12 +173,7 @@ contains
 
     bcvalue = PETSC_FALSE
     call PetscOptionsGetBool(options%my_prefix,'-bc_conc_flux_xm', bcvalue, flag, ierr)
-    if (bcvalue) transport%bc%flags(BOUNDARY_XM) = BC_FLUX
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_zero_conc_gradient_xm', bcvalue, &
-         flag, ierr)
-    if (bcvalue) transport%bc%flags(BOUNDARY_XM) = BC_ZERO_GRADIENT
+    if (bcvalue) transport%bc%flags(BOUNDARY_XM) = BC_NEUMANN
 
     ! xp boundary
     bcvalue = PETSC_FALSE
@@ -187,12 +182,7 @@ contains
 
     bcvalue = PETSC_FALSE
     call PetscOptionsGetBool(options%my_prefix,'-bc_conc_flux_xp', bcvalue, flag, ierr)
-    if (bcvalue) transport%bc%flags(BOUNDARY_XP) = BC_FLUX
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_zero_conc_gradient_xp', bcvalue, &
-         flag, ierr)
-    if (bcvalue) transport%bc%flags(BOUNDARY_XP) = BC_ZERO_GRADIENT
+    if (bcvalue) transport%bc%flags(BOUNDARY_XP) = BC_NEUMANN
 
     bcvalue = PETSC_FALSE
     call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_x', bcvalue, flag, ierr)
@@ -208,12 +198,7 @@ contains
 
     bcvalue = PETSC_FALSE
     call PetscOptionsGetBool(options%my_prefix,'-bc_conc_flux_ym', bcvalue, flag, ierr)
-    if (bcvalue) transport%bc%flags(BOUNDARY_YM) = BC_FLUX
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_zero_conc_gradient_ym', bcvalue, &
-         flag, ierr)
-    if (bcvalue) transport%bc%flags(BOUNDARY_YM) = BC_ZERO_GRADIENT
+    if (bcvalue) transport%bc%flags(BOUNDARY_YM) = BC_NEUMANN
 
     ! yp boundary
     bcvalue = PETSC_FALSE
@@ -222,12 +207,7 @@ contains
 
     bcvalue = PETSC_FALSE
     call PetscOptionsGetBool(options%my_prefix,'-bc_conc_flux_yp', bcvalue, flag, ierr)
-    if (bcvalue) transport%bc%flags(BOUNDARY_YP) = BC_FLUX
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_zero_conc_gradient_yp', bcvalue, &
-         flag, ierr)
-    if (bcvalue) transport%bc%flags(BOUNDARY_YP) = BC_ZERO_GRADIENT
+    if (bcvalue) transport%bc%flags(BOUNDARY_YP) = BC_NEUMANN
 
     bcvalue = PETSC_FALSE
     call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_y', bcvalue, flag, ierr)
@@ -244,12 +224,7 @@ contains
 
        bcvalue = PETSC_FALSE
        call PetscOptionsGetBool(options%my_prefix,'-bc_conc_flux_zm', bcvalue, flag, ierr)
-       if (bcvalue) transport%bc%flags(BOUNDARY_ZM) = BC_FLUX
-       
-       bcvalue = PETSC_FALSE
-       call PetscOptionsGetBool(options%my_prefix, '-bc_zero_conc_gradient_zm', bcvalue, &
-            flag, ierr)
-       if (bcvalue) transport%bc%flags(BOUNDARY_ZM) = BC_ZERO_GRADIENT
+       if (bcvalue) transport%bc%flags(BOUNDARY_ZM) = BC_NEUMANN
 
        ! zp boundary
        bcvalue = PETSC_FALSE
@@ -258,12 +233,7 @@ contains
 
        bcvalue = PETSC_FALSE
        call PetscOptionsGetBool(options%my_prefix,'-bc_conc_flux_zp', bcvalue, flag, ierr)
-       if (bcvalue) transport%bc%flags(BOUNDARY_ZP) = BC_FLUX
-       
-       bcvalue = PETSC_FALSE
-       call PetscOptionsGetBool(options%my_prefix, '-bc_zero_conc_gradient_zp', bcvalue, &
-            flag, ierr)
-       if (bcvalue) transport%bc%flags(BOUNDARY_ZP) = BC_ZERO_GRADIENT
+       if (bcvalue) transport%bc%flags(BOUNDARY_ZP) = BC_NEUMANN
 
        bcvalue = PETSC_FALSE
        call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_z', bcvalue, flag, ierr)
