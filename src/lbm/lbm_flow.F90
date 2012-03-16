@@ -190,6 +190,7 @@ contains
     PetscScalar gravity(options%ndims)
     PetscScalar,parameter:: eps=1.e-15 ! slightly larger than machine epsilon
     PetscBool flag
+    character[size=MAXWORDLENGTH] boundaryname
 
     flag = PETSC_FALSE
     flow%ncomponents = options%ncomponents
@@ -236,202 +237,38 @@ contains
     ! dimension
     call BCSetSizes(flow%bc, options%ndims*options%ncomponents)
     call BCSetFromOptions(flow%bc, options, ierr)
-    allocate(flow%bc_data(flow%dist%s,6))
+    allocate(flow%bc_data(flow%bc%nbcs,6))
 
     ! parse flow boundary conditions
-    bcvalue = PETSC_FALSE
-    call OptionsGetBool(options, "-bc_density_xm", "use density BC", bcvalue, flag, ierr)
-    if (bcvalue) then
-      flow%bc%flags(BOUNDARY_XM) = BC_DIRICHLET
-      flow%bc_flags(BOUNDARY_XM) = BC_DENSITY
-      flow%bc_data(:,BOUNDARY_XM) = -1.d0
-      if (flow%dist%s.eq.1) then
-        call OptionsGetScalar(options, "-bc_density_xm_value", "density", &
-             flow%bc_data(1,BOUNDARY_XM), flag, ierr)
-      else
-        do m=1,flow%dist%s
-          call OptionsGetScalar(options, "-bc_density_xm_"//flow%components(m)%name, &
-               "density", flow%bc_data(m,BOUNDARY_XM), flag, ierr)
-        end do
-      end if
-      if (MINVALUE(flow%bc_data(:,BOUNDARY_XM)) < 0.d0) then
-        call LBMWarn("Density BC on boundary XM not set -- be sure to set in"// &
-             " initialize_bcs hook!", ierr)
-      end if
+    boundaryname = "xm"
+    call FlowParseBC(flow, options, BOUNDARY_XM, boundaryname)
+    boundaryname = "xp"
+    call FlowParseBC(flow, options, BOUNDARY_XP, boundaryname)
+    boundaryname = "ym"
+    call FlowParseBC(flow, options, BOUNDARY_YM, boundaryname)
+    boundaryname = "yp"
+    call FlowParseBC(flow, options, BOUNDARY_YP, boundaryname)
+    if (flow%ndims > 2) then
+      boundaryname = "zm"
+      call FlowParseBC(flow, options, BOUNDARY_ZM, boundaryname)
+      boundaryname = "zp"
+      call FlowParseBC(flow, options, BOUNDARY_ZP, boundaryname)
     endif
-
-
-
-
-
-
-
-    bcvalue = PETSC_FALSE
-    call OptionsGetBool(options, "-bc_pressure_inlet_xm", &
-         "use pressure and mass fraction BC", bcvalue, flag, ierr)
-    if (bcvalue) then
-      flow%bc%flags(BOUNDARY_XM) = BC_DIRICHLET
-      flow%bc_flags(BOUNDARY_XM) = BC_DENSITY
-    endif
-
-    if (help) call PetscPrintf(options%comm, "-bc_pressure_{xyz}{mp}: use pressure bcs\n",&
-         ierr)
-    if (help) call PetscPrintf(options%comm, "-bc_velocity_{xyz}{mp}: use total"//&
-         " velocity bcs\n", ierr)
-    if (help) call PetscPrintf(options%comm, "-bc_velocity_{xyz}{mp}_poiseuille:"// &
-         " use total velocity bcs with a poiseuille profile\n", ierr)
-    if (help) call PetscPrintf(options%comm, "-bc_flux_{xyz}{mp}: use VOLUMETRIC flux"//&
-         " bcs (NOT mass flux!)\n", ierr)
-
-    ! xm boundary
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_xm', bcvalue, flag, ierr)
-    if (bcvalue) flow%bc%flags(BOUNDARY_XM) = BC_DIRICHLET
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_xm', bcvalue, flag, ierr)
-    if (bcvalue) flow%bc%flags(BOUNDARY_XM) = BC_FLUX
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_velocity_xm', bcvalue, flag, ierr)
-    if (bcvalue) flow%bc%flags(BOUNDARY_XM) = BC_VELOCITY
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_velocity_xm_poiseuille', bcvalue, &
-         flag, ierr)
-    if (bcvalue) flow%bc%flags(BOUNDARY_XM) = BC_VELOCITY
-
-    ! xp boundary
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_xp', bcvalue, flag, ierr)
-    if (bcvalue) flow%bc%flags(BOUNDARY_XP) = BC_DIRICHLET
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_xp', bcvalue, flag, ierr)
-    if (bcvalue) flow%bc%flags(BOUNDARY_XP) = BC_FLUX
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_velocity_xp', bcvalue, flag, ierr)
-    if (bcvalue) flow%bc%flags(BOUNDARY_XP) = BC_VELOCITY
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_velocity_xp_poiseuille', bcvalue, &
-         flag, ierr)
-    if (bcvalue) flow%bc%flags(BOUNDARY_XP) = BC_VELOCITY
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_x', bcvalue, flag, ierr)
-    if (bcvalue) then
-       flow%bc%flags(BOUNDARY_XM) = BC_PERIODIC
-       flow%bc%flags(BOUNDARY_XP) = BC_PERIODIC
-    end if
-
-    ! ym boundary
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_ym', bcvalue, flag, ierr)
-    if (bcvalue) flow%bc%flags(BOUNDARY_YM) = BC_DIRICHLET
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_ym', bcvalue, flag, ierr)
-    if (bcvalue) flow%bc%flags(BOUNDARY_YM) = BC_FLUX
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_velocity_ym', bcvalue, flag, ierr)
-    if (bcvalue) flow%bc%flags(BOUNDARY_YM) = BC_VELOCITY
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_velocity_ym_poiseuille', bcvalue, &
-         flag, ierr)
-    if (bcvalue) flow%bc%flags(BOUNDARY_YM) = BC_VELOCITY
-
-    ! yp boundary
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_yp', bcvalue, flag, ierr)
-    if (bcvalue) flow%bc%flags(BOUNDARY_YP) = BC_DIRICHLET
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_flux_yp', bcvalue, flag, ierr)
-    if (bcvalue) flow%bc%flags(BOUNDARY_YP) = BC_FLUX
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_velocity_yp', bcvalue, flag, ierr)
-    if (bcvalue) flow%bc%flags(BOUNDARY_YP) = BC_VELOCITY
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_velocity_yp_poiseuille', bcvalue, &
-         flag, ierr)
-    if (bcvalue) flow%bc%flags(BOUNDARY_YP) = BC_VELOCITY
-
-    bcvalue = PETSC_FALSE
-    call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_y', bcvalue, flag, ierr)
-    if (bcvalue) then
-       flow%bc%flags(BOUNDARY_YM) = BC_PERIODIC
-       flow%bc%flags(BOUNDARY_YP) = BC_PERIODIC
-    end if
-
-    if (options%ndims > 2) then
-       ! zm boundary
-       bcvalue = PETSC_FALSE
-       call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_zm', bcvalue, flag, ierr)
-       if (bcvalue) flow%bc%flags(BOUNDARY_ZM) = BC_DIRICHLET
-
-       bcvalue = PETSC_FALSE
-       call PetscOptionsGetBool(options%my_prefix, '-bc_flux_zm', bcvalue, flag, ierr)
-       if (bcvalue) flow%bc%flags(BOUNDARY_ZM) = BC_FLUX
-
-       bcvalue = PETSC_FALSE
-       call PetscOptionsGetBool(options%my_prefix, '-bc_velocity_zm', bcvalue, flag, ierr)
-       if (bcvalue) flow%bc%flags(BOUNDARY_ZM) = BC_VELOCITY
-
-       bcvalue = PETSC_FALSE
-       call PetscOptionsGetBool(options%my_prefix, '-bc_velocity_zm_poiseuille', bcvalue, &
-            flag, ierr)
-       if (bcvalue) flow%bc%flags(BOUNDARY_ZM) = BC_VELOCITY
-
-       ! zp boundary
-       bcvalue = PETSC_FALSE
-       call PetscOptionsGetBool(options%my_prefix, '-bc_pressure_zp', bcvalue, flag, ierr)
-       if (bcvalue) flow%bc%flags(BOUNDARY_ZP) = BC_DIRICHLET
-
-       bcvalue = PETSC_FALSE
-       call PetscOptionsGetBool(options%my_prefix, '-bc_flux_zp', bcvalue, flag, ierr)
-       if (bcvalue) flow%bc%flags(BOUNDARY_ZP) = BC_FLUX
-
-       bcvalue = PETSC_FALSE
-       call PetscOptionsGetBool(options%my_prefix, '-bc_velocity_zp', bcvalue, flag, ierr)
-       if (bcvalue) flow%bc%flags(BOUNDARY_ZP) = BC_VELOCITY
-
-       bcvalue = PETSC_FALSE
-       call PetscOptionsGetBool(options%my_prefix, '-bc_velocity_zp_poiseuille', bcvalue, &
-            flag, ierr)
-       if (bcvalue) flow%bc%flags(BOUNDARY_ZP) = BC_VELOCITY
-
-       bcvalue = PETSC_FALSE
-       call PetscOptionsGetBool(options%my_prefix, '-bc_periodic_z', bcvalue, flag, ierr)
-       if (bcvalue) then
-          flow%bc%flags(BOUNDARY_ZM) = BC_PERIODIC
-          flow%bc%flags(BOUNDARY_ZP) = BC_PERIODIC
-       end if
-    end if
 
     ! check io options
-    if (help) call PetscPrintf(options%comm, &
-         "  -output_flow_fi <FALSE>: output distribution functions for flow\n", ierr)
-    call PetscOptionsGetBool(options%my_prefix, '-output_flow_fi', flow%io_fi, flag, ierr)
-    if (help) call PetscPrintf(options%comm, &
-         "  -output_flow_last_fi <FALSE>: output distribution functions at the last timestep\n", ierr)
-    call PetscOptionsGetBool(options%my_prefix, '-output_flow_last_fi', flow%io_last_fi, flag, ierr)
-    if (help) call PetscPrintf(options%comm, "  -output_flow_rho <TRUE>: output densities\n", ierr)
-    call PetscOptionsGetBool(options%my_prefix, '-output_flow_rho', flow%io_rho, flag, ierr)
-    if (help) call PetscPrintf(options%comm, "  -output_flow_velt <TRUE>: output total velocity\n", ierr)
-    call PetscOptionsGetBool(options%my_prefix, '-output_flow_velt', flow%io_velt, flag, ierr)
-    if (help) call PetscPrintf(options%comm, "  -output_flow_rhot <FALSE>: output total density\n", ierr)
-    call PetscOptionsGetBool(options%my_prefix, '-output_flow_rhot', flow%io_rhot, flag, ierr)
-    if (help) call PetscPrintf(options%comm, "  -output_flow_prs <TRUE>: output pressure\n", ierr)
-    call PetscOptionsGetBool(options%my_prefix, '-output_flow_prs', flow%io_prs, flag, ierr)
-    if (help) call PetscPrintf(options%comm, "  -null_pressure <0.>: pressure within a wall cell\n", ierr)
-    flow%null_pressure = 0.
-    call PetscOptionsGetReal(options%my_prefix, '-null_pressure', flow%null_pressure, flag, ierr)
+    call OptionsGetBool(options, "-output_flow_fi", &
+         "ouput distribution function for flow", flow%io_fi, flag, ierr)
+    call OptionsGetBool(options, "-output_flow_last_fi", &
+         "ouput distribution function for flow at the last timestep", &
+         flow%io_last_fi, flag, ierr)
+    call OptionsGetBool(options, "-output_rho", "output density", &
+         flow%io_rho, flag, ierr)
+    call OptionsGetBool(options, "-output_velocity", "output total velocity", &
+         flow%io_velt, flag, ierr)
+    call OptionsGetBool(options, "-output_rhot", "output total density", &
+         flow%io_rhot, flag, ierr)
+    call OptionsGetBool(options, "-output_pressure", "output pressure", &
+         flow%io_prs, flag, ierr)
   end subroutine FlowSetFromOptions
 
   subroutine FlowSetGrid(flow, grid)
@@ -486,7 +323,8 @@ contains
              flow%components(lcv)%relax%tau = consistent_tau
 
           else if (abs(flow%components(lcv)%relax%tau - consistent_tau) > eps) then
-             call LBMError(PETSC_COMM_WORLD, 1, 'Viscosities and relaxation times specified '// &
+             call LBMError(options%comm, 1, &
+                  'Viscosities and relaxation times specified '// &
                   'for components are not consistent.', ierr)
           else
              ! all ok
@@ -505,7 +343,8 @@ contains
              flow%components(lcv)%mm = consistent_mm
 
           else if (abs(flow%components(lcv)%mm - consistent_mm) > eps) then
-             call LBMError(PETSC_COMM_WORLD, 1, 'Densities and molecular masses specified '// &
+             call LBMError(options%comm, 1, &
+                  'Densities and molecular masses specified '// &
                   'for components are not consistent.', ierr)
           else
              ! all ok
@@ -539,7 +378,17 @@ contains
     call DistributionSetDAs(flow%distribution, flow%grid%da(NCOMPONENTXBDOF), &
          flow%grid%da(NCOMPONENTDOF))
     call DistributionSetUp(flow%distribution)
+
+    ! set up boundary conditions
     call BCSetUp(flow%bc)
+    select case(flow%ndims)
+    case(2)
+      call FlowSetUpBCsD2(flow, flow%bc%xm_a, flow%bc%xp_a, &
+           flow%bc%ym_a, flow%bc%yp_a)
+    case(3)
+      call FlowSetUpBCsD3(flow, flow%bc%xm_a, flow%bc%xp_a, &
+           flow%bc%ym_a, flow%bc%yp_a, flow%bc%zm_a, flow%bc%zp_a)
+    end select
 
     ! allocate, initialize workspace
     allocate(flow%vel_eq(1:flow%ncomponents, 1:flow%ndims, &
@@ -1163,6 +1012,859 @@ contains
     end do
     end do
   end subroutine FlowCollisionD2
+
+  subroutine FlowParseBC(flow, options, boundary, name)
+    type(flow_type) flow
+    type(options_type) options
+    PetscInt boundary
+    character[size=MAXWORDLENGTH] name
+
+    PetscBool done, bcvalue
+    PetscInt bccount
+
+    done = PETSC_FALSE
+
+    ! density boundary condition
+    bcvalue = PETSC_FALSE
+    call OptionsGetBool(options, "-bc_density_"//trim(name),"provide density", &
+         bcvalue, flag, ierr)
+    if (bcvalue) then
+      done = PETSC_TRUE
+      flow%bc%flags(boundary) = BC_DIRICHLET
+      flow%bc_flags(boundary) = BC_DENSITY
+      flow%bc_data(:,boundary) = -1.d0
+
+      if (flow%dist%s.eq.1) then
+        call OptionsGetReal(options, "-bc_density_"//trim(name)//"_value", &
+             "density", flow%bc_data(1,boundary), flag, ierr)
+        if (.not.flag) call LBMWarn(options%comm, "Density BC on boundary "&
+             //trim(name)//" not set in input file!", ierr)
+      else
+        do m=1,flow%dist%s
+          call OptionsGetReal(options, "-bc_density_"//trim(name)//"_"// &
+               flow%components(m)%name, "density", flow%bc_data(m,boundary), &
+               flag, ierr)
+          if (.not.flag) then
+            call LBMWarn(options%comm, "Density BC on boundary "// &
+                 trim(name)//" not set in input file!", ierr)
+          endif
+        end do
+      end if
+    endif
+
+    ! pressure on the inlet provides pressure and rho1/rho_total
+    bcvalue = PETSC_FALSE
+    call OptionsGetBool(options,"-bc_pressure_inlet_"//trim(name), &
+         "provide pressure (and rho_1/rho_t if two-component)", &
+         bcvalue, flag, ierr)
+    if (bcvalue) then
+      if (done) call LBMError(options%comm, 1, &
+           "Multiple BCs provided for boundary "//trim(name), ierr)
+      done = PETSC_TRUE
+      flow%bc%flags(boundary) = BC_DIRICHLET
+      flow%bc_flags(boundary) = BC_PRESSURE_INLET
+      flow%bc_data(:,boundary) = -1.d0
+
+      call OptionsGetReal(options, "-bc_pressure_"//trim(name)//"_value", &
+           "pressure", flow%bc_data(1,boundary), flag, ierr)
+      if (.not.flag) then
+        call LBMWarn(options%comm, "Pressure BC on boundary "//trim(name)//&
+           " not set in input file!", ierr)
+      end if
+      if (flow%dist%s > 1) then
+        call OptionsGetReal(options, "-bc_rho1_fraction_"//trim(name)// &
+             "_value", "mass fraction of rho1, rho1/sum(rho)", &
+             flow%bc_data(1,boundary), flag, ierr)
+        if (.not.flag) then
+          call LBMWarn(options%comm, &
+               "Mass fraction for pressure BC on boundary " &
+               //trim(name)//" not set in input file!", ierr)
+        end if
+      endif
+    end if
+
+    ! pressure on the outlet provides pressure only
+    bcvalue = PETSC_FALSE
+    call OptionsGetBool(options,"-bc_pressure_outlet_"//trim(name), &
+         "provide pressure only", &
+         bcvalue, flag, ierr)
+    if (bcvalue) then
+      if (done) call LBMError(options%comm, 1, &
+           "Multiple BCs provided for boundary "//trim(name), ierr)
+      done = PETSC_TRUE
+      flow%bc%flags(boundary) = BC_DIRICHLET
+      flow%bc_flags(boundary) = BC_PRESSURE_OUTLET
+      flow%bc_data(:,boundary) = -1.d0
+
+      call OptionsGetReal(options, "-bc_pressure_"//trim(name)//"_value", &
+           "pressure", flow%bc_data(1,boundary), flag, ierr)
+      if (.not.flag) then
+        call LBMWarn(options%comm, "Pressure BC on boundary "//trim(name)// &
+           " not set in input file!", ierr)
+      end if
+    end if
+
+    ! momentum boundary condition
+    bcvalue = PETSC_FALSE
+    call OptionsGetBool(options, "-bc_momentum_"//trim(name), &
+         "provide all components of rho*u", bcvalue, flag, ierr)
+    if (bcvalue) then
+      if (done) call LBMError(options%comm, 1, &
+           "Multiple BCs provided for boundary "//trim(name), ierr)
+      done = PETSC_TRUE
+      flow%bc%flags(boundary) = BC_NEUMANN
+      flow%bc_flags(boundary) = BC_MOMENTUM
+      flow%bc_data(:,boundary) = -1.d0
+
+      if (flow%dist%s.eq.1) then
+        bccount = flow%ndims
+        call OptionsGetRealArray(options,"-bc_momentum_"//trim(name)//"_value",&
+             "list of momentums in x,y,(z) directions", &
+             flow%bc_data(:,boundary), bccount, flag, ierr)
+        if (.not.flag) then
+          call LBMWarn(options%comm, "Density BC on boundary "//trim(name)// &
+               " not set in input file!", ierr)
+        else if (bccount /= flow%ndims) then
+          call LBMError("Momentum BC on boundary "//trim(name)// &
+               " was provided the wrong number of components.", ierr)
+        end if
+      else
+        do m=1,flow%dist%s
+          bccount = flow%ndims
+          call OptionsGetRealArray(options,"-bc_momentum_"//trim(name)// &
+               "_"//flow%components(m)%name, &
+               "list of momentums in x,y,(z) directions", &
+               flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims,boundary), &
+               bccount, flag, ierr)
+          if (.not.flag) then
+            call LBMWarn(options%comm, "Momentum BC on boundary " &
+                 //trim(name)//" not set in input file!", ierr)
+          else if (bccount /= flow%ndims) then
+            call LBMError(options%comm, 1, "Momentum BC on boundary "// &
+                 trim(name)//" for component "//flow%comonents(m)%name// &
+                 " was provided the wrong number of components.", ierr)
+          end if
+        end do
+      end if
+    endif
+
+    ! flux inlet provides total flux and rho1/rho_total
+    bcvalue = PETSC_FALSE
+    call OptionsGetBool(options,"-bc_flux_inlet_"//trim(name), &
+         "provide total flux (and rho_1/rho_t if two-component)", &
+         bcvalue, flag, ierr)
+    if (bcvalue) then
+      if (done) call LBMError(options%comm, 1, &
+           "Multiple BCs provided for boundary "//trim(name), ierr)
+      done = PETSC_TRUE
+      flow%bc%flags(boundary) = BC_NEUMANN
+      flow%bc_flags(boundary) = BC_FLUX_INLET
+      flow%bc_data(:,boundary) = -1.d0
+
+      call OptionsGetReal(options, "-bc_flux_inlet_"//trim(name)//"_value", &
+           "flux", flow%bc_data(1,boundary), flag, ierr)
+      if (.not.flag) then
+        call LBMWarn(options%comm, "Flux inlet BC on boundary "//trim(name)// &
+           " not set in input file!", ierr)
+      end if
+
+      if (flow%dist%s > 1) then
+        call OptionsGetReal(options, "-bc_rho1_fraction_"//trim(name)// &
+             "_value", "mass fraction of rho1, rho1/sum(rho)", &
+             flow%bc_data(1,boundary), flag, ierr)
+        if (.not.flag) then
+          call LBMWarn(options%comm, "Mass fraction for flux BC on boundary "&
+             //trim(name)//" not set in input file!", ierr)
+        end if
+      endif
+    end if
+
+    ! flux outlet provides total flux
+    bcvalue = PETSC_FALSE
+    call OptionsGetBool(options,"-bc_flux_outlet_"//trim(name), &
+         "provide total flux", bcvalue, flag, ierr)
+    if (bcvalue) then
+      if (done) call LBMError(options%comm, 1, &
+           "Multiple BCs provided for boundary "//trim(name), ierr)
+      done = PETSC_TRUE
+      flow%bc%flags(boundary) = BC_NEUMANN
+      flow%bc_flags(boundary) = BC_FLUX_OUTLET
+      flow%bc_data(:,boundary) = -1.d0
+
+      call OptionsGetReal(options, "-bc_flux_outlet_"//trim(name)//"_value", &
+           "flux", flow%bc_data(1,boundary), flag, ierr)
+      if (.not.flag) then
+        call LBMWarn(options%comm, "Flux outlet BC on boundary "//trim(name)// &
+             " not set in input file!", ierr)
+      end if
+    end if
+
+    ! velocity provides total velocities
+    bcvalue = PETSC_FALSE
+    call OptionsGetBool(options,"-bc_velocity_"//trim(name), &
+         "provide velocity", bcvalue, flag, ierr)
+    if (bcvalue) then
+      if (done) call LBMError(options%comm, 1, &
+           "Multiple BCs provided for boundary "//trim(name), ierr)
+      done = PETSC_TRUE
+      flow%bc%flags(boundary) = BC_VELOCITY
+      flow%bc_flags(boundary) = BC_VELOCITY
+      flow%bc_data(:,boundary) = -1.d0
+
+      bccount = flow%ndims
+      call OptionsGetRealArray(options, "-bc_velocity_"//trim(name)//"_values",&
+           "velocity in x,y,(z) directions", flow%bc_data(:,boundary), bccount,&
+           flag, ierr)
+      if (.not.flag) then
+        call LBMWarn(options%comm, "Velocity BC on boundary "//trim(name)// &
+             " not set in input file!", ierr)
+      else if (bccount /= flow%ndims) then
+        call LBMError("Velocity BC on boundary "//trim(name)// &
+             " was provided the wrong number of components.", ierr)
+      end if
+    endif
+  end subroutine FlowParseBC
+
+  subroutine FlowSetUpBCsD3(flow, xm_vals, xp_vals, ym_vals, yp_vals, &
+       zm_vals, zp_vals, dist)
+    type(flow_type) flow
+    type(distribution_type) dist
+    PetscScalar,dimension(flow%dist%s,flow%ndims,dist%info%ys:dist%info%ye, &
+         dist%info%zs:dist%info%ze):: xm_vals, xp_vals
+    PetscScalar,dimension(flow%dist%s,flow%ndims,dist%info%xs:dist%info%xe, &
+         dist%info%zs:dist%info%ze):: ym_vals, yp_vals
+    PetscScalar,dimension(flow%dist%s,flow%ndims,dist%info%xs:dist%info%xe, &
+         dist%info%ys:dist%info%ye):: zm_vals, zp_vals
+
+    PetscScalar density(dist%s)
+
+    ! xm boundary
+    if (dist%info%xs.eq.1) then
+      select case(flow%bc_flags(BOUNDARY_XM)
+      case(BC_DENSITY)
+        do k=dist%info%zs,dist%info%ze
+        do j=dist%info%ys,dist%info%ye
+          xm_vals(:,1,j,k) = flow%bc_data(1:dist%s,BOUNDARY_XM)
+        end do
+        end do
+      case(BC_PRESSURE_INLET)
+        density(:) = 0.d0
+        call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_XM), &
+             flow%bc_data(2,BOUNDARY_XM), density)
+        do k=dist%info%zs,dist%info%ze
+        do j=dist%info%ys,dist%info%ye
+          xm_vals(:,1,j,k) = density
+        end do
+        end do
+      case(BC_PRESSURE_OUTLET)
+        do k=dist%info%zs,dist%info%ze
+        do j=dist%info%ys,dist%info%ye
+          xm_vals(1,1,j,k) = flow%bc_data(1,BOUNDARY_XM)
+        end do
+        end do
+      case(BC_MOMENTUM)
+        do k=dist%info%zs,dist%info%ze
+        do j=dist%info%ys,dist%info%ye
+          do m=1,dist%s
+            xm_vals(m,1,j,k) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+                 BOUNDARY_XM)
+          end do
+        end do
+        end do
+      case(BC_FLUX_INLET)
+        if (dist%s.eq.1) then
+          do k=dist%info%zs,dist%info%ze
+          do j=dist%info%ys,dist%info%ye
+            xm_vals(1,X_DIRECTION,j,k) = flow%bc_data(1,BOUNDARY_XM)
+          end do
+          end do
+        else if (dist%s.eq.2) then
+          do k=dist%info%zs,dist%info%ze
+          do j=dist%info%ys,dist%info%ye
+            xm_vals(1,X_DIRECTION,j,k) = flow%bc_data(1,BOUNDARY_XM) &
+                 * flow%bc_data(2,BOUNDARY_XM)
+            xm_vals(2,X_DIRECTION,j,k) = flow%bc_data(1,BOUNDARY_XM) &
+                 * (1.d0 - flow%bc_data(2,BOUNDARY_XM))
+          end do
+          end do
+        else
+          call LBMError(flow%comm, 1, &
+               "BC flux inlet only implemented for 1 or 2 components.", ierr)
+        end if
+      case(BC_FLUX_OUTLET)
+        do k=dist%info%zs,dist%info%ze
+        do j=dist%info%ys,dist%info%ye
+          xm_vals(1,X_DIRECTION,j,k) = flow%bc_data(1,BOUNDARY_XM)
+        end do
+        end do
+      case(BC_VELOCITY_OUTLET)
+        do k=dist%info%zs,dist%info%ze
+        do j=dist%info%ys,dist%info%ye
+          xm_vals(1,:,j,k) = flow%bc_data(1:flow%ndims,BOUNDARY_XM)
+        end do
+        end do
+      end select
+    end if
+
+    ! xp boundary
+    if (dist%info%xe.eq.dist%info%NX) then
+      select case(flow%bc_flags(BOUNDARY_XP)
+      case(BC_DENSITY)
+        do k=dist%info%zs,dist%info%ze
+        do j=dist%info%ys,dist%info%ye
+          xp_vals(:,1,j,k) = flow%bc_data(1:dist%s,BOUNDARY_XP)
+        end do
+        end do
+      case(BC_PRESSURE_INLET)
+        density(:) = 0.d0
+        call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_XP), &
+             flow%bc_data(2,BOUNDARY_XP), density)
+        do k=dist%info%zs,dist%info%ze
+        do j=dist%info%ys,dist%info%ye
+          xp_vals(:,1,j,k) = density
+        end do
+        end do
+      case(BC_PRESSURE_OUTLET)
+        do k=dist%info%zs,dist%info%ze
+        do j=dist%info%ys,dist%info%ye
+          xp_vals(1,1,j,k) = flow%bc_data(1,BOUNDARY_XP)
+        end do
+        end do
+      case(BC_MOMENTUM)
+        do k=dist%info%zs,dist%info%ze
+        do j=dist%info%ys,dist%info%ye
+          do m=1,dist%s
+            xp_vals(m,1,j,k) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+                 BOUNDARY_XP)
+          end do
+        end do
+        end do
+      case(BC_FLUX_INLET)
+        if (dist%s.eq.1) then
+          do k=dist%info%zs,dist%info%ze
+          do j=dist%info%ys,dist%info%ye
+            xp_vals(1,X_DIRECTION,j,k) = flow%bc_data(1,BOUNDARY_XP)
+          end do
+          end do
+        else if (dist%s.eq.2) then
+          do k=dist%info%zs,dist%info%ze
+          do j=dist%info%ys,dist%info%ye
+            xp_vals(1,X_DIRECTION,j,k) = flow%bc_data(1,BOUNDARY_XP) &
+                 * flow%bc_data(2,BOUNDARY_XP)
+            xp_vals(2,X_DIRECTION,j,k) = flow%bc_data(1,BOUNDARY_XP) &
+                 * (1.d0 - flow%bc_data(2,BOUNDARY_XP))
+          end do
+          end do
+        else
+          call LBMError(flow%comm, 1, &
+               "BC flux inlet only implemented for 1 or 2 components.", ierr)
+        end if
+      case(BC_FLUX_OUTLET)
+        do k=dist%info%zs,dist%info%ze
+        do j=dist%info%ys,dist%info%ye
+          xp_vals(1,X_DIRECTION,j,k) = flow%bc_data(1,BOUNDARY_XP)
+        end do
+        end do
+      case(BC_VELOCITY_OUTLET)
+        do k=dist%info%zs,dist%info%ze
+        do j=dist%info%ys,dist%info%ye
+          xp_vals(1,:,j,k) = flow%bc_data(1:flow%ndims,BOUNDARY_XP)
+        end do
+        end do
+      end select
+    end if
+
+    ! ym boundary
+    if (dist%info%ys.eq.1) then
+      select case(flow%bc_flags(BOUNDARY_YM)
+      case(BC_DENSITY)
+        do k=dist%info%zs,dist%info%ze
+        do i=dist%info%xs,dist%info%xe
+          ym_vals(:,1,i,k) = flow%bc_data(1:dist%s,BOUNDARY_YM)
+        end do
+        end do
+      case(BC_PRESSURE_INLET)
+        density(:) = 0.d0
+        call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_YM), &
+             flow%bc_data(2,BOUNDARY_YM), density)
+        do k=dist%info%zs,dist%info%ze
+        do i=dist%info%xs,dist%info%xe
+          ym_vals(:,1,i,k) = density
+        end do
+        end do
+      case(BC_PRESSURE_OUTLET)
+        do k=dist%info%zs,dist%info%ze
+        do i=dist%info%xs,dist%info%xe
+          ym_vals(1,1,i,k) = flow%bc_data(1,BOUNDARY_YM)
+        end do
+        end do
+      case(BC_MOMENTUM)
+        do k=dist%info%zs,dist%info%ze
+        do i=dist%info%xs,dist%info%xe
+          do m=1,dist%s
+            ym_vals(m,1,i,k) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+                 BOUNDARY_YM)
+          end do
+        end do
+        end do
+      case(BC_FLUX_INLET)
+        if (dist%s.eq.1) then
+          do k=dist%info%zs,dist%info%ze
+          do i=dist%info%xs,dist%info%xe
+            ym_vals(1,Y_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_YM)
+          end do
+          end do
+        else if (dist%s.eq.2) then
+          do k=dist%info%zs,dist%info%ze
+          do i=dist%info%xs,dist%info%xe
+            ym_vals(1,Y_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_YM) &
+                 * flow%bc_data(2,BOUNDARY_YM)
+            ym_vals(2,Y_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_YM) &
+                 * (1.d0 - flow%bc_data(2,BOUNDARY_YM))
+          end do
+          end do
+        else
+          call LBMError(flow%comm, 1, &
+               "BC flux inlet only implemented for 1 or 2 components.", ierr)
+        end if
+      case(BC_FLUX_OUTLET)
+        do k=dist%info%zs,dist%info%ze
+        do i=dist%info%xs,dist%info%xe
+          ym_vals(1,Y_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_YM)
+        end do
+        end do
+      case(BC_VELOCITY_OUTLET)
+        do k=dist%info%zs,dist%info%ze
+        do i=dist%info%xs,dist%info%xe
+          ym_vals(1,:,i,k) = flow%bc_data(1:flow%ndims,BOUNDARY_YM)
+        end do
+        end do
+      end select
+    end if
+
+    ! yp boundary
+    if (dist%info%ye.eq.dist%info%NY) then
+      select case(flow%bc_flags(BOUNDARY_YP)
+      case(BC_DENSITY)
+        do k=dist%info%zs,dist%info%ze
+        do i=dist%info%xs,dist%info%xe
+          yp_vals(:,1,i,k) = flow%bc_data(1:dist%s,BOUNDARY_YP)
+        end do
+        end do
+      case(BC_PRESSURE_INLET)
+        density(:) = 0.d0
+        call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_YP), &
+             flow%bc_data(2,BOUNDARY_YP), density)
+        do k=dist%info%zs,dist%info%ze
+        do i=dist%info%xs,dist%info%xe
+          yp_vals(:,1,i,k) = density
+        end do
+        end do
+      case(BC_PRESSURE_OUTLET)
+        do k=dist%info%zs,dist%info%ze
+        do i=dist%info%xs,dist%info%xe
+          yp_vals(1,1,i,k) = flow%bc_data(1,BOUNDARY_YP)
+        end do
+        end do
+      case(BC_MOMENTUM)
+        do k=dist%info%zs,dist%info%ze
+        do i=dist%info%xs,dist%info%xe
+          do m=1,dist%s
+            yp_vals(m,1,i,k) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+                 BOUNDARY_YP)
+          end do
+        end do
+        end do
+      case(BC_FLUX_INLET)
+        if (dist%s.eq.1) then
+          do k=dist%info%zs,dist%info%ze
+          do i=dist%info%xs,dist%info%xe
+            yp_vals(1,Y_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_YP)
+          end do
+          end do
+        else if (dist%s.eq.2) then
+          do k=dist%info%zs,dist%info%ze
+          do i=dist%info%xs,dist%info%xe
+            yp_vals(1,Y_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_YP) &
+                 * flow%bc_data(2,BOUNDARY_YP)
+            yp_vals(2,Y_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_YP) &
+                 * (1.d0 - flow%bc_data(2,BOUNDARY_YP))
+          end do
+          end do
+        else
+          call LBMError(flow%comm, 1, &
+               "BC flux inlet only implemented for 1 or 2 components.", ierr)
+        end if
+      case(BC_FLUX_OUTLET)
+        do k=dist%info%zs,dist%info%ze
+        do i=dist%info%xs,dist%info%xe
+          yp_vals(1,Y_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_YP)
+        end do
+        end do
+      case(BC_VELOCITY_OUTLET)
+        do k=dist%info%zs,dist%info%ze
+        do i=dist%info%xs,dist%info%xe
+          yp_vals(1,:,i,k) = flow%bc_data(1:flow%ndims,BOUNDARY_YP)
+        end do
+        end do
+      end select
+    end if
+
+    ! zm boundary
+    if (dist%info%zs.eq.1) then
+      select case(flow%bc_flags(BOUNDARY_ZM)
+      case(BC_DENSITY)
+        do j=dist%info%ys:dist%info%ye
+        do i=dist%info%xs,dist%info%xe
+          zm_vals(:,1,i,k) = flow%bc_data(1:dist%s,BOUNDARY_ZM)
+        end do
+        end do
+      case(BC_PRESSURE_INLET)
+        density(:) = 0.d0
+        call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_ZM), &
+             flow%bc_data(2,BOUNDARY_ZM), density)
+        do j=dist%info%ys:dist%info%ye
+        do i=dist%info%xs,dist%info%xe
+          zm_vals(:,1,i,k) = density
+        end do
+        end do
+      case(BC_PRESSURE_OUTLET)
+        do j=dist%info%ys:dist%info%ye
+        do i=dist%info%xs,dist%info%xe
+          zm_vals(1,1,i,k) = flow%bc_data(1,BOUNDARY_ZM)
+        end do
+        end do
+      case(BC_MOMENTUM)
+        do j=dist%info%ys:dist%info%ye
+        do i=dist%info%xs,dist%info%xe
+          do m=1,dist%s
+            zm_vals(m,1,i,k) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+                 BOUNDARY_ZM)
+          end do
+        end do
+        end do
+      case(BC_FLUX_INLET)
+        if (dist%s.eq.1) then
+          do j=dist%info%ys:dist%info%ye
+          do i=dist%info%xs,dist%info%xe
+            zm_vals(1,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZM)
+          end do
+          end do
+        else if (dist%s.eq.2) then
+          do j=dist%info%ys:dist%info%ye
+          do i=dist%info%xs,dist%info%xe
+            zm_vals(1,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZM) &
+                 * flow%bc_data(2,BOUNDARY_ZM)
+            zm_vals(2,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZM) &
+                 * (1.d0 - flow%bc_data(2,BOUNDARY_ZM))
+          end do
+          end do
+        else
+          call LBMError(flow%comm, 1, &
+               "BC flux inlet only implemented for 1 or 2 components.", ierr)
+        end if
+      case(BC_FLUX_OUTLET)
+        do j=dist%info%ys:dist%info%ye
+        do i=dist%info%xs,dist%info%xe
+          zm_vals(1,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZM)
+        end do
+        end do
+      case(BC_VELOCITY_OUTLET)
+        do j=dist%info%ys:dist%info%ye
+        do i=dist%info%xs,dist%info%xe
+          zm_vals(1,:,i,k) = flow%bc_data(1:flow%ndims,BOUNDARY_ZM)
+        end do
+        end do
+      end select
+    end if
+
+    ! zp boundary
+    if (dist%info%ze.eq.dist%info%NZ) then
+      select case(flow%bc_flags(BOUNDARY_ZP)
+      case(BC_DENSITY)
+        do j=dist%info%ys:dist%info%ye
+        do i=dist%info%xs,dist%info%xe
+          zp_vals(:,1,i,k) = flow%bc_data(1:dist%s,BOUNDARY_ZP)
+        end do
+        end do
+      case(BC_PRESSURE_INLET)
+        density(:) = 0.d0
+        call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_ZP), &
+             flow%bc_data(2,BOUNDARY_ZP), density)
+        do j=dist%info%ys:dist%info%ye
+        do i=dist%info%xs,dist%info%xe
+          zp_vals(:,1,i,k) = density
+        end do
+        end do
+      case(BC_PRESSURE_OUTLET)
+        do j=dist%info%ys:dist%info%ye
+        do i=dist%info%xs,dist%info%xe
+          zp_vals(1,1,i,k) = flow%bc_data(1,BOUNDARY_ZP)
+        end do
+        end do
+      case(BC_MOMENTUM)
+        do j=dist%info%ys:dist%info%ye
+        do i=dist%info%xs,dist%info%xe
+          do m=1,dist%s
+            zp_vals(m,1,i,k) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+                 BOUNDARY_ZP)
+          end do
+        end do
+        end do
+      case(BC_FLUX_INLET)
+        if (dist%s.eq.1) then
+          do j=dist%info%ys:dist%info%ye
+          do i=dist%info%xs,dist%info%xe
+            zp_vals(1,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZP)
+          end do
+          end do
+        else if (dist%s.eq.2) then
+          do j=dist%info%ys:dist%info%ye
+          do i=dist%info%xs,dist%info%xe
+            zp_vals(1,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZP) &
+                 * flow%bc_data(2,BOUNDARY_ZP)
+            zp_vals(2,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZP) &
+                 * (1.d0 - flow%bc_data(2,BOUNDARY_ZP))
+          end do
+          end do
+        else
+          call LBMError(flow%comm, 1, &
+               "BC flux inlet only implemented for 1 or 2 components.", ierr)
+        end if
+      case(BC_FLUX_OUTLET)
+        do j=dist%info%ys:dist%info%ye
+        do i=dist%info%xs,dist%info%xe
+          zp_vals(1,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZP)
+        end do
+        end do
+      case(BC_VELOCITY_OUTLET)
+        do j=dist%info%ys:dist%info%ye
+        do i=dist%info%xs,dist%info%xe
+          zp_vals(1,:,i,k) = flow%bc_data(1:flow%ndims,BOUNDARY_ZP)
+        end do
+        end do
+      end select
+    end if
+  end subroutine FlowSetUpBCsD3
+
+  subroutine FlowSetUpBCsD2(flow, xm_vals, xp_vals, ym_vals, yp_vals, dist)
+    type(flow_type) flow
+    type(distribution_type) dist
+    PetscScalar,dimension(flow%dist%s,flow%ndims, &
+         dist%info%ys:dist%info%ye):: xm_vals, xp_vals
+    PetscScalar,dimension(flow%dist%s,flow%ndims, &
+         dist%info%xs:dist%info%xe):: ym_vals, yp_vals
+
+    PetscScalar density(dist%s)
+
+    ! xm boundary
+    if (dist%info%xs.eq.1) then
+      select case(flow%bc_flags(BOUNDARY_XM)
+      case(BC_DENSITY)
+        do j=dist%info%ys,dist%info%ye
+          xm_vals(:,1,j) = flow%bc_data(1:dist%s,BOUNDARY_XM)
+        end do
+      case(BC_PRESSURE_INLET)
+        density(:) = 0.d0
+        call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_XM), &
+             flow%bc_data(2,BOUNDARY_XM), density)
+        do j=dist%info%ys,dist%info%ye
+          xm_vals(:,1,j) = density
+        end do
+      case(BC_PRESSURE_OUTLET)
+        do j=dist%info%ys,dist%info%ye
+          xm_vals(1,1,j) = flow%bc_data(1,BOUNDARY_XM)
+        end do
+      case(BC_MOMENTUM)
+        do j=dist%info%ys,dist%info%ye
+          do m=1,dist%s
+            xm_vals(m,1,j) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+                 BOUNDARY_XM)
+          end do
+        end do
+      case(BC_FLUX_INLET)
+        if (dist%s.eq.1) then
+          do j=dist%info%ys,dist%info%ye
+            xm_vals(1,X_DIRECTION,j) = flow%bc_data(1,BOUNDARY_XM)
+          end do
+        else if (dist%s.eq.2) then
+          do j=dist%info%ys,dist%info%ye
+            xm_vals(1,X_DIRECTION,j) = flow%bc_data(1,BOUNDARY_XM) &
+                 * flow%bc_data(2,BOUNDARY_XM)
+            xm_vals(2,X_DIRECTION,j) = flow%bc_data(1,BOUNDARY_XM) &
+                 * (1.d0 - flow%bc_data(2,BOUNDARY_XM))
+          end do
+        else
+          call LBMError(flow%comm, 1, &
+               "BC flux inlet only implemented for 1 or 2 components.", ierr)
+        end if
+      case(BC_FLUX_OUTLET)
+        do j=dist%info%ys,dist%info%ye
+          xm_vals(1,X_DIRECTION,j) = flow%bc_data(1,BOUNDARY_XM)
+        end do
+      case(BC_VELOCITY_OUTLET)
+        do j=dist%info%ys,dist%info%ye
+          xm_vals(1,:,j) = flow%bc_data(1:flow%ndims,BOUNDARY_XM)
+        end do
+      end select
+    end if
+
+    ! xp boundary
+    if (dist%info%xe.eq.dist%info%NX) then
+      select case(flow%bc_flags(BOUNDARY_XP)
+      case(BC_DENSITY)
+        do j=dist%info%ys,dist%info%ye
+          xp_vals(:,1,j) = flow%bc_data(1:dist%s,BOUNDARY_XP)
+        end do
+      case(BC_PRESSURE_INLET)
+        density(:) = 0.d0
+        call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_XP), &
+             flow%bc_data(2,BOUNDARY_XP), density)
+        do j=dist%info%ys,dist%info%ye
+          xp_vals(:,1,j) = density
+        end do
+      case(BC_PRESSURE_OUTLET)
+        do j=dist%info%ys,dist%info%ye
+          xp_vals(1,1,j) = flow%bc_data(1,BOUNDARY_XP)
+        end do
+      case(BC_MOMENTUM)
+        do j=dist%info%ys,dist%info%ye
+          do m=1,dist%s
+            xp_vals(m,1,j) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+                 BOUNDARY_XP)
+          end do
+        end do
+      case(BC_FLUX_INLET)
+        if (dist%s.eq.1) then
+          do j=dist%info%ys,dist%info%ye
+            xp_vals(1,X_DIRECTION,j) = flow%bc_data(1,BOUNDARY_XP)
+          end do
+        else if (dist%s.eq.2) then
+          do j=dist%info%ys,dist%info%ye
+            xp_vals(1,X_DIRECTION,j) = flow%bc_data(1,BOUNDARY_XP) &
+                 * flow%bc_data(2,BOUNDARY_XP)
+            xp_vals(2,X_DIRECTION,j) = flow%bc_data(1,BOUNDARY_XP) &
+                 * (1.d0 - flow%bc_data(2,BOUNDARY_XP))
+          end do
+        else
+          call LBMError(flow%comm, 1, &
+               "BC flux inlet only implemented for 1 or 2 components.", ierr)
+        end if
+      case(BC_FLUX_OUTLET)
+        do j=dist%info%ys,dist%info%ye
+          xp_vals(1,X_DIRECTION,j) = flow%bc_data(1,BOUNDARY_XP)
+        end do
+      case(BC_VELOCITY_OUTLET)
+        do j=dist%info%ys,dist%info%ye
+          xp_vals(1,:,j) = flow%bc_data(1:flow%ndims,BOUNDARY_XP)
+        end do
+      end select
+    end if
+
+    ! ym boundary
+    if (dist%info%ys.eq.1) then
+      select case(flow%bc_flags(BOUNDARY_YM)
+      case(BC_DENSITY)
+        do i=dist%info%xs,dist%info%xe
+          ym_vals(:,1,i) = flow%bc_data(1:dist%s,BOUNDARY_YM)
+        end do
+      case(BC_PRESSURE_INLET)
+        density(:) = 0.d0
+        call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_YM), &
+             flow%bc_data(2,BOUNDARY_YM), density)
+        do i=dist%info%xs,dist%info%xe
+          ym_vals(:,1,i) = density
+        end do
+      case(BC_PRESSURE_OUTLET)
+        do i=dist%info%xs,dist%info%xe
+          ym_vals(1,1,i) = flow%bc_data(1,BOUNDARY_YM)
+        end do
+      case(BC_MOMENTUM)
+        do i=dist%info%xs,dist%info%xe
+          do m=1,dist%s
+            ym_vals(m,1,i) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+                 BOUNDARY_YM)
+          end do
+        end do
+      case(BC_FLUX_INLET)
+        if (dist%s.eq.1) then
+          do i=dist%info%xs,dist%info%xe
+            ym_vals(1,Y_DIRECTION,i) = flow%bc_data(1,BOUNDARY_YM)
+          end do
+        else if (dist%s.eq.2) then
+          do i=dist%info%xs,dist%info%xe
+            ym_vals(1,Y_DIRECTION,i) = flow%bc_data(1,BOUNDARY_YM) &
+                 * flow%bc_data(2,BOUNDARY_YM)
+            ym_vals(2,Y_DIRECTION,i) = flow%bc_data(1,BOUNDARY_YM) &
+                 * (1.d0 - flow%bc_data(2,BOUNDARY_YM))
+          end do
+        else
+          call LBMError(flow%comm, 1, &
+               "BC flux inlet only implemented for 1 or 2 components.", ierr)
+        end if
+      case(BC_FLUX_OUTLET)
+        do i=dist%info%xs,dist%info%xe
+          ym_vals(1,Y_DIRECTION,i) = flow%bc_data(1,BOUNDARY_YM)
+        end do
+      case(BC_VELOCITY_OUTLET)
+        do i=dist%info%xs,dist%info%xe
+          ym_vals(1,:,i) = flow%bc_data(1:flow%ndims,BOUNDARY_YM)
+        end do
+      end select
+    end if
+
+    ! yp boundary
+    if (dist%info%ye.eq.dist%info%NY) then
+      select case(flow%bc_flags(BOUNDARY_YP)
+      case(BC_DENSITY)
+        do i=dist%info%xs,dist%info%xe
+          yp_vals(:,1,i) = flow%bc_data(1:dist%s,BOUNDARY_YP)
+        end do
+      case(BC_PRESSURE_INLET)
+        density(:) = 0.d0
+        call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_YP), &
+             flow%bc_data(2,BOUNDARY_YP), density)
+        do i=dist%info%xs,dist%info%xe
+          yp_vals(:,1,i) = density
+        end do
+      case(BC_PRESSURE_OUTLET)
+        do i=dist%info%xs,dist%info%xe
+          yp_vals(1,1,i) = flow%bc_data(1,BOUNDARY_YP)
+        end do
+      case(BC_MOMENTUM)
+        do i=dist%info%xs,dist%info%xe
+          do m=1,dist%s
+            yp_vals(m,1,i) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+                 BOUNDARY_YP)
+          end do
+        end do
+      case(BC_FLUX_INLET)
+        if (dist%s.eq.1) then
+          do i=dist%info%xs,dist%info%xe
+            yp_vals(1,Y_DIRECTION,i) = flow%bc_data(1,BOUNDARY_YP)
+          end do
+        else if (dist%s.eq.2) then
+          do i=dist%info%xs,dist%info%xe
+            yp_vals(1,Y_DIRECTION,i) = flow%bc_data(1,BOUNDARY_YP) &
+                 * flow%bc_data(2,BOUNDARY_YP)
+            yp_vals(2,Y_DIRECTION,i) = flow%bc_data(1,BOUNDARY_YP) &
+                 * (1.d0 - flow%bc_data(2,BOUNDARY_YP))
+          end do
+        else
+          call LBMError(flow%comm, 1, &
+               "BC flux inlet only implemented for 1 or 2 components.", ierr)
+        end if
+      case(BC_FLUX_OUTLET)
+        do i=dist%info%xs,dist%info%xe
+          yp_vals(1,Y_DIRECTION,i) = flow%bc_data(1,BOUNDARY_YP)
+        end do
+      case(BC_VELOCITY_OUTLET)
+        do i=dist%info%xs,dist%info%xe
+          yp_vals(1,:,i) = flow%bc_data(1:flow%ndims,BOUNDARY_YP)
+        end do
+      end select
+    end if
+  end subroutine FlowSetUpBCsD2
 
   subroutine FlowApplyBCs(flow, walls)
     type(flow_type) flow

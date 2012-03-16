@@ -180,6 +180,7 @@ contains
     call VecSetBlockSize(bc%yp, bc%nbcs, ierr)
     call PetscObjectSetName(bc%yp, 'yp_bc', ierr)
 
+    ! z boundaries
     if ((info%ndims > 2).and.(info%zs.eq.1)) then
       bc%zml = info%xl*info%yl
     else
