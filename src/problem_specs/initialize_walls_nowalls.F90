@@ -16,16 +16,17 @@
 #include "finclude/petscvecdef.h"
 #include "finclude/petscdmdef.h"
 
-  subroutine initialize_walls(walls, filename, info)
+  subroutine initialize_walls(walls, info, options)
     use petsc
+    use LBM_Options_module
     use LBM_Info_module
     implicit none
 
 #include "lbm_definitions.h"
 !   input variables
     type(info_type) info
+    type(options_type) options
     PetscScalar,dimension(info%rgxyzl):: walls
-    character(len=MAXSTRINGLENGTH) filename
 
     walls=0
     return

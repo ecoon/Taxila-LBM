@@ -218,7 +218,7 @@ contains
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           !!!!! 8th order isotropy !!!!!
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-          if(dist%disc%deriv_order > 4) then
+          if(dist%disc%isotropy_order > 4) then
 
           ! diagonals squared length 3
           if (walls(i+1,j+1,k+1).eq.0) then
@@ -951,12 +951,6 @@ contains
             end if
           end do
           end do
-
-!          if ((i.eq.1 .or. i.eq.15) .and. j.eq.4 .and. k.eq.1) then
-          if ((i.eq.1 .or. i.eq.dist%info%NX).and. j.eq.4 .and. k.eq.1) then
-            print*, 'final gradient (X_DIR):', gradrho(:,X_DIRECTION,i,j,k)/weightsum(X_DIRECTION)
-            print*, 'forces (X_DIR):', forces(:,X_DIRECTION,i,j,k)
-          end if
        end if
     end do
     end do
@@ -1055,7 +1049,7 @@ contains
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           !!!!! 8th order isotropy !!!!!
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-          if(dist%disc%deriv_order > 4) then
+          if(dist%disc%isotropy_order > 4) then
              ! N/S/E/W squared length 4 
              if (walls(i+2,j).eq.0.and.walls(i+1,j).eq.0) then
                 gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &
@@ -1182,7 +1176,7 @@ contains
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           !!!!! 10th order isotropy !!!!!
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-          if(dist%disc%deriv_order > 8) then
+          if(dist%disc%isotropy_order > 8) then
              ! N/S/E/W squared length 9 
              if (walls(i+3,j).eq.0.and.walls(i+2,j).eq.0.and.walls(i+1,j).eq.0) then
                 gradrho(:,X_DIRECTION,i,j) = gradrho(:,X_DIRECTION,i,j) &

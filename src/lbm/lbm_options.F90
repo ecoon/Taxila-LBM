@@ -52,7 +52,7 @@
        PetscInt flow_relaxation_mode
        PetscBool flow_fluidsolid_forces
        PetscBool flow_use_nonideal_eos
-       PetscInt deriv_order
+       PetscInt isotropy_order
 
        PetscBool steadystate
        PetscInt steadystate_rampup_steps
@@ -114,7 +114,7 @@
       options%flow_relaxation_mode = RELAXATION_MODE_SRT
       options%flow_fluidsolid_forces = PETSC_FALSE
       options%flow_use_nonideal_eos = PETSC_FALSE
-      options%deriv_order = 4
+      options%isotropy_order = 4
 
       options%steadystate = PETSC_FALSE
       options%steadystate_rampup_steps = 0
@@ -245,8 +245,14 @@
            flag,ierr)
       call OptionsGetInt(options, "-ncomponents", "number of components", &
            options%ncomponents,flag,ierr)
-      call OptionsGetInt(options, "-derivative_order", &
-           "order of fluid-fluid term derivatives", options%deriv_order,flag,ierr)
+
+      call OptionsGetInt(options, "-isotropy_order", &
+           "order of fluid-fluid term isotropy", options%isotropy_order,flag,ierr)
+      if (.not.flag) then
+         call OptionsGetInt(options, "-derivative_order", &
+              "order of fluid-fluid term isotropy (deprecated -- use -isotropy_order)", &
+              options%isotropy_order,flag,ierr)
+      endif
 
       ! flow discretization
       name = "D3Q19"
