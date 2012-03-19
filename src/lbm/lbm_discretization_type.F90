@@ -24,7 +24,7 @@ module LBM_Discretization_Type_module
      PetscInt name
      PetscInt ndims
      PetscInt b
-     PetscInt deriv_order
+     PetscInt isotropy_order
 
      PetscScalar :: c_0 ! grid factor for fluid-fluid terms
      PetscInt,pointer:: ci(:,:)

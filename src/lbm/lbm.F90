@@ -160,6 +160,7 @@
 
       call PetscLogEventBegin(logger%event_init_wallssetup,ierr)
       call WallsSetUp(lbm%walls)
+      call WallsSetValues(lbm%walls, lbm%options)
       call PetscLogEventEnd(logger%event_init_wallssetup,ierr)
 
       call PetscLogEventBegin(logger%event_init_flowsetup,ierr)

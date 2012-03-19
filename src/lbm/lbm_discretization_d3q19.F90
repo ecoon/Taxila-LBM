@@ -76,7 +76,7 @@ contains
     allocate(disc%reflect_z(0:disc%b))              ! direction reflected in z-direction
     allocate(disc%mt_mrt(0:disc%b,0:disc%b))         ! transpose of M
     allocate(disc%mmt_mrt(0:disc%b))                 ! diagonal M dot MT matrix
-    allocate(disc%ffw(1:4*disc%deriv_order))        ! slightly larger than needed in all cases
+    allocate(disc%ffw(1:4*disc%isotropy_order))        ! slightly larger than needed in all cases
 
     disc%local_normal = UP
 
@@ -197,12 +197,12 @@ contains
     disc%mmt_mrt = (/ 19, 2394, 252, 10, 40, 10, 40, 10, 40, 36, 72, 12, 24, 4, 4, 4, 8, 8, 8 /)
 
     disc%ffw = 0.0
-    if(disc%deriv_order.eq.4) then ! 4th order isotropy
+    if(disc%isotropy_order.eq.4) then ! 4th order isotropy
       disc%ffw(1) = 1.d0/6.
       disc%ffw(2) = 1.d0/12.
     end if
 
-    if(disc%deriv_order.eq.8) then ! 8th order isotropy
+    if(disc%isotropy_order.eq.8) then ! 8th order isotropy
       disc%ffw(1) = 4.d0/45.
       disc%ffw(2) = 1.d0/21.
       disc%ffw(3) = 2.d0/105.
@@ -213,7 +213,7 @@ contains
     end if
 
     ! Not implemented yet
-    if(disc%deriv_order.eq.10) then ! 10th order
+    if(disc%isotropy_order.eq.10) then ! 10th order
       disc%ffw( 1) = 352.d0/5355.
       disc%ffw( 2) = 38.d0/1071.
       disc%ffw( 3) = 271.d0/14280.

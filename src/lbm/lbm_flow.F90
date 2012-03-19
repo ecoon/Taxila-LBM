@@ -116,6 +116,10 @@ contains
     flow%distribution => DistributionCreate(flow%comm)
     flow%bc => BCCreate(flow%comm)
 
+    flow%bc_flags = BC_NULL
+    flow%bc_done = PETSC_FALSE
+    flow%bc_data = 0.d0
+
     flow%velt_g = 0
     flow%prs_g = 0
     flow%rhot_g = 0
@@ -199,7 +203,7 @@ contains
     flow%components => ComponentCreate(flow%comm, flow%ncomponents)
 
     call DiscretizationSetType(flow%disc, options%flow_disc)
-    call DiscretizationSetDerivOrder(flow%disc, options%deriv_order)
+    call DiscretizationSetDerivOrder(flow%disc, options%isotropy_order)
     call DiscretizationSetUp(flow%disc)
 
     flow%use_nonideal_eos = options%flow_use_nonideal_eos
@@ -444,7 +448,7 @@ contains
     type(flow_type) flow
     type(walls_type) walls
 
-    !call DistributionCalcDensity(flow%distribution, walls%walls_a)
+    call DistributionCalcDensity(flow%distribution, walls%walls_a)
     !call DistributionCommunicateDensityBegin(flow%distribution)
     call DistributionCalcFlux(flow%distribution, walls%walls_a)
     !call DistributionCommunicateDensityEnd(flow%distribution)
@@ -606,7 +610,7 @@ contains
     call DMDAVecGetArrayF90(flow%grid%da(ONEDOF), flow%prs_g, flow%prs_a, ierr)
 
     if (flow%use_nonideal_eos) then
-      do m=1,flow%distribution%s
+      do m=1,flow%ncomponents
         call EOSApply(flow%components(m)%eos, flow%distribution%rho_a, &
              flow%psi_of_rho, flow%components(m)%gf(m), m, flow%distribution)
       end do
@@ -760,7 +764,7 @@ contains
     if (flow%fluidfluid_forces) then
       call PetscLogEventBegin(logger%event_forcing_fluidfluid,ierr)
       if (flow%use_nonideal_eos) then
-        do m=1,flow%distribution%s
+        do m=1,flow%ncomponents
           call EOSApply(flow%components(m)%eos, flow%distribution%rho_a, &
                flow%psi_of_rho, flow%components(m)%gf(m), m, flow%distribution)
         end do
@@ -807,7 +811,7 @@ contains
     PetscInt m
     PetscErrorCode ierr
 
-    do m=1,flow%distribution%s
+    do m=1,flow%ncomponents
       call DiscretizationEquilf(flow%disc, flow%distribution%rho_a, &
            flow%distribution%flux, walls, flow%fi_eq, m, flow%components(m)%relax, &
            flow%distribution)
@@ -1060,13 +1064,13 @@ contains
       flow%bc_flags(boundary) = BC_DENSITY
       flow%bc_data(:,boundary) = -1.d0
 
-      if (flow%distribution%s.eq.1) then
+      if (flow%ncomponents.eq.1) then
         call OptionsGetReal(options, "-bc_density_"//trim(bname)//"_value", &
              "density", flow%bc_data(1,boundary), flag, ierr)
         if (.not.flag) call LBMWarn(flow%comm, "Density BC on boundary "&
              //trim(bname)//" not set in input file!", ierr)
       else
-        do m=1,flow%distribution%s
+        do m=1,flow%ncomponents
           call OptionsGetReal(options, "-bc_density_"//trim(bname)//"_"// &
                trim(flow%components(m)%name), "density", flow%bc_data(m,boundary), &
                flag, ierr)
@@ -1075,6 +1079,48 @@ contains
                  trim(bname)//" not set in input file!", ierr)
           endif
         end do
+      end if
+    endif
+
+    ! single phase secondary boundary conditions
+    if (flow%ncomponents.eq.1) then
+      bcvalue = PETSC_FALSE
+      call OptionsGetBool(options,"-bc_pressure_"//trim(bname), &
+           "provide pressure", bcvalue, flag, ierr)
+      if (bcvalue) then
+        if (done) call LBMError(flow%comm, 1, &
+             "Multiple BCs provided for boundary "//trim(bname), ierr)
+        done = PETSC_TRUE
+        flow%bc%flags(boundary) = BC_DIRICHLET
+        flow%bc_flags(boundary) = BC_PRESSURE
+        flow%bc_data(:,boundary) = -1.d0
+
+        call OptionsGetReal(options, "-bc_pressure_"//trim(bname)//"_value", &
+             "pressure", flow%bc_data(1,boundary), flag, ierr)
+        if (.not.flag) then
+          call LBMWarn(flow%comm, "Pressure BC on boundary "//trim(bname)//&
+               " not set in input file!", ierr)
+        end if
+      end if
+
+      ! flux inlet provides total flux and rho1/rho_total
+      bcvalue = PETSC_FALSE
+      call OptionsGetBool(options,"-bc_flux_"//trim(bname), &
+           "provide total flux", bcvalue, flag, ierr)
+      if (bcvalue) then
+        if (done) call LBMError(flow%comm, 1, &
+             "Multiple BCs provided for boundary "//trim(bname), ierr)
+        done = PETSC_TRUE
+        flow%bc%flags(boundary) = BC_NEUMANN
+        flow%bc_flags(boundary) = BC_FLUX
+        flow%bc_data(:,boundary) = -1.d0
+
+        call OptionsGetReal(options, "-bc_flux_"//trim(bname)//"_value", &
+             "flux in the inward-normal direction", flow%bc_data(1,boundary), flag, ierr)
+        if (.not.flag) then
+          call LBMWarn(flow%comm, "Flux BC on boundary "//trim(bname)// &
+               " not set in input file!", ierr)
+        end if
       end if
     endif
 
@@ -1097,7 +1143,7 @@ contains
         call LBMWarn(flow%comm, "Pressure BC on boundary "//trim(bname)//&
            " not set in input file!", ierr)
       end if
-      if (flow%distribution%s > 1) then
+      if (flow%ncomponents > 1) then
         call OptionsGetReal(options, "-bc_rho1_fraction_"//trim(bname)// &
              "_value", "mass fraction of rho1, rho1/sum(rho)", &
              flow%bc_data(1,boundary), flag, ierr)
@@ -1142,7 +1188,7 @@ contains
       flow%bc_flags(boundary) = BC_MOMENTUM
       flow%bc_data(:,boundary) = -1.d0
 
-      if (flow%distribution%s.eq.1) then
+      if (flow%ncomponents.eq.1) then
         bccount = flow%ndims
         call OptionsGetRealArray(options,"-bc_momentum_"//trim(bname)//"_value",&
              "list of momentums in x,y,(z) directions", &
@@ -1155,7 +1201,7 @@ contains
                " was provided the wrong number of components.", ierr)
         end if
       else
-        do m=1,flow%distribution%s
+        do m=1,flow%ncomponents
           bccount = flow%ndims
           call OptionsGetRealArray(options,"-bc_momentum_"//trim(bname)// &
                "_"//trim(flow%components(m)%name), &
@@ -1194,7 +1240,7 @@ contains
            " not set in input file!", ierr)
       end if
 
-      if (flow%distribution%s > 1) then
+      if (flow%ncomponents > 1) then
         call OptionsGetReal(options, "-bc_rho1_fraction_"//trim(bname)// &
              "_value", "mass fraction of rho1, rho1/sum(rho)", &
              flow%bc_data(1,boundary), flag, ierr)
@@ -1275,7 +1321,7 @@ contains
           xm_vals(:,1,j,k) = flow%bc_data(1:dist%s,BOUNDARY_XM)
         end do
         end do
-      case(BC_PRESSURE_INLET)
+      case(BC_PRESSURE_INLET, BC_PRESSURE)
         density(:) = 0.d0
         call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_XM), &
              flow%bc_data(2,BOUNDARY_XM), density)
@@ -1299,7 +1345,7 @@ contains
           end do
         end do
         end do
-      case(BC_FLUX_INLET)
+      case(BC_FLUX_INLET,BC_FLUX)
         if (dist%s.eq.1) then
           do k=dist%info%zs,dist%info%ze
           do j=dist%info%ys,dist%info%ye
@@ -1343,7 +1389,7 @@ contains
           xp_vals(:,1,j,k) = flow%bc_data(1:dist%s,BOUNDARY_XP)
         end do
         end do
-      case(BC_PRESSURE_INLET)
+      case(BC_PRESSURE_INLET,BC_PRESSURE)
         density(:) = 0.d0
         call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_XP), &
              flow%bc_data(2,BOUNDARY_XP), density)
@@ -1411,7 +1457,7 @@ contains
           ym_vals(:,1,i,k) = flow%bc_data(1:dist%s,BOUNDARY_YM)
         end do
         end do
-      case(BC_PRESSURE_INLET)
+      case(BC_PRESSURE_INLET,BC_PRESSURE)
         density(:) = 0.d0
         call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_YM), &
              flow%bc_data(2,BOUNDARY_YM), density)
@@ -1479,7 +1525,7 @@ contains
           yp_vals(:,1,i,k) = flow%bc_data(1:dist%s,BOUNDARY_YP)
         end do
         end do
-      case(BC_PRESSURE_INLET)
+      case(BC_PRESSURE_INLET,BC_PRESSURE)
         density(:) = 0.d0
         call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_YP), &
              flow%bc_data(2,BOUNDARY_YP), density)
@@ -1547,7 +1593,7 @@ contains
           zm_vals(:,1,i,k) = flow%bc_data(1:dist%s,BOUNDARY_ZM)
         end do
         end do
-      case(BC_PRESSURE_INLET)
+      case(BC_PRESSURE_INLET,BC_PRESSURE)
         density(:) = 0.d0
         call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_ZM), &
              flow%bc_data(2,BOUNDARY_ZM), density)
@@ -1615,7 +1661,7 @@ contains
           zp_vals(:,1,i,k) = flow%bc_data(1:dist%s,BOUNDARY_ZP)
         end do
         end do
-      case(BC_PRESSURE_INLET)
+      case(BC_PRESSURE_INLET,BC_PRESSURE)
         density(:) = 0.d0
         call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_ZP), &
              flow%bc_data(2,BOUNDARY_ZP), density)
@@ -1694,10 +1740,12 @@ contains
         do j=dist%info%ys,dist%info%ye
           xm_vals(:,1,j) = flow%bc_data(1:dist%s,BOUNDARY_XM)
         end do
-      case(BC_PRESSURE_INLET)
+      case(BC_PRESSURE_INLET,BC_PRESSURE)
         density(:) = 0.d0
         call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_XM), &
              flow%bc_data(2,BOUNDARY_XM), density)
+        print*, 'data:', flow%bc_data(1,BOUNDARY_XM)
+        print*, 'density:', density
         do j=dist%info%ys,dist%info%ye
           xm_vals(:,1,j) = density
         end do
@@ -1746,7 +1794,7 @@ contains
         do j=dist%info%ys,dist%info%ye
           xp_vals(:,1,j) = flow%bc_data(1:dist%s,BOUNDARY_XP)
         end do
-      case(BC_PRESSURE_INLET)
+      case(BC_PRESSURE_INLET,BC_PRESSURE)
         density(:) = 0.d0
         call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_XP), &
              flow%bc_data(2,BOUNDARY_XP), density)
@@ -1798,7 +1846,7 @@ contains
         do i=dist%info%xs,dist%info%xe
           ym_vals(:,1,i) = flow%bc_data(1:dist%s,BOUNDARY_YM)
         end do
-      case(BC_PRESSURE_INLET)
+      case(BC_PRESSURE_INLET,BC_PRESSURE)
         density(:) = 0.d0
         call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_YM), &
              flow%bc_data(2,BOUNDARY_YM), density)
@@ -1850,7 +1898,7 @@ contains
         do i=dist%info%xs,dist%info%xe
           yp_vals(:,1,i) = flow%bc_data(1:dist%s,BOUNDARY_YP)
         end do
-      case(BC_PRESSURE_INLET)
+      case(BC_PRESSURE_INLET,BC_PRESSURE)
         density(:) = 0.d0
         call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_YP), &
              flow%bc_data(2,BOUNDARY_YP), density)
@@ -1911,7 +1959,7 @@ contains
     do lcv_side=1,flow%ndims*2
       if ((flow%bc_flags(lcv_side).eq.BC_PRESSURE_OUTLET).and. &
            .not.flow%bc_done(BC_PRESSURE_OUTLET)) then
-        if (flow%distribution%s /= 1) then
+        if (flow%ncomponents /= 1) then
           call FlowUpdateBCPressureOutlet(flow, walls)
         end if
         flow%bc_done(BC_PRESSURE_OUTLET) = PETSC_TRUE
@@ -2173,24 +2221,30 @@ contains
   subroutine FlowUpdateDensityFromPressure(flow, pressure, rho1frac, rho)
     type(flow_type) flow
     PetscScalar pressure, rho1frac
-    PetscScalar,dimension(2) :: rho
+    PetscScalar,dimension(flow%ncomponents) :: rho
     PetscScalar alpha
     PetscErrorCode ierr
     PetscScalar :: eps = 1.d-10
 
-    if (rho1frac < eps) then
-      rho(1) = 0.d0
-      rho(2) = pressure/3.d0
-    else if (rho1frac > 1-eps) then
-      rho(1) = pressure/3.d0
-      rho(2) = 0.d0
-    else
-      alpha = 1.d0/(1.d0/rho1frac - 1.d0)
+    if (flow%ncomponents.eq.1) then
+      rho(1) = pressure*3.d0
+    else if (flow%ncomponents.eq.2) then
+      if (rho1frac < eps) then
+        rho(1) = 0.d0
+        rho(2) = pressure/3.d0
+      else if (rho1frac > 1-eps) then
+        rho(1) = pressure/3.d0
+        rho(2) = 0.d0
+      else
+        alpha = 1.d0/(1.d0/rho1frac - 1.d0)
 
-      rho(1) = (-(1.d0 + alpha)/3.d0 + DSQRT((1.d0 + alpha)/3.d0*(1.d0 + alpha)/3.d0&
-                 + 4.*flow%disc%c_0 *flow%components(2)%gf(1)*alpha*pressure)) / &
-                 (2*flow%disc%c_0*flow%components(2)%gf(1))
-      rho(2) = rho(1)/alpha
+        rho(1) = (-(1.d0 + alpha)/3.d0 + DSQRT((1.d0 + alpha)/3.d0*(1.d0 + alpha)/3.d0&
+             + 4.*flow%disc%c_0 *flow%components(2)%gf(1)*alpha*pressure)) / &
+             (2*flow%disc%c_0*flow%components(2)%gf(1))
+        rho(2) = rho(1)/alpha
+      end if
+    else
+      call LBMError(flow%comm, 1, "Invalid number of components for flow", ierr)
     end if
   end subroutine FlowUpdateDensityFromPressure
 

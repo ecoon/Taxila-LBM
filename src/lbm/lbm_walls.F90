@@ -28,14 +28,14 @@ module LBM_Walls_module
 
   type, public:: walls_type
     MPI_Comm comm
-    character(len=MAXWORDLENGTH):: name       
+    character(len=MAXWORDLENGTH):: name
 
     PetscInt ndims
     type(grid_type),pointer:: grid
 
     PetscInt nminerals
     type(mineral_type),pointer,dimension(:):: minerals
-    
+
     Vec walls
     Vec walls_g
     PetscScalar,pointer:: walls_a(:)
@@ -48,14 +48,15 @@ module LBM_Walls_module
        WallsSetGrid, &
        WallsSetFromOptions, &
        WallsSetUp, &
+       WallsSetValues, &
        WallsCommunicate, &
        WallsOutputDiagnostics
-  
+
 contains
   function WallsCreate(comm) result(walls)
     MPI_Comm comm
     type(walls_type),pointer :: walls
-  
+
     allocate(walls)
     walls%comm = comm
     walls%ndims = -1
@@ -89,10 +90,10 @@ contains
     type(grid_type),pointer:: grid
     walls%grid => grid
   end subroutine WallsSetGrid
-    
-  subroutine WallsSetName(walls, name) 
-    type(walls_type) walls 
-    character(len=MAXWORDLENGTH):: name       
+
+  subroutine WallsSetName(walls, name)
+    type(walls_type) walls
+    character(len=MAXWORDLENGTH):: name
     walls%name = name
   end subroutine WallsSetName
 
@@ -112,7 +113,7 @@ contains
     walls%ndims = options%ndims
     walls%nminerals = options%nminerals
     walls%minerals => MineralCreate(walls%comm, walls%nminerals)
-    
+
     do lcv=1,walls%nminerals
       call MineralSetID(walls%minerals(lcv), lcv)
       call MineralSetFromOptions(walls%minerals(lcv), options, ierr)
@@ -139,14 +140,22 @@ contains
     type(walls_type) walls
     PetscInt lcv
     PetscErrorCode ierr
-    PetscViewer viewer
-    external initialize_walls
 
     call DMCreateGlobalVector(walls%grid%da(ONEDOF), walls%walls_g, ierr)
     call DMCreateLocalVector(walls%grid%da(ONEDOF), walls%walls, ierr)
     call VecSet(walls%walls_g, 0.d0, ierr)
     call VecSet(walls%walls, 0.d0, ierr)
     call PetscObjectSetName(walls%walls_g, trim(walls%name)//'walls', ierr)
+  end subroutine WallsSetUp
+
+  subroutine WallsSetValues(walls, options)
+    use LBM_Options_module
+    type(walls_type) walls
+    type(options_type) options
+
+    PetscErrorCode ierr
+    PetscViewer viewer
+    external initialize_walls
 
     if (walls%walls_type == WALLS_TYPE_PETSC) then
       call PetscViewerBinaryOpen(walls%comm, walls%filename, FILE_MODE_READ, viewer, ierr)
@@ -160,7 +169,7 @@ contains
       call WallsSetGhostNodes(walls, walls%walls_a)
     else
       call DMDAVecGetArrayF90(walls%grid%da(ONEDOF), walls%walls, walls%walls_a, ierr)
-      call initialize_walls(walls%walls_a, walls%filename, walls%grid%info)
+      call initialize_walls(walls%walls_a, walls%grid%info, options)
       call DMDAVecRestoreArrayF90(walls%grid%da(ONEDOF), walls%walls, &
            walls%walls_a, ierr)
       call DMLocalToGlobalBegin(walls%grid%da(ONEDOF), walls%walls, INSERT_VALUES, &
@@ -170,7 +179,7 @@ contains
       call DMDAVecGetArrayF90(walls%grid%da(ONEDOF), walls%walls, walls%walls_a, ierr)
       call WallsSetGhostNodes(walls, walls%walls_a)
     end if
-  end subroutine WallsSetUp
+  end subroutine WallsSetValues
 
   subroutine WallsSetGhostNodes(walls, data)
     type(walls_type) walls
@@ -182,7 +191,7 @@ contains
       call WallsSetGhostNodesD3(walls, data, walls%grid%info)
     end select
   end subroutine WallsSetGhostNodes
-  
+
   subroutine WallsSetGhostNodesD2(walls, data, info)
     type(walls_type) walls
     type(info_type) info
@@ -200,7 +209,7 @@ contains
       data(:,info%ye+1:info%rgye) = WALL_GHOST
     end if
   end subroutine WallsSetGhostNodesD2
-  
+
   subroutine WallsSetGhostNodesD3(walls, data, info)
     type(walls_type) walls
     type(info_type) info

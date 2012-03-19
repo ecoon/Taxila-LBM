@@ -146,7 +146,7 @@ contains
     call PetscOptionsHasName(PETSC_NULL_CHARACTER, "-help", help, ierr)
 
     call DiscretizationSetType(transport%disc, options%transport_disc)
-    call DiscretizationSetDerivOrder(transport%disc, options%deriv_order)
+    call DiscretizationSetDerivOrder(transport%disc, options%isotropy_order)
     call DiscretizationSetUp(transport%disc)
     
     do lcv=1,transport%nspecies

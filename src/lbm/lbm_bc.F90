@@ -73,7 +73,7 @@ contains
     nullify(bc%yp_a)
     nullify(bc%zm_a)
     nullify(bc%zp_a)
-    bc%flags = 0
+    bc%flags = BC_NULL
     bc%nbcs = 0
 
     bc%xm = 0
@@ -542,7 +542,7 @@ contains
     PetscScalar,dimension(1:dist%info%rgxyzl):: walls
     PetscScalar,dimension(dist%s,dist%info%ndims,dist%info%gxyzl):: forces
 
-    logical,dimension(0:10):: bcs_done
+    logical,dimension(0:15):: bcs_done
     PetscInt lcv_sides
     bcs_done=.FALSE.
     bcs_done(BC_PERIODIC) = .TRUE.   ! periodic done by default
