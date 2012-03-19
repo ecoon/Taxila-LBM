@@ -27,17 +27,20 @@
   PetscInt, parameter :: Z_DIRECTION = 3
 
   ! Flow BCs
-  PetscInt, parameter :: BC_PERIODIC = 0
-  PetscInt, parameter :: BC_REFLECTING = 1
-  PetscInt, parameter :: BC_DIRICHLET = 2
-  PetscInt, parameter :: BC_NEUMANN = 3
-  PetscInt, parameter :: BC_VELOCITY = 4
-  PetscInt, parameter :: BC_DENSITY = 5
-  PetscInt, parameter :: BC_MOMENTUM = 6
-  PetscInt, parameter :: BC_PRESSURE_INLET = 7
-  PetscInt, parameter :: BC_PRESSURE_OUTLET = 8
-  PetscInt, parameter :: BC_FLUX_INLET = 9
-  PetscInt, parameter :: BC_FLUX_OUTLET = 10
+  PetscInt, parameter :: BC_NULL = 0
+  PetscInt, parameter :: BC_PERIODIC = 1
+  PetscInt, parameter :: BC_REFLECTING = 2
+  PetscInt, parameter :: BC_DIRICHLET = 3
+  PetscInt, parameter :: BC_NEUMANN = 4
+  PetscInt, parameter :: BC_VELOCITY = 5
+  PetscInt, parameter :: BC_DENSITY = 6
+  PetscInt, parameter :: BC_MOMENTUM = 7
+  PetscInt, parameter :: BC_PRESSURE = 8
+  PetscInt, parameter :: BC_PRESSURE_INLET = 9
+  PetscInt, parameter :: BC_PRESSURE_OUTLET = 10
+  PetscInt, parameter :: BC_FLUX = 11
+  PetscInt, parameter :: BC_FLUX_INLET = 12
+  PetscInt, parameter :: BC_FLUX_OUTLET = 13
 
   ! boundaries
   PetscInt, parameter :: BOUNDARY_XM = 1

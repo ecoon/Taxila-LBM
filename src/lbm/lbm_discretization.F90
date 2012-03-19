@@ -75,14 +75,14 @@ contains
     if (associated(disc%ffw)) deallocate(disc%ffw)
   end subroutine DiscretizationDestroy
 
-  subroutine DiscretizationSetDerivOrder(disc, deriv_order)
+  subroutine DiscretizationSetDerivOrder(disc, isotropy_order)
     type(discretization_type) disc
-    PetscInt deriv_order
+    PetscInt isotropy_order
     PetscErrorCode ierr
 
-    if ((deriv_order.eq.0).or.(deriv_order.eq.4).or. &
-         (deriv_order.eq.8).or.(deriv_order.eq.10)) then
-       disc%deriv_order = deriv_order
+    if ((isotropy_order.eq.0).or.(isotropy_order.eq.4).or. &
+         (isotropy_order.eq.8).or.(isotropy_order.eq.10)) then
+       disc%isotropy_order = isotropy_order
     else
        call LBMError(PETSC_COMM_SELF, 1, 'Invalid derivative order', ierr)
     end if

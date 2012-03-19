@@ -62,7 +62,9 @@ contains
     allocate(disc%reflect_y(0:disc%b))              ! direction reflected in y-direction
     allocate(disc%mt_mrt(0:disc%b,0:disc%b))        ! transpose of M
     allocate(disc%mmt_mrt(0:disc%b))                ! diagonal M dot MT matrix
-    allocate(disc%ffw(1:4*disc%deriv_order))        ! slightly larger than needed in all cases
+    allocate(disc%ffw(1:4*disc%isotropy_order))        ! slightly larger than needed in all cases
+
+    disc%local_normal = SOUTH
 
     disc%opposites(ORIGIN) = ORIGIN
     disc%opposites(EAST) = WEST
@@ -116,12 +118,12 @@ contains
     disc%mmt_mrt = (/ 9, 36, 36, 6, 12, 6, 12, 4, 4 /)
 
     disc%ffw = 0.0
-    if(disc%deriv_order.eq.4) then
+    if(disc%isotropy_order.eq.4) then
       disc%ffw(1) = 1.d0/3.
       disc%ffw(2) = 1.d0/12.
     end if
     
-    if(disc%deriv_order.eq.8) then 
+    if(disc%isotropy_order.eq.8) then 
       disc%ffw(1) = 4.d0/21.
       disc%ffw(2) = 4.d0/45.
       disc%ffw(4) = 1.d0/60.
@@ -129,7 +131,7 @@ contains
       disc%ffw(8) = 1.d0/5040.
     end if
 
-    if(disc%deriv_order.eq.10) then 
+    if(disc%isotropy_order.eq.10) then 
       disc%ffw( 1) = 262.d0/1785.
       disc%ffw( 2) = 93.d0/1190.
       disc%ffw( 4) = 7.d0/340.

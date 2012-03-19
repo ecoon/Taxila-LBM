@@ -105,7 +105,7 @@ contains
 
     ! update a few things
     if (grid%info%stencil_size_rho < 0) then
-       select case(options%deriv_order)
+       select case(options%isotropy_order)
        case (0)
           grid%info%stencil_size_rho = 0
        case (4)
