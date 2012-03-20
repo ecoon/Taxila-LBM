@@ -55,6 +55,7 @@ module LBM_BC_module
        BCSetValues, &
        BCGetArrays, &
        BCRestoreArrays, &
+       BCUpdateRho, &
        BCPreStream, &
        BCApplyDirichletToRho, &
        BCApply
@@ -367,6 +368,183 @@ contains
       end if
     end select
   end subroutine BCApplyDirichletToRho_D3
+
+  subroutine BCUpdateRho(bc, walls, dist)
+    type(bc_type) bc
+    type(distribution_type) dist
+    PetscScalar,dimension(1:dist%info%rgxyzl):: walls
+
+    PetscInt lcv_sides
+
+    do lcv_sides = 1,6
+      if (bc%flags(lcv_sides).eq.BC_NEUMANN .or. &
+           bc%flags(lcv_sides).eq.BC_VELOCITY .or. &
+           bc%flags(lcv_sides).eq.BC_DIRICHLET) then
+
+        select case(dist%info%ndims)
+        case (2)
+          call BCUpdateRho_D2(bc, walls, dist%fi_a, dist%rho_a, dist, lcv_sides)
+        case (3)
+          call BCUpdateRho_D3(bc, walls, dist%fi_a, dist%rho_a, dist, lcv_sides)
+        end select
+      end if
+    enddo
+  end subroutine BCUpdateRho
+
+  subroutine BCUpdateRho_D2(bc, walls, fi, rho, dist, boundary)
+    type(bc_type) bc
+    type(distribution_type) dist
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe,dist%info%rgys:dist%info%rgye):: walls
+    PetscScalar,dimension(dist%s,0:dist%b,dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: fi
+    PetscScalar,dimension(dist%s,dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: rho
+    PetscInt boundary
+
+    PetscInt i,j,m
+
+    select case(boundary)
+    case(BOUNDARY_XM)
+      if (dist%info%xs.eq.1) then
+        i = 1
+        do j=dist%info%ys,dist%info%ye
+          if (walls(i,j).eq.0.d0) then
+            do m=1,dist%s
+              rho(m,i,j) = sum(fi(m,:,i,j))
+            end do
+          end if
+        end do
+      end if
+    case(BOUNDARY_XP)
+      if (dist%info%xe.eq.dist%info%NX) then
+        i = dist%info%NX
+        do j=dist%info%ys,dist%info%ye
+          if (walls(i,j).eq.0.d0) then
+            do m=1,dist%s
+              rho(m,i,j) = sum(fi(m,:,i,j))
+            end do
+          end if
+        end do
+      end if
+    case(BOUNDARY_YM)
+      if (dist%info%ys.eq.1) then
+        j = 1
+        do i=dist%info%xs,dist%info%xe
+          if (walls(i,j).eq.0.d0) then
+            do m=1,dist%s
+              rho(m,i,j) = sum(fi(m,:,i,j))
+            end do
+          end if
+        end do
+      end if
+    case(BOUNDARY_YP)
+      if (dist%info%ye.eq.dist%info%NY) then
+        j = dist%info%NY
+        do i=dist%info%xs,dist%info%xe
+          if (walls(i,j).eq.0.d0) then
+            do m=1,dist%s
+              rho(m,i,j) = sum(fi(m,:,i,j))
+            end do
+          end if
+        end do
+      end if
+    end select
+  end subroutine BCUpdateRho_D2
+
+  subroutine BCUpdateRho_D3(bc, walls, fi, rho, dist, boundary)
+    type(bc_type) bc
+    type(distribution_type) dist
+    PetscScalar,dimension(dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye,dist%info%rgzs:dist%info%rgze):: walls
+    PetscScalar,dimension(dist%s,0:dist%b,dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye,dist%info%gzs:dist%info%gze):: fi
+    PetscScalar,dimension(dist%s,dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye,dist%info%rgzs:dist%info%rgze):: rho
+    PetscInt boundary
+
+    PetscInt i,j,k,m
+
+    select case(boundary)
+    case(BOUNDARY_XM)
+      if (dist%info%xs.eq.1) then
+        i = 1
+        do k=dist%info%zs,dist%info%ze
+        do j=dist%info%ys,dist%info%ye
+          if (walls(i,j,k).eq.0.d0) then
+            do m=1,dist%s
+              rho(m,i,j,k) = sum(fi(m,:,i,j,k))
+            end do
+          end if
+        end do
+        end do
+      end if
+    case(BOUNDARY_XP)
+      if (dist%info%xe.eq.dist%info%NX) then
+        i = dist%info%NX
+        do k=dist%info%zs,dist%info%ze
+        do j=dist%info%ys,dist%info%ye
+          if (walls(i,j,k).eq.0.d0) then
+            do m=1,dist%s
+              rho(m,i,j,k) = sum(fi(m,:,i,j,k))
+            end do
+          end if
+        end do
+        end do
+      end if
+    case(BOUNDARY_YM)
+      if (dist%info%ys.eq.1) then
+        j = 1
+        do k=dist%info%zs,dist%info%ze
+        do i=dist%info%xs,dist%info%xe
+          if (walls(i,j,k).eq.0.d0) then
+            do m=1,dist%s
+              rho(m,i,j,k) = sum(fi(m,:,i,j,k))
+            end do
+          end if
+        end do
+        end do
+      end if
+    case(BOUNDARY_YP)
+      if (dist%info%ye.eq.dist%info%NY) then
+        j = dist%info%NY
+        do k=dist%info%zs,dist%info%ze
+        do i=dist%info%xs,dist%info%xe
+          if (walls(i,j,k).eq.0.d0) then
+            do m=1,dist%s
+              rho(m,i,j,k) = sum(fi(m,:,i,j,k))
+            end do
+          end if
+        end do
+        end do
+      end if
+    case(BOUNDARY_ZM)
+      if (dist%info%zs.eq.1) then
+        k = 1
+        do j=dist%info%ys,dist%info%ye
+        do i=dist%info%xs,dist%info%xe
+          if (walls(i,j,k).eq.0.d0) then
+            do m=1,dist%s
+              rho(m,i,j,k) = sum(fi(m,:,i,j,k))
+            end do
+          end if
+        end do
+        end do
+      end if
+    case(BOUNDARY_ZP)
+      if (dist%info%ze.eq.dist%info%NZ) then
+        k = dist%info%NZ
+        do j=dist%info%ys,dist%info%ye
+        do i=dist%info%xs,dist%info%xe
+          if (walls(i,j,k).eq.0.d0) then
+            do m=1,dist%s
+              rho(m,i,j,k) = sum(fi(m,:,i,j,k))
+            end do
+          end if
+        end do
+        end do
+      end if
+    end select
+  end subroutine BCUpdateRho_D3
 
   subroutine BCPreStream(bc, dist)
     type(bc_type) bc
@@ -1310,6 +1488,8 @@ contains
     local_normal = directions(dist%disc%local_normal)
 
     do m=1,dist%s
+      ! print*, 'momentum in:', mvals(m,:)
+
       ! note fi has fi in the interior/defined directions and f* in
       ! the incoming/unknown directions
       weightsum = 0.d0
@@ -1325,7 +1505,7 @@ contains
             weightsum(p) = weightsum(p) + dist%disc%weights(n)
           end if
         end do
-        Q(p) = (mvals(m,p) - forces(m,p)- momentum(p)) / weightsum(p)
+        Q(p) = (mvals(m,p) - forces(m,p)/2.d0 - momentum(p)) / weightsum(p)
       end do
 
       do n=1,dist%disc%b
@@ -1334,6 +1514,17 @@ contains
           fi(m,n) = fi(m,n) + dist%disc%weights(n)*sum(dist%disc%ci(n,:)*Q(:))
         end if
       end do
+
+      ! ! recalc and affirm it worked
+      ! momentum(:) = 0.d0
+      ! do p=1,dist%info%ndims
+      !   do n=1,dist%disc%b
+      !     momentum(p) = momentum(p) &
+      !          + fi(m,n)*dist%disc%ci(n, p)
+      !   end do
+      ! end do
+      ! momentum = momentum + forces(m,:)/2.d0
+      ! print*, 'momentum out:', momentum
     end do
   end subroutine BCApplyNeumannNode
 
@@ -1575,7 +1766,7 @@ contains
 
       Q(cardinals(CARDINAL_NORMAL)) = &
            (sum(fi(m,:))*uvals(1,cardinals(CARDINAL_NORMAL)) &
-           - momentum(cardinals(CARDINAL_NORMAL)) - forces(m,cardinals(CARDINAL_NORMAL))) &
+           - momentum(cardinals(CARDINAL_NORMAL)) - forces(m,cardinals(CARDINAL_NORMAL))/2.d0) &
            / (1.d0 - dist%disc%ci(local_normal, cardinals(CARDINAL_NORMAL))*uvals(1,cardinals(CARDINAL_NORMAL))) &
            / weightsum(cardinals(CARDINAL_NORMAL))
 
@@ -1593,7 +1784,7 @@ contains
             weightsum(cardinals(p)) = weightsum(cardinals(p)) + dist%disc%weights(n)
           end if
         end do
-        Q(cardinals(p)) = (rho*uvals(m,cardinals(p)) - forces(m,cardinals(p)) &
+        Q(cardinals(p)) = (rho*uvals(m,cardinals(p)) - forces(m,cardinals(p))/2.d0 &
              - momentum(cardinals(p))) / weightsum(cardinals(p))
       end do
 

@@ -48,13 +48,13 @@ module LBM_Distribution_Function_module
        DistributionSetUp, &
        DistributionGetArrays, &
        DistributionRestoreArrays, &
-       DistributionCommunicateAll, &       
-       DistributionCommunicateFi, &       
-       DistributionCommunicateFiBegin, &       
-       DistributionCommunicateFiEnd, &       
-       DistributionCommunicateDensity, &       
-       DistributionCommunicateDensityBegin, &       
-       DistributionCommunicateDensityEnd, &       
+       DistributionCommunicateAll, &
+       DistributionCommunicateFi, &
+       DistributionCommunicateFiBegin, &
+       DistributionCommunicateFiEnd, &
+       DistributionCommunicateDensity, &
+       DistributionCommunicateDensityBegin, &
+       DistributionCommunicateDensityEnd, &
        DistributionCalcDensity, &
        DistributionCalcFlux, &
        DistributionStream, &
