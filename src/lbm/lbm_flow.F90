@@ -450,12 +450,13 @@ contains
     type(flow_type) flow
     type(walls_type) walls
 
-    call DistributionCalcDensity(flow%distribution, walls%walls_a)
+    ! no need to calc density - was done to get bcs/forces
+    !call DistributionCalcDensity(flow%distribution, walls%walls_a)
     !call DistributionCommunicateDensityBegin(flow%distribution)
     call DistributionCalcFlux(flow%distribution, walls%walls_a)
     !call DistributionCommunicateDensityEnd(flow%distribution)
     !call FlowCalcForces(flow, walls)
-!    call BCZeroForces(flow%bc, flow%forces, flow%distribution)
+    !call BCZeroForces(flow%bc, flow%forces, flow%distribution)
     call FlowUpdateUE(flow, walls%walls_a)
   end subroutine FlowUpdateMoments
 
@@ -1149,7 +1150,7 @@ contains
       if (flow%ncomponents > 1) then
         call OptionsGetReal(options, "-bc_rho1_fraction_"//trim(bname)// &
              "_value", "mass fraction of rho1, rho1/sum(rho)", &
-             flow%bc_data(1,boundary), flag, ierr)
+             flow%bc_data(2,boundary), flag, ierr)
         if (.not.flag) then
           call LBMWarn(flow%comm, &
                "Mass fraction for pressure BC on boundary " &
@@ -1246,7 +1247,7 @@ contains
       if (flow%ncomponents > 1) then
         call OptionsGetReal(options, "-bc_rho1_fraction_"//trim(bname)// &
              "_value", "mass fraction of rho1, rho1/sum(rho)", &
-             flow%bc_data(1,boundary), flag, ierr)
+             flow%bc_data(2,boundary), flag, ierr)
         if (.not.flag) then
           call LBMWarn(flow%comm, "Mass fraction for flux BC on boundary "&
              //trim(bname)//" not set in input file!", ierr)
@@ -1767,6 +1768,9 @@ contains
             xm_vals(1,X_DIRECTION,j) = flow%bc_data(1,BOUNDARY_XM)
           end do
         else if (dist%s.eq.2) then
+          print*, 'flux in 1:', flow%bc_data(1,BOUNDARY_XM)*flow%bc_data(2,BOUNDARY_XM)
+          print*, 'flux in 2:', flow%bc_data(1,BOUNDARY_XM)*(1.d0-flow%bc_data(2,BOUNDARY_XM))
+
           do j=dist%info%ys,dist%info%ye
             xm_vals(1,X_DIRECTION,j) = flow%bc_data(1,BOUNDARY_XM) &
                  * flow%bc_data(2,BOUNDARY_XM)
@@ -1977,6 +1981,9 @@ contains
 
     ! apply boundary conditions, using the calculated forces
     call BCApply(flow%bc, flow%forces, walls%walls_a, flow%distribution)
+
+    ! update rho on the boundary using the new values
+    call BCUpdateRho(flow%bc, walls%walls_a, flow%distribution)
   end subroutine FlowApplyBCs
 
   subroutine FlowUpdateBCPressureOutlet(flow, walls)
