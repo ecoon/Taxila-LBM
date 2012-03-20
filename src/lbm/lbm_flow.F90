@@ -1120,8 +1120,6 @@ contains
         call OptionsGetReal(options, "-bc_flux_"//trim(bname)//"_value", &
              "flux in the inward-normal direction", flow%bc_data(1,boundary), flag, ierr)
 
-        print*, 'flag:', flag
-        print*, 'data:', flow%bc_data
         if (.not.flag) then
           call LBMWarn(flow%comm, "Flux BC on boundary "//trim(bname)// &
                " not set in input file!", ierr)
@@ -1765,8 +1763,6 @@ contains
         end do
       case(BC_FLUX_INLET,BC_FLUX)
         if (dist%s.eq.1) then
-          print*, 'data:', flow%bc_data
-          print*, 'data xm:', flow%bc_data(1,BOUNDARY_XM)
           do j=dist%info%ys,dist%info%ye
             xm_vals(1,X_DIRECTION,j) = flow%bc_data(1,BOUNDARY_XM)
           end do

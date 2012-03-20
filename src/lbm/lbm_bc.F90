@@ -891,7 +891,7 @@ contains
           i = dist%info%NX
           if (walls(i,j,k).eq.0) then
             call BCApplyDirichletNode(bc, fi(:,:,i,j,k), &
-                 -forces(:,:,i,j,k), xp_vals(:,j,k), directions, cardinals, dist)
+                 forces(:,:,i,j,k), xp_vals(:,j,k), directions, cardinals, dist)
           end if
         end do
       end do
@@ -921,7 +921,7 @@ contains
           j = dist%info%NY
           if (walls(i,j,k).eq.0) then
             call BCApplyDirichletNode(bc, fi(:,:,i,j,k), &
-                 -forces(:,:,i,j,k), yp_vals(:,i,k), directions, cardinals, dist)
+                 forces(:,:,i,j,k), yp_vals(:,i,k), directions, cardinals, dist)
           end if
         end do
       end do
@@ -951,7 +951,7 @@ contains
           k = dist%info%NZ
           if (walls(i,j,k).eq.0) then
             call BCApplyDirichletNode(bc, fi(:,:,i,j,k), &
-                 -forces(:,:,i,j,k), zp_vals(:,i,j), directions, cardinals, dist)
+                 forces(:,:,i,j,k), zp_vals(:,i,j), directions, cardinals, dist)
           end if
         end do
       end do
@@ -995,7 +995,7 @@ contains
       do j=dist%info%ys,dist%info%ye
         i = dist%info%NX
         if (walls(i,j).eq.0) then
-          call BCApplyDirichletNode(bc, fi(:,:,i,j), -forces(:,:,i,j), &
+          call BCApplyDirichletNode(bc, fi(:,:,i,j), forces(:,:,i,j), &
                xp_vals(:,j), directions, cardinals, dist)
         end if
       end do
@@ -1021,7 +1021,7 @@ contains
       do i=dist%info%xs,dist%info%xe
         j = dist%info%NY
         if (walls(i,j).eq.0) then
-          call BCApplyDirichletNode(bc, fi(:,:,i,j), -forces(:,:,i,j), &
+          call BCApplyDirichletNode(bc, fi(:,:,i,j), forces(:,:,i,j), &
                yp_vals(:,i), directions, cardinals, dist)
         end if
       end do
@@ -1150,7 +1150,7 @@ contains
         do j=dist%info%ys,dist%info%ye
           i = dist%info%NX
           if (walls(i,j,k).eq.0) then
-            call BCApplyNeumannNode(bc, fi(:,:,i,j,k), -forces(:,:,i,j,k), &
+            call BCApplyNeumannNode(bc, fi(:,:,i,j,k), forces(:,:,i,j,k), &
                  xp_vals(:,j,k), directions, cardinals, dist)
           end if
         end do
@@ -1180,7 +1180,7 @@ contains
         do i=dist%info%xs,dist%info%xe
           j = dist%info%NY
           if (walls(i,j,k).eq.0) then
-            call BCApplyNeumannNode(bc, fi(:,:,i,j,k), -forces(:,:,i,j,k), &
+            call BCApplyNeumannNode(bc, fi(:,:,i,j,k), forces(:,:,i,j,k), &
                  yp_vals(:,i,k), directions, cardinals, dist)
           end if
         end do
@@ -1210,7 +1210,7 @@ contains
         do i=dist%info%xs,dist%info%xe
           k = dist%info%NZ
           if (walls(i,j,k).eq.0) then
-            call BCApplyNeumannNode(bc, fi(:,:,i,j,k), -forces(:,:,i,j,k), &
+            call BCApplyNeumannNode(bc, fi(:,:,i,j,k), forces(:,:,i,j,k), &
                  zp_vals(:,i,j), directions, cardinals, dist)
           end if
         end do
@@ -1255,7 +1255,7 @@ contains
       do j=dist%info%ys,dist%info%ye
         i = dist%info%NX
         if (walls(i,j).eq.0) then
-          call BCApplyNeumannNode(bc, fi(:,:,i,j), -forces(:,:,i,j), &
+          call BCApplyNeumannNode(bc, fi(:,:,i,j), forces(:,:,i,j), &
                xp_vals(:,j), directions, cardinals, dist)
         end if
       end do
@@ -1281,7 +1281,7 @@ contains
       do i=dist%info%xs,dist%info%xe
         j = dist%info%NY
         if (walls(i,j).eq.0) then
-          call BCApplyNeumannNode(bc, fi(:,:,i,j), -forces(:,:,i,j), &
+          call BCApplyNeumannNode(bc, fi(:,:,i,j), forces(:,:,i,j), &
                yp_vals(:,i), directions, cardinals, dist)
         end if
       end do
@@ -1397,7 +1397,7 @@ contains
         do j=dist%info%ys,dist%info%ye
           i = dist%info%NX
           if (walls(i,j,k).eq.0) then
-            call BCApplyVelocityNode(bc, fi(:,:,i,j,k), -forces(:,:,i,j,k), &
+            call BCApplyVelocityNode(bc, fi(:,:,i,j,k), forces(:,:,i,j,k), &
                  xp_vals(:,j,k), directions, cardinals, dist)
           end if
         end do
@@ -1427,7 +1427,7 @@ contains
         do i=dist%info%xs,dist%info%xe
           j = dist%info%NY
           if (walls(i,j,k).eq.0) then
-            call BCApplyVelocityNode(bc, fi(:,:,i,j,k), -forces(:,:,i,j,k), &
+            call BCApplyVelocityNode(bc, fi(:,:,i,j,k), forces(:,:,i,j,k), &
                  yp_vals(:,i,k), directions, cardinals, dist)
           end if
         end do
@@ -1457,7 +1457,7 @@ contains
         do i=dist%info%xs,dist%info%xe
           k = dist%info%NZ
           if (walls(i,j,k).eq.0) then
-            call BCApplyVelocityNode(bc, fi(:,:,i,j,k), -forces(:,:,i,j,k), &
+            call BCApplyVelocityNode(bc, fi(:,:,i,j,k), forces(:,:,i,j,k), &
                  zp_vals(:,i,j), directions, cardinals, dist)
           end if
         end do
@@ -1502,7 +1502,7 @@ contains
       do j=dist%info%ys,dist%info%ye
         i = dist%info%NX
         if (walls(i,j).eq.0) then
-          call BCApplyVelocityNode(bc, fi(:,:,i,j), -forces(:,:,i,j), &
+          call BCApplyVelocityNode(bc, fi(:,:,i,j), forces(:,:,i,j), &
                xp_vals(:,j), directions, cardinals, dist)
         end if
       end do
@@ -1528,7 +1528,7 @@ contains
       do i=dist%info%xs,dist%info%xe
         j = dist%info%NY
         if (walls(i,j).eq.0) then
-          call BCApplyVelocityNode(bc, fi(:,:,i,j), -forces(:,:,i,j), &
+          call BCApplyVelocityNode(bc, fi(:,:,i,j), forces(:,:,i,j), &
                yp_vals(:,i), directions, cardinals, dist)
         end if
       end do
@@ -1573,10 +1573,10 @@ contains
         end if
       end do
 
-      Q(cardinals(CARDINAL_NORMAL)) =(dist%disc%ci(local_normal,cardinals(CARDINAL_NORMAL))&
-           *sum(fi(m,:))*uvals(1,cardinals(CARDINAL_NORMAL)) &
+      Q(cardinals(CARDINAL_NORMAL)) = &
+           (sum(fi(m,:))*uvals(1,cardinals(CARDINAL_NORMAL)) &
            - momentum(cardinals(CARDINAL_NORMAL)) - forces(m,cardinals(CARDINAL_NORMAL))) &
-           / (1.d0 - uvals(1,cardinals(CARDINAL_NORMAL))) &
+           / (1.d0 - dist%disc%ci(local_normal, cardinals(CARDINAL_NORMAL))*uvals(1,cardinals(CARDINAL_NORMAL))) &
            / weightsum(cardinals(CARDINAL_NORMAL))
 
       rho = sum(fi(m,:)) &
