@@ -46,7 +46,7 @@ module LBM_Flow_module
      type(bc_type),pointer:: bc
      PetscInt, dimension(6):: bc_flags
      PetscBool, dimension(15):: bc_done
-     PetscScalar,allocatable,dimension(:,:) :: bc_data
+     PetscScalar,pointer,dimension(:,:) :: bc_data
 
      PetscBool io_fi
      PetscBool io_last_fi
@@ -118,7 +118,7 @@ contains
 
     flow%bc_flags = BC_NULL
     flow%bc_done = PETSC_FALSE
-    flow%bc_data = 0.d0
+    nullify(flow%bc_data)
 
     flow%velt_g = 0
     flow%prs_g = 0
@@ -174,6 +174,7 @@ contains
     if (associated(flow%fi_eq)) deallocate(flow%fi_eq)
     if (associated(flow%psi_of_rho)) deallocate(flow%psi_of_rho)
     if (associated(flow%gvt)) deallocate(flow%gvt)
+    if (associated(flow%bc_data)) deallocate(flow%bc_data)
   end subroutine FlowDestroy
 
   subroutine FlowSetName(flow, name)
@@ -242,7 +243,8 @@ contains
     ! dimension
     call BCSetSizes(flow%bc, options%ndims*options%ncomponents)
     call BCSetFromOptions(flow%bc, options, ierr)
-    allocate(flow%bc_data(flow%bc%nbcs,6))
+    allocate(flow%bc_data(flow%bc%nbcs,2*flow%ndims))
+    flow%bc_data(:,:) = 0.d0
 
     ! parse flow boundary conditions
     boundaryname = "xm"
@@ -1113,10 +1115,13 @@ contains
         done = PETSC_TRUE
         flow%bc%flags(boundary) = BC_NEUMANN
         flow%bc_flags(boundary) = BC_FLUX
-        flow%bc_data(:,boundary) = -1.d0
+        flow%bc_data(:,boundary) = 0.d0
 
         call OptionsGetReal(options, "-bc_flux_"//trim(bname)//"_value", &
              "flux in the inward-normal direction", flow%bc_data(1,boundary), flag, ierr)
+
+        print*, 'flag:', flag
+        print*, 'data:', flow%bc_data
         if (.not.flag) then
           call LBMWarn(flow%comm, "Flux BC on boundary "//trim(bname)// &
                " not set in input file!", ierr)
@@ -1413,11 +1418,11 @@ contains
           end do
         end do
         end do
-      case(BC_FLUX_INLET)
+      case(BC_FLUX_INLET,BC_FLUX)
         if (dist%s.eq.1) then
           do k=dist%info%zs,dist%info%ze
           do j=dist%info%ys,dist%info%ye
-            xp_vals(1,X_DIRECTION,j,k) = flow%bc_data(1,BOUNDARY_XP)
+            xp_vals(1,X_DIRECTION,j,k) = -flow%bc_data(1,BOUNDARY_XP)
           end do
           end do
         else if (dist%s.eq.2) then
@@ -1436,7 +1441,7 @@ contains
       case(BC_FLUX_OUTLET)
         do k=dist%info%zs,dist%info%ze
         do j=dist%info%ys,dist%info%ye
-          xp_vals(1,X_DIRECTION,j,k) = flow%bc_data(1,BOUNDARY_XP)
+          xp_vals(1,X_DIRECTION,j,k) = -flow%bc_data(1,BOUNDARY_XP)
         end do
         end do
       case(BC_VELOCITY)
@@ -1481,7 +1486,7 @@ contains
           end do
         end do
         end do
-      case(BC_FLUX_INLET)
+      case(BC_FLUX_INLET,BC_FLUX)
         if (dist%s.eq.1) then
           do k=dist%info%zs,dist%info%ze
           do i=dist%info%xs,dist%info%xe
@@ -1549,11 +1554,11 @@ contains
           end do
         end do
         end do
-      case(BC_FLUX_INLET)
+      case(BC_FLUX_INLET,BC_FLUX)
         if (dist%s.eq.1) then
           do k=dist%info%zs,dist%info%ze
           do i=dist%info%xs,dist%info%xe
-            yp_vals(1,Y_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_YP)
+            yp_vals(1,Y_DIRECTION,i,k) = -flow%bc_data(1,BOUNDARY_YP)
           end do
           end do
         else if (dist%s.eq.2) then
@@ -1572,7 +1577,7 @@ contains
       case(BC_FLUX_OUTLET)
         do k=dist%info%zs,dist%info%ze
         do i=dist%info%xs,dist%info%xe
-          yp_vals(1,Y_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_YP)
+          yp_vals(1,Y_DIRECTION,i,k) = -flow%bc_data(1,BOUNDARY_YP)
         end do
         end do
       case(BC_VELOCITY)
@@ -1617,7 +1622,7 @@ contains
           end do
         end do
         end do
-      case(BC_FLUX_INLET)
+      case(BC_FLUX_INLET,BC_FLUX)
         if (dist%s.eq.1) then
           do j=dist%info%ys,dist%info%ye
           do i=dist%info%xs,dist%info%xe
@@ -1685,11 +1690,11 @@ contains
           end do
         end do
         end do
-      case(BC_FLUX_INLET)
+      case(BC_FLUX_INLET,BC_FLUX)
         if (dist%s.eq.1) then
           do j=dist%info%ys,dist%info%ye
           do i=dist%info%xs,dist%info%xe
-            zp_vals(1,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZP)
+            zp_vals(1,Z_DIRECTION,i,k) = -flow%bc_data(1,BOUNDARY_ZP)
           end do
           end do
         else if (dist%s.eq.2) then
@@ -1708,7 +1713,7 @@ contains
       case(BC_FLUX_OUTLET)
         do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
-          zp_vals(1,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZP)
+          zp_vals(1,Z_DIRECTION,i,k) = -flow%bc_data(1,BOUNDARY_ZP)
         end do
         end do
       case(BC_VELOCITY)
@@ -1744,8 +1749,6 @@ contains
         density(:) = 0.d0
         call FlowUpdateDensityFromPressure(flow, flow%bc_data(1,BOUNDARY_XM), &
              flow%bc_data(2,BOUNDARY_XM), density)
-        print*, 'data:', flow%bc_data(1,BOUNDARY_XM)
-        print*, 'density:', density
         do j=dist%info%ys,dist%info%ye
           xm_vals(:,1,j) = density
         end do
@@ -1760,8 +1763,10 @@ contains
                  BOUNDARY_XM)
           end do
         end do
-      case(BC_FLUX_INLET)
+      case(BC_FLUX_INLET,BC_FLUX)
         if (dist%s.eq.1) then
+          print*, 'data:', flow%bc_data
+          print*, 'data xm:', flow%bc_data(1,BOUNDARY_XM)
           do j=dist%info%ys,dist%info%ye
             xm_vals(1,X_DIRECTION,j) = flow%bc_data(1,BOUNDARY_XM)
           end do
@@ -1812,10 +1817,12 @@ contains
                  BOUNDARY_XP)
           end do
         end do
-      case(BC_FLUX_INLET)
+      case(BC_FLUX_INLET,BC_FLUX)
         if (dist%s.eq.1) then
           do j=dist%info%ys,dist%info%ye
-            xp_vals(1,X_DIRECTION,j) = flow%bc_data(1,BOUNDARY_XP)
+            ! flux given in the inward normal direction, but uses
+            ! bc_neumann which takes things in x,y,z coordinates
+            xp_vals(1,X_DIRECTION,j) = -flow%bc_data(1,BOUNDARY_XP)
           end do
         else if (dist%s.eq.2) then
           do j=dist%info%ys,dist%info%ye
@@ -1830,7 +1837,7 @@ contains
         end if
       case(BC_FLUX_OUTLET)
         do j=dist%info%ys,dist%info%ye
-          xp_vals(1,X_DIRECTION,j) = flow%bc_data(1,BOUNDARY_XP)
+          xp_vals(1,X_DIRECTION,j) = -flow%bc_data(1,BOUNDARY_XP)
         end do
       case(BC_VELOCITY)
         do j=dist%info%ys,dist%info%ye
@@ -1864,7 +1871,7 @@ contains
                  BOUNDARY_YM)
           end do
         end do
-      case(BC_FLUX_INLET)
+      case(BC_FLUX_INLET,BC_FLUX)
         if (dist%s.eq.1) then
           do i=dist%info%xs,dist%info%xe
             ym_vals(1,Y_DIRECTION,i) = flow%bc_data(1,BOUNDARY_YM)
@@ -1916,10 +1923,10 @@ contains
                  BOUNDARY_YP)
           end do
         end do
-      case(BC_FLUX_INLET)
+      case(BC_FLUX_INLET,BC_FLUX)
         if (dist%s.eq.1) then
           do i=dist%info%xs,dist%info%xe
-            yp_vals(1,Y_DIRECTION,i) = flow%bc_data(1,BOUNDARY_YP)
+            yp_vals(1,Y_DIRECTION,i) = -flow%bc_data(1,BOUNDARY_YP)
           end do
         else if (dist%s.eq.2) then
           do i=dist%info%xs,dist%info%xe
@@ -1934,7 +1941,7 @@ contains
         end if
       case(BC_FLUX_OUTLET)
         do i=dist%info%xs,dist%info%xe
-          yp_vals(1,Y_DIRECTION,i) = flow%bc_data(1,BOUNDARY_YP)
+          yp_vals(1,Y_DIRECTION,i) = -flow%bc_data(1,BOUNDARY_YP)
         end do
       case(BC_VELOCITY)
         do i=dist%info%xs,dist%info%xe

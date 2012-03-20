@@ -1325,7 +1325,7 @@ contains
             weightsum(p) = weightsum(p) + dist%disc%weights(n)
           end if
         end do
-        Q(p) = mvals(m,p) - forces(m,p)- momentum(p) / weightsum(p)
+        Q(p) = (mvals(m,p) - forces(m,p)- momentum(p)) / weightsum(p)
       end do
 
       do n=1,dist%disc%b
