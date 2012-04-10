@@ -1296,7 +1296,6 @@ contains
        end if
     end do
     end do
-
   end subroutine LBMAddFluidFluidForcesD2
 
   ! --- Fluid-solid interaction forces, from
