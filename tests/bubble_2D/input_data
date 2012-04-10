@@ -1,0 +1,54 @@
+## Bubble problem, in 2D
+
+# grid dimensions
+-NX 128
+-NY 128
+
+# numerical params
+-flow_relaxation_mode 0 # MRT
+-discretization d2q9
+
+# component parameters
+-ncomponents 2
+
+## component 1
+-component1_name outer
+-mm_outer 1.0
+-tau_outer 1.0
+-s1_outer 0.1
+-s2_outer 0.2
+-s3_outer 0.625
+
+## component 2
+-component2_name inner
+-mm_inner 1.0
+-tau_inner 1.0
+-s1_inner 1.8
+-s2_inner 1.8
+-s3_inner 1.55
+
+# forcing coefficients
+#-gvt 0.0,0.0
+-g_11 0.0
+-g_22 0.0
+-g_12 0.1
+-g_21 0.1
+
+# initial conditions
+-rho_outer 0.97,0.03
+-rho_inner 0.03,0.97
+
+# boundary conditions
+-bc_periodic_x
+-bc_periodic_y
+
+# timestepping
+-npasses 5
+-kwrite 1
+
+# geometry
+-walls_type 2
+
+# i/o
+-output_file_prefix test_solution/
+-output_flow_fi # get fi for comparison
