@@ -91,6 +91,7 @@ module LBM_Flow_module
        FlowGetArrays, &
        FlowRestoreArrays, &
        FlowUpdateMoments, &
+       FlowUpdateFlux, &
        FlowUpdateDiagnostics, &
        FlowStream, &
        FlowBounceback, &
@@ -446,17 +447,23 @@ contains
     call FlowCalcForces(flow, walls)
   end subroutine FlowCalcRhoForces
 
+  subroutine FlowUpdateFlux(flow, walls)
+    type(flow_type) flow
+    type(walls_type) walls
+
+    call DistributionCalcFlux(flow%distribution, walls%walls_a)
+    call FlowUpdateUE(flow, walls%walls_a)
+  end subroutine FlowUpdateFlux
+
   subroutine FlowUpdateMoments(flow, walls)
     type(flow_type) flow
     type(walls_type) walls
 
-    ! no need to calc density - was done to get bcs/forces
-    !call DistributionCalcDensity(flow%distribution, walls%walls_a)
-    !call DistributionCommunicateDensityBegin(flow%distribution)
+    call DistributionCalcDensity(flow%distribution, walls%walls_a)
+    call DistributionCommunicateDensityBegin(flow%distribution)
     call DistributionCalcFlux(flow%distribution, walls%walls_a)
-    !call DistributionCommunicateDensityEnd(flow%distribution)
-    !call FlowCalcForces(flow, walls)
-    !call BCZeroForces(flow%bc, flow%forces, flow%distribution)
+    call DistributionCommunicateDensityEnd(flow%distribution)
+    call FlowCalcForces(flow, walls)
     call FlowUpdateUE(flow, walls%walls_a)
   end subroutine FlowUpdateMoments
 
