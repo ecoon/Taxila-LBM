@@ -233,6 +233,8 @@
          end if
       endif
 
+      ! hack that needs cleanup and fixing... currently update moments
+      ! does not do density, due to wierdness in calculating forces.
       call FlowUpdateMoments(lbm%flow, lbm%walls)
       if (.not.supress_output) then
         call FlowUpdateDiagnostics(lbm%flow, lbm%walls)
@@ -354,7 +356,8 @@
          if ((.not.lbm%options%steadystate).or. &
               (lcv_step < lbm%options%steadystate_rampup_steps)) then
             call PetscLogEventBegin(logger%event_flow_moments,ierr)
-            call FlowUpdateMoments(lbm%flow, lbm%walls)
+            ! this is bad -- needs to be generalized for all flow methods
+            call FlowUpdateFlux(lbm%flow, lbm%walls)
             call PetscLogEventEnd(logger%event_flow_moments,ierr)
          end if
 

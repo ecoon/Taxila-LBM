@@ -43,7 +43,7 @@
 -bc_periodic_y
 
 # timestepping
--npasses 5
+-npasses 1
 -kwrite 1
 
 # geometry
