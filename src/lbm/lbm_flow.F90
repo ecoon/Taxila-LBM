@@ -1077,7 +1077,7 @@ contains
       if (flow%ncomponents.eq.1) then
         call OptionsGetReal(options, "-bc_density_"//trim(bname)//"_value", &
              "density", flow%bc_data(1,boundary), flag, ierr)
-        if (.not.flag) call LBMWarn(flow%comm, "Density BC on boundary "&
+        if (.not.flag) call LBMWarn(flow%comm, "Density BC on boundary " &
              //trim(bname)//" not set in input file!", ierr)
       else
         do m=1,flow%ncomponents
@@ -1256,7 +1256,7 @@ contains
              "_value", "mass fraction of rho1, rho1/sum(rho)", &
              flow%bc_data(2,boundary), flag, ierr)
         if (.not.flag) then
-          call LBMWarn(flow%comm, "Mass fraction for flux BC on boundary "&
+          call LBMWarn(flow%comm, "Mass fraction for flux BC on boundary " &
              //trim(bname)//" not set in input file!", ierr)
         end if
       endif
