@@ -1748,6 +1748,8 @@ contains
     ! all others are rotated to match via directions/cardinals.
     local_normal = directions(dist%disc%local_normal)
 
+
+
     do m=1,dist%s
       ! note fi has fi in the interior/defined directions and f* in
       ! the incoming/unknown directions
@@ -1784,7 +1786,7 @@ contains
             weightsum(cardinals(p)) = weightsum(cardinals(p)) + dist%disc%weights(n)
           end if
         end do
-        Q(cardinals(p)) = (rho*uvals(m,cardinals(p)) - forces(m,cardinals(p))/2.d0 &
+        Q(cardinals(p)) = (rho*uvals(1,cardinals(p)) - forces(m,cardinals(p))/2.d0 &
              - momentum(cardinals(p))) / weightsum(cardinals(p))
       end do
 
