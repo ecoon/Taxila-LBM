@@ -1773,7 +1773,8 @@ contains
            / weightsum(cardinals(CARDINAL_NORMAL))
 
       rho = sum(fi(m,:)) &
-           + weightsum(cardinals(CARDINAL_NORMAL))*Q(cardinals(CARDINAL_NORMAL))
+           + weightsum(cardinals(CARDINAL_NORMAL))*Q(cardinals(CARDINAL_NORMAL)) &
+              * dist%disc%ci(local_normal, cardinals(CARDINAL_NORMAL))
 
       do p=2,dist%info%ndims
         do n=1,dist%disc%b
