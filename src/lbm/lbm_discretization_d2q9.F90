@@ -150,17 +150,17 @@ contains
     type(relaxation_type) relax
     PetscScalar oneontau
      
-    oneontau = 1.d0/relax%tau
+    !oneontau = 1.d0/relax%tau
     if (relax%mode .eq. RELAXATION_MODE_MRT) then
-       relax%tau_mrt(0) = oneontau 
-       relax%tau_mrt(1) = relax%s1 
-       relax%tau_mrt(2) = relax%s2 
-       relax%tau_mrt(3) = oneontau 
-       relax%tau_mrt(4) = relax%s3 
-       relax%tau_mrt(5) = oneontau 
-       relax%tau_mrt(6) = relax%s3 
-       relax%tau_mrt(7) = oneontau
-       relax%tau_mrt(8) = oneontau
+       relax%tau_mrt(0) = relax%s_c 
+       relax%tau_mrt(1) = relax%s_e 
+       relax%tau_mrt(2) = relax%s_e2 
+       relax%tau_mrt(3) = relax%s_c 
+       relax%tau_mrt(4) = relax%s_q 
+       relax%tau_mrt(5) = relax%s_c
+       relax%tau_mrt(6) = relax%s_q 
+       relax%tau_mrt(7) = relax%s_nu
+       relax%tau_mrt(8) = relax%s_nu
     end if
 
   end subroutine DiscretizationSetUpRelax_D2Q9
