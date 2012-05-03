@@ -71,12 +71,12 @@ contains
     allocate(disc%ci(0:disc%b,1:disc%ndims))
     allocate(disc%weights(0:disc%b))
     allocate(disc%opposites(0:disc%b))
-    allocate(disc%reflect_x(0:disc%b))              ! direction reflected in x-direction
-    allocate(disc%reflect_y(0:disc%b))              ! direction reflected in y-direction
-    allocate(disc%reflect_z(0:disc%b))              ! direction reflected in z-direction
-    allocate(disc%mt_mrt(0:disc%b,0:disc%b))         ! transpose of M
-    allocate(disc%mmt_mrt(0:disc%b))                 ! diagonal M dot MT matrix
-    allocate(disc%ffw(1:4*disc%isotropy_order))        ! slightly larger than needed in all cases
+    allocate(disc%reflect_x(0:disc%b))         ! direction reflected in x-direction
+    allocate(disc%reflect_y(0:disc%b))         ! direction reflected in y-direction
+    allocate(disc%reflect_z(0:disc%b))         ! direction reflected in z-direction
+    allocate(disc%mt_mrt(0:disc%b,0:disc%b))   ! transpose of M
+    allocate(disc%mmt_mrt(0:disc%b))           ! diagonal M dot MT matrix
+    allocate(disc%ffw(1:4*disc%isotropy_order))! slightly larger than needed in all cases
 
     disc%local_normal = UP
 
@@ -237,29 +237,28 @@ contains
     type(relaxation_type) relax
     PetscScalar oneontau
 
-    oneontau = 1.d0/relax%tau
-
+    !oneontau = 1.d0/relax%tau
     if (relax%mode .eq. RELAXATION_MODE_MRT) then
        !! Not tested yet
-       relax%tau_mrt(0) = oneontau
-       relax%tau_mrt(1) = relax%s1
-       relax%tau_mrt(2) = relax%s2
-       relax%tau_mrt(3) = oneontau
-       relax%tau_mrt(4) = relax%s3
-       relax%tau_mrt(5) = oneontau
-       relax%tau_mrt(6) = relax%s3
-       relax%tau_mrt(7) = oneontau
-       relax%tau_mrt(8) = relax%s3
-       relax%tau_mrt(9) = oneontau
-       relax%tau_mrt(10) = relax%s4
-       relax%tau_mrt(11) = oneontau
-       relax%tau_mrt(12) = relax%s4
-       relax%tau_mrt(13) = oneontau
-       relax%tau_mrt(14) = oneontau
-       relax%tau_mrt(15) = oneontau
-       relax%tau_mrt(16) = relax%s5
-       relax%tau_mrt(17) = relax%s5
-       relax%tau_mrt(18) = relax%s5
+       relax%tau_mrt(0) = relax%s_c
+       relax%tau_mrt(1) = relax%s_e
+       relax%tau_mrt(2) = relax%s_e2
+       relax%tau_mrt(3) = relax%s_c
+       relax%tau_mrt(4) = relax%s_q
+       relax%tau_mrt(5) = relax%s_c
+       relax%tau_mrt(6) = relax%s_q
+       relax%tau_mrt(7) = relax%s_c
+       relax%tau_mrt(8) = relax%s_q
+       relax%tau_mrt(9) = relax%s_nu
+       relax%tau_mrt(10) = relax%s_pi
+       relax%tau_mrt(11) = relax%s_nu
+       relax%tau_mrt(12) = relax%s_pi
+       relax%tau_mrt(13) = relax%s_nu
+       relax%tau_mrt(14) = relax%s_nu
+       relax%tau_mrt(15) = relax%s_nu
+       relax%tau_mrt(16) = relax%s_m
+       relax%tau_mrt(17) = relax%s_m
+       relax%tau_mrt(18) = relax%s_m
     end if
   end subroutine DiscretizationSetupRelax_D3Q19
 
