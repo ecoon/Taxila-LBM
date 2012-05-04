@@ -287,6 +287,7 @@ contains
     call BCSetGrid(flow%bc, flow%grid)
   end subroutine FlowSetGrid
 
+  ! This currently only makes sense for SRT -- should be updated at some point.
   subroutine FlowSetPhysicalScales(flow, ierr)
     type(flow_type) flow
     PetscScalar consistent_tau, consistent_mm
@@ -504,7 +505,7 @@ contains
     PetscScalar,dimension(1:dist%s) :: mmot
 
     do m=1,dist%s
-       mmot(m) = flow%components(m)%mm/flow%components(m)%relax%tau
+       mmot(m) = flow%components(m)%mm*flow%components(m)%relax%s_c
     end do
 
     do k=flow%grid%info%zs,flow%grid%info%ze
@@ -543,7 +544,7 @@ contains
     PetscScalar,dimension(1:dist%s) :: mmot
 
     do m=1,dist%s
-       mmot(m) = flow%components(m)%mm/flow%components(m)%relax%tau
+       mmot(m) = flow%components(m)%mm*flow%components(m)%relax%s_c
     end do
 
     do j=flow%grid%info%ys,flow%grid%info%ye
