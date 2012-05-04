@@ -33,11 +33,11 @@ module LBM_Relaxation_module
      PetscInt mode
 
      PetscScalar tau  ! SRT relaxation time: viscosity [nu=(tau-0.5)/3]
-     PetscScalar s_c  ! MRT relaxation time: conserved moments (rho & momentum) 
+     PetscScalar s_c  ! MRT relaxation time: conserved moments (rho & momentum)
      PetscScalar s_e  ! MRT relaxation time: energy
      PetscScalar s_e2 ! MRT relaxation time: energy squared
-     PetscScalar s_q  ! MRT relaxation time: energy flux 
-     PetscScalar s_nu ! MRT relaxation time: kinematic viscosity (stress) 
+     PetscScalar s_q  ! MRT relaxation time: energy flux
+     PetscScalar s_nu ! MRT relaxation time: kinematic viscosity (stress)
      PetscScalar s_pi ! MRT relaxation time: stress (only 3D)
      PetscScalar s_m  ! MRT relaxation time: stress (only 3D)
      PetscScalar,pointer,dimension(:) :: tau_mrt ! species of S vector for mrt
@@ -125,31 +125,29 @@ contains
 
     call OptionsGroupHeader(options, "  "//trim(relax%name)//" Relaxation Options", ierr)
 
-    ! single and multiple relaxation times
-    call OptionsGetReal(options, "-tau_"//trim(relax%name), "SRT & MRT: kinematic visocity", &
-         relax%tau, flag, ierr)
-
-    relax%s_c = 1.d0/relax%tau
-    call OptionsGetReal(options, "-s_c_"//trim(relax%name), "MRT: conserved momments", &
-         relax%s_c, flag, ierr)
-    relax%s_e = 1.d0/relax%tau
-    call OptionsGetReal(options, "-s_e_"//trim(relax%name), "MRT: energy", &
-         relax%s_e, flag, ierr)
-    relax%s_e2 = 1.d0/relax%tau
-    call OptionsGetReal(options, "-s_e2_"//trim(relax%name), "MRT: energy squared", &
-         relax%s_e2, flag, ierr)
-    relax%s_q = 1.d0/relax%tau
-    call OptionsGetReal(options, "-s_q_"//trim(relax%name), "MRT: energy flux", &
-         relax%s_q, flag, ierr)
-    relax%s_nu = 1.d0/relax%tau
-    !call OptionsGetReal(options, "-s_nu_"//trim(relax%name), "MRT: kinematic viscosity", &
-    !     relax%s_s_nu, flag, ierr)
-    relax%s_pi = 1.d0/relax%tau
-    call OptionsGetReal(options, "-s_pi_"//trim(relax%name), "MRT: stress (only for 3D)", &
-         relax%s_pi, flag, ierr)
-    relax%s_m = 1.d0/relax%tau
-    call OptionsGetReal(options, "-s_m_"//trim(relax%name), "MRT: stress (only for 3D)", &
-         relax%s_m, flag, ierr)
+    select case(relax%mode)
+    case(RELAXATION_MODE_SRT)
+      ! single relaxation times
+      call OptionsGetReal(options, "-tau_"//trim(relax%name), "SRT: relaxation time", &
+           relax%tau, flag, ierr)
+      relax%s_c = 1.d0/relax%tau
+    case(RELAXATION_MODE_MRT)
+      ! multiple relaxation times
+      call OptionsGetReal(options, "-s_c_"//trim(relax%name), "MRT: conserved momments", &
+           relax%s_c, flag, ierr)
+      call OptionsGetReal(options, "-s_e_"//trim(relax%name), "MRT: energy", &
+           relax%s_e, flag, ierr)
+      call OptionsGetReal(options, "-s_e2_"//trim(relax%name), "MRT: energy squared", &
+           relax%s_e2, flag, ierr)
+      call OptionsGetReal(options, "-s_q_"//trim(relax%name), "MRT: energy flux", &
+           relax%s_q, flag, ierr)
+      call OptionsGetReal(options, "-s_nu_"//trim(relax%name), "MRT: kinematic viscosity",&
+           relax%s_s_nu, flag, ierr)
+      call OptionsGetReal(options, "-s_pi_"//trim(relax%name), "MRT: stress (3D only)", &
+           relax%s_pi, flag, ierr)
+      call OptionsGetReal(options, "-s_m_"//trim(relax%name), "MRT: stress (3D only)", &
+           relax%s_m, flag, ierr)
+    end select
   end subroutine RelaxationSetFromOptions
 
   subroutine RelaxationCollide(relax, fi, fi_eq, m, dist)
@@ -192,7 +190,7 @@ contains
     PetscInt n                  ! loop variables
     PetscScalar :: mdiff
     PetscScalar :: d_fi(0:dist%b)
-   
+
     d_fi = fi(m,:)-fi_eq(m,:)
     do n=0,dist%b
       mdiff = sum(dist%disc%mt_mrt(:,n)*d_fi,1)
@@ -201,5 +199,3 @@ contains
     enddo
   end subroutine RelaxationCollideMRT
 end module LBM_Relaxation_module
-
-    
