@@ -142,7 +142,7 @@ contains
       call OptionsGetReal(options, "-s_q_"//trim(relax%name), "MRT: energy flux", &
            relax%s_q, flag, ierr)
       call OptionsGetReal(options, "-s_nu_"//trim(relax%name), "MRT: kinematic viscosity",&
-           relax%s_s_nu, flag, ierr)
+           relax%s_nu, flag, ierr)
       call OptionsGetReal(options, "-s_pi_"//trim(relax%name), "MRT: stress (3D only)", &
            relax%s_pi, flag, ierr)
       call OptionsGetReal(options, "-s_m_"//trim(relax%name), "MRT: stress (3D only)", &
