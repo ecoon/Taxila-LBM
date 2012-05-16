@@ -29,6 +29,8 @@ ifndef LBM_OPT
     FFLAGS += -Mbounds
   else ifeq ($(COMP),pgf95)
     FFLAGS += -Mbounds
+  else ifeq ($(COMP),pgfortran)
+    FFLAGS += -Mbounds
   endif
 else
   FFLAGS += -O3
