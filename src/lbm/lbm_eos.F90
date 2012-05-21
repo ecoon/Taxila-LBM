@@ -331,15 +331,18 @@ contains
     PetscInt i
     PetscScalar alpha   
     PetscScalar tmp
+    PetscErrorCode ierr
 
-    alpha = (1. + (0.37464 + 1.54226*eos%omega - 0.26992*eos%omega**2)*(1. - & 
+    alpha = (1. + (0.37464 + 1.54226*eos%omega - 0.26992*eos%omega**2)*(1. - &
             SQRT(eos%T/eos%T_c)))**2
     do i=1,dist%info%rgxyzl
       tmp =  2.*( rho(m,i)*eos%R*eos%T/(1. - eos%b*rho(m,i)) - &
-                 eos%a*alpha*rho(m,i)**2/(1. + 2.*eos%b*rho(m,i) - eos%b**2*rho(m,i)**2) &
+                 (eos%a*alpha*rho(m,i)**2)/(1. + 2.*eos%b*rho(m,i) - (eos%b*rho(m,i))**2) &
                  - rho(m,i)/3. )/(dist%disc%c_0*g_mm )
       if (tmp < 0) then
-        call LBMError(PETSC_COMM_WORLD, 1, 'PR EOS inner sqrt went negative', 1)
+        print*, "PR EOS inner sqrt went negative with rho = ", rho(m,i)
+        ierr = 58
+        call LBMError(PETSC_COMM_WORLD, 1, 'PR EOS inner sqrt went negative', ierr)
       end if
       psi(m,i) = SQRT(tmp)
     end do
