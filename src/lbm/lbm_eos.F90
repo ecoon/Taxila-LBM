@@ -303,6 +303,16 @@ contains
     call PetscOptionsGetReal(options%my_prefix, '-eos_pr_T_'//trim(eos%name), &
          eos%T, flag, ierr)
 
+    if (.not.flag) then
+      ! get reduced T
+      eos%T = 0.9
+      if (help) call PetscPrintf(options%comm, '  -eos_pr_reduced_T_'//trim(eos%name)//&
+           '=1.:'//' temperature (LU)\n', ierr)
+      call PetscOptionsGetReal(options%my_prefix, '-eos_pr_reduced_T_'//trim(eos%name), &
+           eos%T, flag, ierr)
+      eos%T = eos%T*eos%T_c
+    endif
+
     ! get omega, or default to water
     eos%omega = 0.344
     if (help) call PetscPrintf(options%comm, '  -eos_pr_omega_'//trim(eos%name)//&
@@ -320,13 +330,18 @@ contains
 
     PetscInt i
     PetscScalar alpha   
+    PetscScalar tmp
 
     alpha = (1. + (0.37464 + 1.54226*eos%omega - 0.26992*eos%omega**2)*(1. - & 
             SQRT(eos%T/eos%T_c)))**2
     do i=1,dist%info%rgxyzl
-      psi(m,i) = SQRT( 2.*( rho(m,i)*eos%R*eos%T/(1. - eos%b*rho(m,i)) - &
+      tmp =  2.*( rho(m,i)*eos%R*eos%T/(1. - eos%b*rho(m,i)) - &
                  eos%a*alpha*rho(m,i)**2/(1. + 2.*eos%b*rho(m,i) - eos%b**2*rho(m,i)**2) &
-                 - rho(m,i)/3. )/(dist%disc%c_0*g_mm ) )
+                 - rho(m,i)/3. )/(dist%disc%c_0*g_mm )
+      if (tmp < 0) then
+        call LBMError(PETSC_COMM_WORLD, 1, 'PR EOS inner sqrt went negative', 1)
+      end if
+      psi(m,i) = SQRT(tmp)
     end do
   end subroutine EOSApply_PR
 end module LBM_EOS_module
