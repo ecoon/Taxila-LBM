@@ -83,8 +83,8 @@ program MAIN
         call LBMInitializeState(lbm, initialize_state)
      end if
 
-     if (options%steadystate_hasfile) then
-        call LBMLoadSteadyStateFlow(lbm, options%steadystate_flow_file)
+     if (options%flow_at_steadystate_hasfile) then
+        call LBMLoadSteadyStateFlow(lbm, options%flow_at_steadystate_flow_file)
      end if
      istep=0
   endif

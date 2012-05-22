@@ -43,8 +43,13 @@
 -bc_periodic_y
 
 # timestepping
--npasses 1
--kwrite 1
+-npasses 1000
+-kwrite 100
+-run_to_steadystate
+-steadystate_field_rho
+-steadystate_tolerance 1.e-1
+-output_last
+
 
 # geometry
 -walls_type 2

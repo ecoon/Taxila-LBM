@@ -206,8 +206,8 @@
          !  1. we are running a steady state problem and it is pre-calculated
          !  2. we initialized from a restart file
          !  3. we initialized from an IC fi file
-         if (((.not.lbm%options%steadystate).or. &
-              (lbm%options%steadystate_rampup_steps > 0)).and. &
+         if (((.not.lbm%options%flow_at_steadystate).or. &
+              (lbm%options%flow_at_steadystate_rampup_steps > 0)).and. &
               (.not.lbm%options%restart).and.(.not.lbm%options%ic_from_file)) then
            call FlowFiInit(lbm%flow, lbm%walls)
          end if
@@ -272,6 +272,7 @@
       type(timing_type),pointer:: timer1, timer2, timer3
       character(len=MAXWORDLENGTH) timerunits
       character(len=MAXWORDLENGTH) timername
+      PetscScalar norm
 
       timername = trim(lbm%name)//'Simulation'
       timer1 => TimingCreate(lbm%comm, timername)
@@ -279,16 +280,16 @@
          ! collision
          call PetscLogStagePop(ierr)
          call PetscLogStagePush(logger%stage(COLLISION_STAGE), ierr)
-         if ((.not.lbm%options%steadystate).or. &
-              (lcv_step < lbm%options%steadystate_rampup_steps)) then
+         if ((.not.lbm%options%flow_at_steadystate).or. &
+              (lcv_step < lbm%options%flow_at_steadystate_rampup_steps)) then
             call PetscLogEventBegin(logger%event_collision_flow, ierr)
             call FlowCollision(lbm%flow, lbm%walls)
             call PetscLogEventEnd(logger%event_collision_flow, ierr)
          end if
 
          if (associated(lbm%transport)) then
-            if ((.not.lbm%options%steadystate).or. &
-                 (lcv_step < lbm%options%steadystate_rampup_steps)) then
+            if ((.not.lbm%options%flow_at_steadystate).or. &
+                 (lcv_step < lbm%options%flow_at_steadystate_rampup_steps)) then
                call PetscLogEventBegin(logger%event_diagnostics,ierr)
                call FlowUpdateDiagnostics(lbm%flow, lbm%walls)
                call PetscLogEventEnd(logger%event_diagnostics,ierr)
@@ -301,8 +302,8 @@
          ! streaming
          call PetscLogStagePop(ierr)
          call PetscLogStagePush(logger%stage(STREAM_STAGE), ierr)
-         if ((.not.lbm%options%steadystate).or. &
-              (lcv_step < lbm%options%steadystate_rampup_steps)) then
+         if ((.not.lbm%options%flow_at_steadystate).or. &
+              (lcv_step < lbm%options%flow_at_steadystate_rampup_steps)) then
             call PetscLogEventBegin(logger%event_communicate_fi, ierr)
             call DistributionCommunicateFi(lbm%flow%distribution)
             call PetscLogEventEnd(logger%event_communicate_fi, ierr)
@@ -323,8 +324,8 @@
          call PetscLogStagePush(logger%stage(BC_STAGE), ierr)
 
          ! internal bounceback
-         if ((.not.lbm%options%steadystate).or. &
-              (lcv_step < lbm%options%steadystate_rampup_steps)) then
+         if ((.not.lbm%options%flow_at_steadystate).or. &
+              (lcv_step < lbm%options%flow_at_steadystate_rampup_steps)) then
             call PetscLogEventBegin(logger%event_bc_bounceback,ierr)
             call FlowBounceback(lbm%flow, lbm%walls)
             call PetscLogEventEnd(logger%event_bc_bounceback,ierr)
@@ -337,8 +338,8 @@
          end if
 
          ! external boundary conditions
-         if ((.not.lbm%options%steadystate).or. &
-              (lcv_step < lbm%options%steadystate_rampup_steps)) then
+         if ((.not.lbm%options%flow_at_steadystate).or. &
+              (lcv_step < lbm%options%flow_at_steadystate_rampup_steps)) then
             call PetscLogEventBegin(logger%event_bc_flow,ierr)
             call FlowApplyBCs(lbm%flow, lbm%walls)
             call PetscLogEventEnd(logger%event_bc_flow,ierr)
@@ -353,8 +354,8 @@
          ! update moments for rho, psi
          call PetscLogStagePop(ierr)
          call PetscLogStagePush(logger%stage(MOMENTS_STAGE), ierr)
-         if ((.not.lbm%options%steadystate).or. &
-              (lcv_step < lbm%options%steadystate_rampup_steps)) then
+         if ((.not.lbm%options%flow_at_steadystate).or. &
+              (lcv_step < lbm%options%flow_at_steadystate_rampup_steps)) then
             call PetscLogEventBegin(logger%event_flow_moments,ierr)
             ! this is bad -- needs to be generalized for all flow methods
             call FlowUpdateFlux(lbm%flow, lbm%walls)
@@ -389,7 +390,30 @@
             call LBMOutput(lbm, lcv_step)
             call PetscLogEventEnd(logger%event_output,ierr)
          endif
+
+         ! check for steady-state finished
+         if (lbm%options%run_to_steadystate) then
+           call DistributionCalcDeltaNorm(lbm%flow%distribution, norm)
+           if (norm < lbm%options%steadystate_tolerance .and. lcv_step > istep+2) then
+             ! This is the worst instance of ugly fortran-ness in Taxila, I promise!
+             if (lbm%grid%info%rank.eq.0) then
+               write(*,*) "Exiting steady state solve, norm (tol):", norm, "(", &
+                  lbm%options%steadystate_tolerance, ")"
+             endif
+             exit
+           endif
+         endif
       end do
+
+      ! if we're solving to steady state, the last timestep may not be a standard i/o check
+      if (lbm%options%output_last) then
+         call PetscLogStagePop(ierr)
+         call PetscLogStagePush(logger%stage(OUTPUT_STAGE), ierr)
+         lbm%flow%io_fi = (lbm%flow%io_fi.OR.lbm%flow%io_last_fi)
+         call PetscLogEventBegin(logger%event_output,ierr)
+         call LBMOutput(lbm, lcv_step)
+         call PetscLogEventEnd(logger%event_output,ierr)
+      endif
 
       timerunits = 'timestep'
       call TimingEndPerUnit(timer1, (kstep-istep+1), timerunits, supress_output)
@@ -404,8 +428,8 @@
       if (lbm%grid%info%rank.eq.0) then
          write(*,*) 'outputing step', istep, 'to file', lbm%io%counter
       endif
-      if ((.not.lbm%options%steadystate).or. &
-           (istep < lbm%options%steadystate_rampup_steps)) then
+      if ((.not.lbm%options%flow_at_steadystate).or. &
+           (istep < lbm%options%flow_at_steadystate_rampup_steps)) then
          call FlowUpdateDiagnostics(lbm%flow, lbm%walls)
          call FlowOutputDiagnostics(lbm%flow, lbm%io)
       end if
