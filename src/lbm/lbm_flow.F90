@@ -277,6 +277,10 @@ contains
          flow%io_rhot, flag, ierr)
     call OptionsGetBool(options, "-output_pressure", "output pressure", &
          flow%io_prs, flag, ierr)
+
+    ! steady state checking
+    call DistributionSetTrackOld(flow%distribution, options%steadystate_field_rho, &
+         options%steadystate_field_fi)
   end subroutine FlowSetFromOptions
 
   subroutine FlowSetGrid(flow, grid)
