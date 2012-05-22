@@ -24,43 +24,55 @@
 #include "lbm_definitions.h"
 
     type,public:: options_type
-       MPI_Comm comm
-       character(len=MAXWORDLENGTH):: my_prefix
-       PetscInt ntimes, npasses
-       PetscInt kprint, kwrite
-       PetscBool restart
-       PetscInt istep
-       PetscInt restart_counter
-       PetscInt current_waypoint
-       PetscInt, pointer:: waypoints(:)
+      ! basics
+      MPI_Comm comm
+      character(len=MAXWORDLENGTH):: my_prefix
 
-       PetscBool ic_from_file
-       character(len=MAXSTRINGLENGTH):: ic_file
-       character(len=MAXSTRINGLENGTH):: output_prefix
-       PetscBool mpiio
-       PetscBool supress_ic_output
-       PetscBool print_help
+      ! timestep control
+      PetscInt ntimes, npasses
+      PetscInt kprint, kwrite
+      PetscInt istep
+      PetscBool run_to_steadystate
+      PetscScalar steadystate_tolerance
+      PetscBool steadystate_field_rho
+      PetscBool steadystate_field_fi
 
-       PetscInt flow_disc
-       PetscInt transport_disc
+      ! initialization
+      PetscBool restart
+      PetscInt restart_counter
+      PetscBool ic_from_file
+      character(len=MAXSTRINGLENGTH):: ic_file
 
-       PetscInt ndims
-       PetscInt ncomponents
-       PetscInt nspecies
-       PetscInt nminerals
+      ! i/o
+      character(len=MAXSTRINGLENGTH):: output_prefix
+      PetscInt current_waypoint
+      PetscInt, pointer:: waypoints(:)
+      PetscBool mpiio
+      PetscBool supress_ic_output
+      PetscBool output_last
+      PetscBool print_help
 
-       PetscInt flow_relaxation_mode
-       PetscBool flow_fluidsolid_forces
-       PetscBool flow_use_nonideal_eos
-       PetscInt isotropy_order
+      ! physics control
+      PetscInt flow_disc
+      PetscInt transport_disc
 
-       PetscBool steadystate
-       PetscInt steadystate_rampup_steps
-       character(len=MAXSTRINGLENGTH):: steadystate_flow_file
-       PetscBool steadystate_hasfile
+      PetscInt ndims
+      PetscInt ncomponents
+      PetscInt nspecies
+      PetscInt nminerals
 
-       PetscInt transport_relaxation_mode
-       PetscBool transport_reactive_matrix
+      PetscInt flow_relaxation_mode
+      PetscBool flow_fluidsolid_forces
+      PetscBool flow_use_nonideal_eos
+      PetscInt isotropy_order
+
+      PetscBool flow_at_steadystate
+      PetscInt flow_at_steadystate_rampup_steps
+      character(len=MAXSTRINGLENGTH):: flow_at_steadystate_flow_file
+      PetscBool flow_at_steadystate_hasfile
+
+      PetscInt transport_relaxation_mode
+      PetscBool transport_reactive_matrix
     end type options_type
 
     public :: OptionsCreate, &
@@ -84,16 +96,29 @@
       MPI_Comm comm
 
       allocate(options)
+
+      ! basics
       options%comm = comm
+
+      ! timestep control
       options%ntimes = 1
       options%npasses = 1
       options%kprint = 0
       options%kwrite = -1
+      options%istep = 0
+      options%run_to_steadystate = PETSC_FALSE
+      options%steadystate_tolerance = 1d-6
+      options%steadystate_field_rho = PETSC_TRUE
+      options%steadystate_field_fi = PETSC_FALSE
+
+      ! initialization
       options%restart = PETSC_FALSE
       options%restart_counter = -1
-      options%istep = 0
+
+      ! i/o control
       options%mpiio = PETSC_FALSE
       options%supress_ic_output = PETSC_FALSE
+      options%output_last = PETSC_FALSE
       options%print_help = PETSC_FALSE
       options%ic_from_file = PETSC_FALSE
       options%ic_file = ''
@@ -102,7 +127,8 @@
       nullify(options%waypoints)
 
       options%output_prefix = 'test_solution/'
-      
+
+      ! physics control
       options%flow_disc = NULL_DISCRETIZATION
       options%transport_disc = NULL_DISCRETIZATION
 
@@ -116,10 +142,10 @@
       options%flow_use_nonideal_eos = PETSC_FALSE
       options%isotropy_order = 4
 
-      options%steadystate = PETSC_FALSE
-      options%steadystate_rampup_steps = 0
-      options%steadystate_flow_file = ''
-      options%steadystate_hasfile = PETSC_FALSE
+      options%flow_at_steadystate = PETSC_FALSE
+      options%flow_at_steadystate_rampup_steps = 0
+      options%flow_at_steadystate_flow_file = ''
+      options%flow_at_steadystate_hasfile = PETSC_FALSE
 
       options%transport_relaxation_mode = RELAXATION_MODE_SRT
       options%transport_reactive_matrix = PETSC_FALSE
@@ -159,16 +185,32 @@
            flag, ierr)
       call OptionsGetInt(options, "-npasses", "total timesteps to run", options%npasses, &
            flag, ierr)
-      call OptionsGetBool(options, "-steadystate", "turn off flow, assuming steady state", &
-           options%steadystate, flag, ierr)
-      if (options%steadystate) then
+
+      call OptionsGetBool(options, "-run_to_steadystate", &
+           "Run simulation until change in moments reach tolerance", options%run_to_steadystate, &
+           flag, ierr)
+      if (options%run_to_steadystate) then
+        call OptionsGetReal(options, "-steadystate_tolerance", &
+             "relative norm of change allowed in steadystate", options%steadystate_tolerance, &
+             flag, ierr)
+        call OptionsGetBool(options, "-steadystate_field_rho", &
+             "Include rho in steady state convergence norms", options%steadystate_field_rho, &
+             flag, ierr)
+        call OptionsGetBool(options, "-steadystate_field_fi", &
+             "Include u in steady state convergence norms", options%steadystate_field_fi, &
+             flag, ierr)
+      endif
+
+      call OptionsGetBool(options, "-steadystate_flow", "turn off flow, assuming steady state", &
+           options%flow_at_steadystate, flag, ierr)
+      if (options%flow_at_steadystate) then
         call OptionsGetString(options, "-steadystate_flow_file", &
-             "set flow via pre-computed steadystate", options%steadystate_flow_file, &
+             "set flow via pre-computed steadystate", options%flow_at_steadystate_flow_file, &
              flag, ierr)
         if (.not.flag) then
           call OptionsGetInt(options, "-steadystate_rampup_steps", &
                "allow flow to ramp up if flow not set via file", &
-               options%steadystate_rampup_steps, flag, ierr)
+               options%flow_at_steadystate_rampup_steps, flag, ierr)
         end if
       end if
 
@@ -195,6 +237,8 @@
            options%mpiio, flag, ierr)
       call OptionsGetBool(options, "-supress_ic_output", "do not output IC", &
            options%supress_ic_output, flag, ierr)
+      call OptionsGetBool(options, "-output_last", "Do a special i/o call for the last timestep", &
+           options%output_last, flag, ierr)
 
       ! waypoints and checkpointing, i/o stuff
       wpnum = 0

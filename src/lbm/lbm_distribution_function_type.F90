@@ -37,13 +37,17 @@ module LBM_Distribution_Function_type_module
      Vec fi
      Vec fi_g
      PetscScalar,pointer:: fi_a(:)
+     Vec fi_g_old
 
      Vec rho
      Vec rho_g
      PetscScalar,pointer:: rho_a(:)
+     Vec rho_g_old
 
      PetscScalar,pointer,dimension(:,:,:):: flux
      PetscBool flux_required
-     character(len=MAXWORDLENGTH) name       
+     character(len=MAXWORDLENGTH) name
+     PetscBool track_old_rho
+     PetscBool track_old_fi
   end type distribution_type
 end module LBM_Distribution_Function_type_module

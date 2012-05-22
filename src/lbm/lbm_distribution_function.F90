@@ -45,6 +45,7 @@ module LBM_Distribution_Function_module
        DistributionSetDiscretization, &
        DistributionSetSizes, &
        DistributionSetDAs, &
+       DistributionSetTrackOld, &
        DistributionSetUp, &
        DistributionGetArrays, &
        DistributionRestoreArrays, &
@@ -59,7 +60,8 @@ module LBM_Distribution_Function_module
        DistributionCalcFlux, &
        DistributionStream, &
        DistributionBounceback, &
-       DistributionGatherValueToDirection
+       DistributionGatherValueToDirection, &
+       DistributionCalcDeltaNorm
 
 contains
   function DistributionCreate(comm) result(distribution)
@@ -79,10 +81,14 @@ contains
     distribution%rho = 0
     distribution%fi_g = 0
     distribution%rho_g = 0
+    distribution%fi_g_old = 0
+    distribution%rho_g_old = 0
     nullify(distribution%fi_a)
     nullify(distribution%rho_a)
     nullify(distribution%flux)
     distribution%flux_required = PETSC_TRUE
+    distribution%track_old_fi = PETSC_FALSE
+    distribution%track_old_rho = PETSC_FALSE
   end function DistributionCreate
 
   subroutine DistributionDestroy(distribution, ierr)
@@ -95,9 +101,9 @@ contains
     if (associated(distribution%flux)) deallocate(distribution%flux)
   end subroutine DistributionDestroy
 
-  subroutine DistributionSetName(distribution, name) 
-    type(distribution_type) distribution 
-    character(len=MAXWORDLENGTH):: name       
+  subroutine DistributionSetName(distribution, name)
+    type(distribution_type) distribution
+    character(len=MAXWORDLENGTH):: name
     distribution%name = name
   end subroutine DistributionSetName
 
@@ -119,13 +125,20 @@ contains
     PetscInt s
     distribution%s = s
   end subroutine DistributionSetSizes
-    
+
   subroutine DistributionSetDAs(distribution, da_fi, da_rho)
     type(distribution_type) distribution
     DM,target:: da_fi, da_rho
     distribution%da_fi => da_fi
     distribution%da_rho => da_rho
   end subroutine DistributionSetDAs
+
+  subroutine DistributionSetTrackOld(distribution, track_old_rho, track_old_fi)
+    type(distribution_type) distribution
+    PetscBool track_old_fi, track_old_rho
+    distribution%track_old_fi = track_old_fi
+    distribution%track_old_rho = track_old_rho
+  end subroutine DistributionSetTrackOld
 
   subroutine DistributionSetUp(distribution)
     type(distribution_type) distribution
@@ -145,6 +158,9 @@ contains
     call DMCreateGlobalVector(distribution%da_fi, distribution%fi_g, ierr)
     call VecSet(distribution%fi_g, zero, ierr)
     call PetscObjectSetName(distribution%fi_g, trim(distribution%name)//'fi', ierr)
+    call VecDuplicate(distribution%fi_g, distribution%fi_g_old, ierr)
+    call VecSet(distribution%fi_g_old, zero, ierr)
+    call PetscObjectSetName(distribution%fi_g_old, trim(distribution%name)//'fi_old', ierr)
 
     call DMCreateLocalVector(distribution%da_rho, distribution%rho, ierr)
     call VecSet(distribution%rho, zero, ierr)
@@ -152,6 +168,9 @@ contains
     call DMCreateGlobalVector(distribution%da_rho, distribution%rho_g, ierr)
     call VecSet(distribution%rho_g, zero, ierr)
     call PetscObjectSetName(distribution%rho_g, trim(distribution%name)//'rho', ierr)
+    call VecDuplicate(distribution%rho_g, distribution%rho_g_old, ierr)
+    call VecSet(distribution%rho_g_old, zero, ierr)
+    call PetscObjectSetName(distribution%rho_g_old, trim(distribution%name)//'rho_old', ierr)
   end subroutine DistributionSetUp
 
   subroutine DistributionGetArrays(distribution, ierr)
@@ -236,7 +255,7 @@ contains
   subroutine DistributionCalcDensity1(distribution, walls)
     type(distribution_type) distribution
     PetscScalar,dimension(distribution%info%rgxyzl):: walls
-    
+
     call DistributionCalcDensity2(distribution,walls,distribution%rho_a)
   end subroutine DistributionCalcDensity1
 
@@ -263,7 +282,7 @@ contains
     PetscScalar,dimension(distribution%s, &
          distribution%info%rgxs:distribution%info%rgxe, &
          distribution%info%rgys:distribution%info%rgye):: rho
-    
+
     PetscInt i,j,m
     do j=distribution%info%ys,distribution%info%ye
     do i=distribution%info%xs,distribution%info%xe
@@ -341,7 +360,7 @@ contains
          distribution%info%gxs:distribution%info%gxe, &
          distribution%info%gys:distribution%info%gye, &
          distribution%info%gzs:distribution%info%gze):: u
-    
+
     PetscInt i,j,k,d,m
     do k=distribution%info%zs,distribution%info%ze
     do j=distribution%info%ys,distribution%info%ye
@@ -370,7 +389,7 @@ contains
     PetscScalar,dimension(distribution%s, distribution%info%ndims, &
          distribution%info%gxs:distribution%info%gxe, &
          distribution%info%gys:distribution%info%gye):: u
-    
+
     PetscInt i,j,d,m
     do j=distribution%info%ys,distribution%info%ye
     do i=distribution%info%xs,distribution%info%xe
@@ -392,16 +411,16 @@ contains
     PetscScalar,intent(in),dimension(1:distribution%info%rgxyzl):: val
     PetscScalar,intent(out),dimension(0:distribution%b, 1:distribution%info%rgxyzl):: out
     PetscErrorCode ierr
-    
+
     if (distribution%info%ndims.eq.2) then
        call DistributionGatherValueToDirectionD2(distribution, val, out)
     else if (distribution%info%ndims.eq.3) then
        call DistributionGatherValueToDirectionD3(distribution, val, out)
-    else 
+    else
        call LBMError(PETSC_COMM_SELF, 1, 'invalid ndims in LBM', ierr)
     end if
   end subroutine DistributionGatherValueToDirection
-  
+
   subroutine DistributionGatherValueToDirectionD2(distribution, val, out)
     type(distribution_type) distribution
     PetscScalar,intent(in),dimension(distribution%info%rgxs:distribution%info%rgxe, &
@@ -591,4 +610,38 @@ contains
                   distribution%info%ze + distribution%disc%ci(n,Z_DIRECTION))
     end do
   end subroutine DistributionGatherValueToDirectionD3
+
+  subroutine DistributionCalcDeltaNorm(distribution, norm)
+    type(distribution_type) distribution
+    PetscScalar norm
+    PetscErrorCode ierr
+
+    PetscScalar denom
+
+    norm =1.d99
+    call DistributionRestoreArrays(distribution, ierr)
+    if (distribution%track_old_fi) then
+      call DMLocalToGlobalBegin(distribution%da_fi,distribution%fi, &
+           INSERT_VALUES, distribution%fi_g, ierr)
+      call DMLocalToGlobalEnd(distribution%da_fi,distribution%fi, &
+           INSERT_VALUES, distribution%fi_g, ierr)
+      call VecAXPY(distribution%fi_g_old, -1.d0, distribution%fi_g, ierr)
+      call VecPointwiseDivide(distribution%fi_g_old, distribution%fi_g_old, distribution%fi_g, ierr)
+      call VecNorm(distribution%fi_g_old, NORM_INFINITY, norm, ierr)
+      call VecCopy(distribution%fi_g, distribution%fi_g_old, ierr)
+    else if (distribution%track_old_rho) then
+      call DMLocalToGlobalBegin(distribution%da_rho,distribution%rho, &
+           INSERT_VALUES, distribution%rho_g, ierr)
+      call DMLocalToGlobalEnd(distribution%da_rho,distribution%rho, &
+           INSERT_VALUES, distribution%rho_g, ierr)
+      call VecAXPY(distribution%rho_g_old, -1.d0, distribution%rho_g, ierr)
+      call VecPointwiseDivide(distribution%rho_g_old, distribution%rho_g_old, distribution%rho_g, ierr)
+      call VecNorm(distribution%rho_g_old, NORM_INFINITY, norm, ierr)
+      call VecCopy(distribution%rho_g, distribution%rho_g_old, ierr)
+    endif
+    call DistributionGetArrays(distribution, ierr)
+    CHKERRQ(ierr)
+  end subroutine DistributionCalcDeltaNorm
+
+
 end module LBM_Distribution_Function_module
