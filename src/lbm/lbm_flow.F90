@@ -1606,7 +1606,7 @@ contains
       case(BC_DENSITY)
         do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
-          zm_vals(:,1,i,k) = flow%bc_data(1:dist%s,BOUNDARY_ZM)
+          zm_vals(:,1,i,j) = flow%bc_data(1:dist%s,BOUNDARY_ZM)
         end do
         end do
       case(BC_PRESSURE_INLET,BC_PRESSURE)
@@ -1615,20 +1615,20 @@ contains
              flow%bc_data(2,BOUNDARY_ZM), density)
         do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
-          zm_vals(:,1,i,k) = density
+          zm_vals(:,1,i,j) = density
         end do
         end do
       case(BC_PRESSURE_OUTLET)
         do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
-          zm_vals(1,1,i,k) = flow%bc_data(1,BOUNDARY_ZM)
+          zm_vals(1,1,i,j) = flow%bc_data(1,BOUNDARY_ZM)
         end do
         end do
       case(BC_MOMENTUM)
         do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
           do m=1,dist%s
-            zm_vals(m,:,i,k) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+            zm_vals(m,:,i,j) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
                  BOUNDARY_ZM)
           end do
         end do
@@ -1637,15 +1637,15 @@ contains
         if (dist%s.eq.1) then
           do j=dist%info%ys,dist%info%ye
           do i=dist%info%xs,dist%info%xe
-            zm_vals(1,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZM)
+            zm_vals(1,Z_DIRECTION,i,j) = flow%bc_data(1,BOUNDARY_ZM)
           end do
           end do
         else if (dist%s.eq.2) then
           do j=dist%info%ys,dist%info%ye
           do i=dist%info%xs,dist%info%xe
-            zm_vals(1,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZM) &
+            zm_vals(1,Z_DIRECTION,i,j) = flow%bc_data(1,BOUNDARY_ZM) &
                  * flow%bc_data(2,BOUNDARY_ZM)
-            zm_vals(2,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZM) &
+            zm_vals(2,Z_DIRECTION,i,j) = flow%bc_data(1,BOUNDARY_ZM) &
                  * (1.d0 - flow%bc_data(2,BOUNDARY_ZM))
           end do
           end do
@@ -1656,13 +1656,13 @@ contains
       case(BC_FLUX_OUTLET)
         do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
-          zm_vals(1,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZM)
+          zm_vals(1,Z_DIRECTION,i,j) = flow%bc_data(1,BOUNDARY_ZM)
         end do
         end do
       case(BC_VELOCITY)
         do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
-          zm_vals(1,:,i,k) = flow%bc_data(1:flow%ndims,BOUNDARY_ZM)
+          zm_vals(1,:,i,j) = flow%bc_data(1:flow%ndims,BOUNDARY_ZM)
         end do
         end do
       end select
@@ -1674,7 +1674,7 @@ contains
       case(BC_DENSITY)
         do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
-          zp_vals(:,1,i,k) = flow%bc_data(1:dist%s,BOUNDARY_ZP)
+          zp_vals(:,1,i,j) = flow%bc_data(1:dist%s,BOUNDARY_ZP)
         end do
         end do
       case(BC_PRESSURE_INLET,BC_PRESSURE)
@@ -1683,20 +1683,20 @@ contains
              flow%bc_data(2,BOUNDARY_ZP), density)
         do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
-          zp_vals(:,1,i,k) = density
+          zp_vals(:,1,i,j) = density
         end do
         end do
       case(BC_PRESSURE_OUTLET)
         do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
-          zp_vals(1,1,i,k) = flow%bc_data(1,BOUNDARY_ZP)
+          zp_vals(1,1,i,j) = flow%bc_data(1,BOUNDARY_ZP)
         end do
         end do
       case(BC_MOMENTUM)
         do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
           do m=1,dist%s
-            zp_vals(m,:,i,k) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
+            zp_vals(m,:,i,j) = flow%bc_data((m-1)*flow%ndims+1:m*flow%ndims, &
                  BOUNDARY_ZP)
           end do
         end do
@@ -1705,15 +1705,15 @@ contains
         if (dist%s.eq.1) then
           do j=dist%info%ys,dist%info%ye
           do i=dist%info%xs,dist%info%xe
-            zp_vals(1,Z_DIRECTION,i,k) = -flow%bc_data(1,BOUNDARY_ZP)
+            zp_vals(1,Z_DIRECTION,i,j) = -flow%bc_data(1,BOUNDARY_ZP)
           end do
           end do
         else if (dist%s.eq.2) then
           do j=dist%info%ys,dist%info%ye
           do i=dist%info%xs,dist%info%xe
-            zp_vals(1,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZP) &
+            zp_vals(1,Z_DIRECTION,i,j) = flow%bc_data(1,BOUNDARY_ZP) &
                  * flow%bc_data(2,BOUNDARY_ZP)
-            zp_vals(2,Z_DIRECTION,i,k) = flow%bc_data(1,BOUNDARY_ZP) &
+            zp_vals(2,Z_DIRECTION,i,j) = flow%bc_data(1,BOUNDARY_ZP) &
                  * (1.d0 - flow%bc_data(2,BOUNDARY_ZP))
           end do
           end do
@@ -1724,13 +1724,13 @@ contains
       case(BC_FLUX_OUTLET)
         do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
-          zp_vals(1,Z_DIRECTION,i,k) = -flow%bc_data(1,BOUNDARY_ZP)
+          zp_vals(1,Z_DIRECTION,i,j) = -flow%bc_data(1,BOUNDARY_ZP)
         end do
         end do
       case(BC_VELOCITY)
         do j=dist%info%ys,dist%info%ye
         do i=dist%info%xs,dist%info%xe
-          zp_vals(1,:,i,k) = flow%bc_data(1:flow%ndims,BOUNDARY_ZP)
+          zp_vals(1,:,i,j) = flow%bc_data(1:flow%ndims,BOUNDARY_ZP)
         end do
         end do
       end select
