@@ -318,8 +318,8 @@ contains
          dist%info%zs:dist%info%ze):: xm_vals, xp_vals
     PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
          dist%info%zs:dist%info%ze):: ym_vals, yp_vals
-    PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye, &
-         dist%info%zs:dist%info%ze):: zm_vals, zp_vals
+    PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
+         dist%info%ys:dist%info%ye):: zm_vals, zp_vals
 
     PetscInt m
 
@@ -356,14 +356,14 @@ contains
       if (dist%info%zs.eq.1) then
         do m=1,dist%s
           rho(m,dist%info%xs:dist%info%xe,dist%info%ys:dist%info%ye,dist%info%zs) = &
-               ym_vals(m,dist%info%xs:dist%info%xe,dist%info%ys:dist%info%ye)
+               zm_vals(m,dist%info%xs:dist%info%xe,dist%info%ys:dist%info%ye)
         end do
       end if
     case(BOUNDARY_ZP)
       if (dist%info%ze.eq.dist%info%NZ) then
         do m=1,dist%s
           rho(m,dist%info%xs:dist%info%xe,dist%info%ys:dist%info%ye,dist%info%ze) = &
-               yp_vals(m,dist%info%xs:dist%info%xe,dist%info%ys:dist%info%ye)
+               zp_vals(m,dist%info%xs:dist%info%xe,dist%info%ys:dist%info%ye)
         end do
       end if
     end select
