@@ -140,8 +140,10 @@ contains
       bc%xml = 0
     endif
     locn = bc%xml*bc%nbcs
-    call VecCreateMPI(bc%comm, locn, PETSC_DETERMINE, bc%xm, ierr)
+    call VecCreate(bc%comm, bc%xm, ierr)
+    call VecSetSizes(bc%xm, locn, PETSC_DETERMINE, ierr)
     call VecSetBlockSize(bc%xm, bc%nbcs, ierr)
+    call VecSetFromOptions(bc%xm, ierr)
     call PetscObjectSetName(bc%xm, 'xm_bc', ierr)
 
     if (info%xe.eq.info%NX) then
@@ -150,8 +152,10 @@ contains
       bc%xpl = 0
     endif
     locn = bc%xpl*bc%nbcs
-    call VecCreateMPI(bc%comm, locn, PETSC_DETERMINE, bc%xp, ierr)
+    call VecCreate(bc%comm, bc%xp, ierr)
+    call VecSetSizes(bc%xp, locn, PETSC_DETERMINE, ierr)
     call VecSetBlockSize(bc%xp, bc%nbcs, ierr)
+    call VecSetFromOptions(bc%xp, ierr)
     call PetscObjectSetName(bc%xp, 'xp_bc', ierr)
 
     ! y boundaries
@@ -161,8 +165,10 @@ contains
       bc%yml = 0
     endif
     locn = bc%yml*bc%nbcs
-    call VecCreateMPI(bc%comm, locn, PETSC_DETERMINE, bc%ym, ierr)
+    call VecCreate(bc%comm, bc%ym, ierr)
+    call VecSetSizes(bc%ym, locn, PETSC_DETERMINE, ierr)
     call VecSetBlockSize(bc%ym, bc%nbcs, ierr)
+    call VecSetFromOptions(bc%ym, ierr)
     call PetscObjectSetName(bc%ym, 'ym_bc', ierr)
 
     if (info%ye.eq.info%NY) then
@@ -171,8 +177,10 @@ contains
       bc%ypl = 0
     endif
     locn = bc%ypl*bc%nbcs
-    call VecCreateMPI(bc%comm, locn, PETSC_DETERMINE, bc%yp, ierr)
+    call VecCreate(bc%comm, bc%yp, ierr)
+    call VecSetSizes(bc%yp, locn, PETSC_DETERMINE, ierr)
     call VecSetBlockSize(bc%yp, bc%nbcs, ierr)
+    call VecSetFromOptions(bc%yp, ierr)
     call PetscObjectSetName(bc%yp, 'yp_bc', ierr)
 
     ! z boundaries
@@ -182,8 +190,10 @@ contains
       bc%zml = 0
     endif
     locn = bc%zml*bc%nbcs
-    call VecCreateMPI(bc%comm, locn, PETSC_DETERMINE, bc%zm, ierr)
+    call VecCreate(bc%comm, bc%zm, ierr)
+    call VecSetSizes(bc%zm, locn, PETSC_DETERMINE, ierr)
     call VecSetBlockSize(bc%zm, bc%nbcs, ierr)
+    call VecSetFromOptions(bc%zm, ierr)
     call PetscObjectSetName(bc%zm, 'zm_bc', ierr)
 
     if ((info%ndims > 2).and.(info%ze.eq.info%NZ)) then
@@ -192,8 +202,10 @@ contains
       bc%zpl = 0
     endif
     locn = bc%zpl*bc%nbcs
-    call VecCreateMPI(bc%comm, locn, PETSC_DETERMINE, bc%zp, ierr)
+    call VecCreate(bc%comm, bc%zp, ierr)
+    call VecSetSizes(bc%zp, locn, PETSC_DETERMINE, ierr)
     call VecSetBlockSize(bc%zp, bc%nbcs, ierr)
+    call VecSetFromOptions(bc%zp, ierr)
     call PetscObjectSetName(bc%zp, 'zp_bc', ierr)
 
     call BCGetArrays(bc, ierr)
@@ -275,30 +287,34 @@ contains
     select case(boundary)
     case(BOUNDARY_XM)
       if (dist%info%xs.eq.1) then
-        do m=1,dist%s
-          rho(m,dist%info%xs,dist%info%ys:dist%info%ye) = &
-               xm_vals(m,dist%info%ys:dist%info%ye)
+        do j=dist%info%ys,dist%info%ye
+          i = 1
+          if (walls(i,j).eq.0) then
+            rho(:,i,j) = xm_vals(:,j)
         end do
       end if
     case(BOUNDARY_XP)
       if (dist%info%xe.eq.dist%info%NX) then
-        do m=1,dist%s
-          rho(m,dist%info%xe,dist%info%ys:dist%info%ye) = &
-               xp_vals(m,dist%info%ys:dist%info%ye)
+        do j=dist%info%ys,dist%info%ye
+          i = dist%info%NX
+          if (walls(i,j).eq.0) then
+            rho(:,i,j) = xp_vals(:,j)
         end do
       end if
     case(BOUNDARY_YM)
       if (dist%info%ys.eq.1) then
-        do m=1,dist%s
-          rho(m,dist%info%xs:dist%info%xe,dist%info%ys) = &
-               ym_vals(m,dist%info%xs:dist%info%xe)
+        do i=dist%info%xs,dist%info%xe
+          j = 1
+          if (walls(i,j).eq.0) then
+            rho(:,i,j) = ym_vals(:,i)
         end do
       end if
     case(BOUNDARY_YP)
       if (dist%info%ye.eq.dist%info%NY) then
-        do m=1,dist%s
-          rho(m,dist%info%xs:dist%info%xe,dist%info%ye) = &
-               yp_vals(m,dist%info%xs:dist%info%xe)
+        do i=dist%info%xs,dist%info%xe
+          j = dist%info%NY
+          if (walls(i,j).eq.0) then
+            rho(:,i,j) = yp_vals(:,i)
         end do
       end if
     end select
@@ -326,44 +342,62 @@ contains
     select case(boundary)
     case(BOUNDARY_XM)
       if (dist%info%xs.eq.1) then
-        do m=1,dist%s
-          rho(m,dist%info%xs,dist%info%ys:dist%info%ye,dist%info%zs:dist%info%ze) = &
-               xm_vals(m,dist%info%ys:dist%info%ye,dist%info%zs:dist%info%ze)
+        do k=dist%info%zs,dist%info%ze
+        do j=dist%info%ys,dist%info%ye
+          i = 1
+          if (walls(i,j,k).eq.0) then
+            rho(:,i,j,k) = xm_vals(:,j,k)
+        end do
         end do
       end if
     case(BOUNDARY_XP)
       if (dist%info%xe.eq.dist%info%NX) then
-        do m=1,dist%s
-          rho(m,dist%info%xe,dist%info%ys:dist%info%ye,dist%info%zs:dist%info%ze) = &
-               xp_vals(m,dist%info%ys:dist%info%ye,dist%info%zs:dist%info%ze)
+        do k=dist%info%zs,dist%info%ze
+        do j=dist%info%ys,dist%info%ye
+          i = dist%info%NX
+          if (walls(i,j,k).eq.0) then
+            rho(:,i,j,k) = xp_vals(:,j,k)
+        end do
         end do
       end if
     case(BOUNDARY_YM)
       if (dist%info%ys.eq.1) then
-        do m=1,dist%s
-          rho(m,dist%info%xs:dist%info%xe,dist%info%ys,dist%info%zs:dist%info%ze) = &
-               ym_vals(m,dist%info%xs:dist%info%xe,dist%info%zs:dist%info%ze)
+        do k=dist%info%zs,dist%info%ze
+        do i=dist%info%xs,dist%info%xe
+          j = 1
+          if (walls(i,j,k).eq.0) then
+            rho(:,i,j,k) = ym_vals(:,i,k)
+        end do
         end do
       end if
     case(BOUNDARY_YP)
       if (dist%info%ye.eq.dist%info%NY) then
-        do m=1,dist%s
-          rho(m,dist%info%xs:dist%info%xe,dist%info%ye,dist%info%zs:dist%info%ze) = &
-               yp_vals(m,dist%info%xs:dist%info%xe,dist%info%zs:dist%info%ze)
+        do k=dist%info%zs,dist%info%ze
+        do i=dist%info%xs,dist%info%xe
+          j = dist%info%NY
+          if (walls(i,j,k).eq.0) then
+            rho(:,i,j,k) = yp_vals(:,i,k)
+        end do
         end do
       end if
     case(BOUNDARY_ZM)
       if (dist%info%zs.eq.1) then
-        do m=1,dist%s
-          rho(m,dist%info%xs:dist%info%xe,dist%info%ys:dist%info%ye,dist%info%zs) = &
-               zm_vals(m,dist%info%xs:dist%info%xe,dist%info%ys:dist%info%ye)
+        do j=dist%info%ys,dist%info%ye
+        do i=dist%info%xs,dist%info%xe
+          k = 1
+          if (walls(i,j,k).eq.0) then
+            rho(:,i,j,k) = zm_vals(:,i,j)
+        end do
         end do
       end if
     case(BOUNDARY_ZP)
       if (dist%info%ze.eq.dist%info%NZ) then
-        do m=1,dist%s
-          rho(m,dist%info%xs:dist%info%xe,dist%info%ys:dist%info%ye,dist%info%ze) = &
-               zp_vals(m,dist%info%xs:dist%info%xe,dist%info%ys:dist%info%ye)
+        do j=dist%info%ys,dist%info%ye
+        do i=dist%info%xs,dist%info%xe
+          k = dist%info%NZ
+          if (walls(i,j,k).eq.0) then
+            rho(:,i,j,k) = zp_vals(:,i,j)
+        end do
         end do
       end if
     end select

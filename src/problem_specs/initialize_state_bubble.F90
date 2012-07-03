@@ -115,13 +115,11 @@
     do i=dist%info%xs,dist%info%xe
     do j=dist%info%ys,dist%info%ye
     do k=dist%info%zs,dist%info%ze
-      if (walls(i,j,k).eq.0) then
-        if((i.ge.lx.and.i.le.rx).and.(j.ge.ly.and.j.le.ry).and.(k.ge.lz.and.k.le.rz)) then
-          rho(:,i,j,k)=rho1(:)
-        else
-          rho(:,i,j,k)=rho2(:)
-        endif
-      end if
+      if((i.ge.lx.and.i.le.rx).and.(j.ge.ly.and.j.le.ry).and.(k.ge.lz.and.k.le.rz)) then
+        rho(:,i,j,k)=rho1(:)
+      else
+        rho(:,i,j,k)=rho2(:)
+      endif
     enddo
     enddo
     enddo
@@ -170,11 +168,13 @@
     if (help) call PetscPrintf(options%comm, "-rho_inner=<0,0>: ???", ierr)
     nmax = dist%s
     call PetscOptionsGetRealArray(options%my_prefix, '-rho_inner', rho1, nmax, flag, ierr)
+    print*, 'rho inner:', rho1
 
     rho2 = 0.
     if (help) call PetscPrintf(options%comm, "-rho_outer=<0,0>: ???", ierr)
     nmax = dist%s
     call PetscOptionsGetRealArray(options%my_prefix, '-rho_outer', rho2, nmax, flag, ierr)
+    print*, 'rho outer:', rho2
 
     ! initialize state
     u=0.0
@@ -194,13 +194,11 @@
 
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe    
-      if (walls(i,j).eq.0) then
-        if((i.ge.lx.and.i.le.rx).and.(j.ge.ly.and.j.le.ry)) then
-          rho(:,i,j)=rho1(:)
-        else
-          rho(:,i,j)=rho2(:)
-        endif
-      end if
+      if((i.ge.lx.and.i.le.rx).and.(j.ge.ly.and.j.le.ry)) then
+        rho(:,i,j)=rho1(:)
+      else
+        rho(:,i,j)=rho2(:)
+      endif
     enddo
     enddo
     return
