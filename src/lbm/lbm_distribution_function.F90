@@ -287,10 +287,7 @@ contains
     do j=distribution%info%ys,distribution%info%ye
     do i=distribution%info%xs,distribution%info%xe
        if (walls(i,j).eq.0) then
-!          print*, 'i,j:', i,j
-!          print*, fi(1,:,i,j)
           rho(:,i,j) = sum(fi(:,:,i,j),2)
-!          print*, rho(1,i,j)
        else
           rho(:,i,j) = 0.
        end if
