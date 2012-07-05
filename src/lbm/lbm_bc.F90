@@ -281,7 +281,7 @@ contains
     PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye):: xm_vals, xp_vals
     PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe):: ym_vals, yp_vals
 
-    PetscInt m
+    PetscInt i,j,m
 
     ! note this requires m is fastest varying in nbcs
     select case(boundary)
@@ -341,7 +341,7 @@ contains
     PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
          dist%info%ys:dist%info%ye):: zm_vals, zp_vals
 
-    PetscInt m
+    PetscInt i,j,k,m
 
     select case(boundary)
     case(BOUNDARY_XM)
