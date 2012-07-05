@@ -1,0 +1,155 @@
+Setting up and running LBM problems 
+
+This will include some documentation for running problems in LBM.
+Required files/routines 
+
+Note that all the below subroutines must be provided at compile time, even if they do nothing or will not be called. Blaim fortran.
+
+    * initialize_state() sets the initial conditions for flow
+    * initialize_state_transport() sets the initial conditions for transport
+    * initialize_bcs() sets the boundary data for flow (most applications can use $LBM_DIR/common/initialize_bcs_constant.F90)
+    * initialize_bcs_transport() sets the boundary data for transport (most applications can use $LBM_DIR/common/initialize_bcs_transport_constant.F90)
+    * initialize_walls() sets the wall structure (most applications should use a PETSc binary file along with $LBM_DIR/common/initialize_walls_petsc.F90) 
+
+Options 
+
+(required options, oxymoron noted, are marked with *)
+
+Logging, help, debugging options:
+
+ -help 
+       prints a message that may some day look like this wiki page
+ -on_error_attach_debugger [gdb,dbx,xxgdb,ups,noxterm]
+       start the debugger in new xterm
+       unless noxterm is given
+ -start_in_debugger [gdb,dbx,xxgdb,ups,noxterm]
+       start all processes in the debugger
+ -on_error_emacs <machinename>
+    emacs jumps to error file
+ -debugger_nodes [n1,n2,..] Nodes to start in debugger
+ -debugger_pause [m] : delay (in seconds) to attach debugger
+ -log[_all _summary]: logging objects and events
+ -log_trace [filename]: prints trace of all PETSc calls
+
+Grid options:
+
+  -NX <0>: grid size in X *
+  -NY <0>: grid size in Y *
+  -NZ <0>: grid size in Z *
+  -stencil_size <1>: number of grid points in the stencil, and radius of forcing term nonlocality 
+
+  -x_start <0 + 0i>: lower x coordinate 
+  -x_end <1 + 0i>: upper x coordinate 
+  -y_start <0 + 0i>: lower y coordinate 
+  -y_end <1 + 0i>: upper y coordinate 
+  -z_start <0 + 0i>: lower z coordinate 
+  -z_end <1 + 0i>: upper z coordinate 
+
+  -da_processors_x <-1>: Number of processors in x direction (DMDASetNumProcs)
+  -da_processors_y <-1>: Number of processors in y direction (DMDASetNumProcs)
+  -da_processors_z <-1>: Number of processors in z direction (DMDASetNumProcs)
+  -da_view: <FALSE> Print information about the DMDA's distribution (DMView)
+  -da_view_draw: <FALSE> Draw how the DMDA is distributed (DMView)
+
+Timestepping and Simulation control:
+
+  -ntimes=<1>: total ??? to run (deprecated) 
+  -npasses=<1>: total timesteps to run 
+  -restart: start from an old simulation 
+  -istep=<0>: initial timestep, istep/kwrite = file number to be read in for restart 
+
+  -steadystate: turn off flow, assuming steady state 
+  -steadystate_flow_file <file> : set flow via pre-computed steadystate 
+  -steadystate_rampup_steps <0> : allow flow to ramp up if flow not set via file 
+
+IO options:
+
+  -output_file_prefix=<test_solution/>: prefix for solution data output files 
+  -mpiio: use mpiio for i/o 
+  -kwrite=<1>: output interval in timesteps 
+
+Boundary Conditions:
+
+    Note that boundaries are notated by {xyz}{mp}, with one of {xyz} indicating coordinate and {mp} indicating minus-one or plus-one outward normal vector
+
+      -bc_periodic_x <FALSE>: x-direction periodic? 
+      -bc_periodic_y <FALSE>: y-direction periodic? 
+      -bc_periodic_z <FALSE>: z-direction periodic? 
+
+      -bc_pressure_{xyz}{mp}: use pressure bcs on the various directions, with {xyz} for dimension and {mp} indicating minus-one or plus-one outward normal vector 
+      -bc_velocity_{xyz}{mp}: use total velocity bcs 
+      -bc_velocity_{xyz}{mp}_poiseuille: use total velocity bcs with a poiseuille profile 
+      -bc_flux_{xyz}{mp}: use VOLUMETRIC flux bcs (NOT mass flux!) 
+
+      -bc_conc_{xyz}{mp}: use Dirichlet concentration bcs 
+      -bc_conc_flux_{xyz}{mp}: use concentration flux bcs 
+
+    with initialize_bcs_constant.F90:
+
+      -bc_pressure_{xyz}{mp}_phase*: "density of phase * for a Dirichlet BC
+      -bc_velocity_{xyz}{mp}_avg: mean velocity for constant velocity, or max velocity for Poiseuille flow
+      -bc_flux_{xyz}{mp}_phase*: normal volumetric flux of phase *
+
+    with initialize_bcs_transport_constant.F90:
+
+      -bc_conc_{xyz}{mp}_specie*: concentration of specie * for a Dirichlet BC
+      -bc_conc_flux_{xyz}{mp}_specie*: normal volumetric flux of specie *
+
+    with initialize_bcs_transport_pointsource.F90: pointsource of a tracer on the xm boundary.
+
+      -bc_conc_pointsource <val>': set the psi flux of primary specie in the inward normal direction
+      -bc_conc_pointsource_location <val>: set the location of the point source in y-grid points
+
+Initial Conditions:
+
+    With initialize_state_flushing.F90: (initializes a 10-node buffer of the invading fluid on the minus boundary)
+
+      -rho_invading=<0,0>: phase density of the invading fluid
+      -rho_defending=<0,0>: phase density of the defending fluid
+      -flush_direction_{xyz}: set the direction of invasion
+
+    With initialize_state_bubble.F90 ???: (initializes a bubble test)
+
+      -rho_inner=<0,0>: phase density of the inside of the bubble
+      -rho_outer=<0,0>: phase density of the outside of the bubble
+
+Physical Properties:
+
+    General
+
+      -gvt=<0,0,0>: gravity force in each dimension 
+      -reactive_matrix: allow dissolution/precipitation  (currently only FALSE is supported!)
+
+
+
+    Phase properties: note that if the phase name is supplied, then other phase options must be specified with the name (not phaseN)
+
+      -nphases <1>: number of phases 
+
+      -phaseN_name=<phaseN>: name the phase -- for use with all other parameter options
+      -gw_phaseN <0 + 0i>: Phase-solid interaction potential coefficient 
+      -mm_phaseN <1 + 0i>: molecular mass of phase N
+      -g_NM <0 + 0i>: phase-phase interaction potential coefficient for phases N and M.  Note all combinations must be supplied (even though it should be symmetric).  
+      -tau_phaseN <1 + 0i>: relaxation time of phase N (related to viscosity!)
+      -s1_phaseN <1 + 0i>: MRT relaxation time of phase N
+
+    Species properties: much like phases...
+
+      -nspecies <1>: number of major species 
+
+      -specieN_name=<specieN>: name the specie -- for use with parameter options
+      -phase_specieN <1>: ID of the phase in which specie N is a component
+      -tau_specieN <1 + 0i>: relaxation time (related to diffusivity!)
+      -s1_specieN <1 + 0i>: MRT relaxation time 
+
+    Wall structure:
+
+      -walls_type <1>: enum: (1) use PETSc .dat file, (2) from initialize_walls subroutine 
+      -walls_file=<geometry.dat>: filename for porescale walls  
+
+Numerical Methodology:
+
+  -flow_discretization <d3q19>: discretization type 
+  -flow_relaxation_mode <0>: flow relaxation as SRT=0, MRT=1 
+  -transport_discretization <d3q19>: discretization type 
+  -transport_relaxation_mode <0>: transport relaxation as SRT=0, MRT=1 
