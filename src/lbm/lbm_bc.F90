@@ -291,6 +291,7 @@ contains
           i = 1
           if (walls(i,j).eq.0) then
             rho(:,i,j) = xm_vals(:,j)
+          end if
         end do
       end if
     case(BOUNDARY_XP)
@@ -299,6 +300,7 @@ contains
           i = dist%info%NX
           if (walls(i,j).eq.0) then
             rho(:,i,j) = xp_vals(:,j)
+          end if
         end do
       end if
     case(BOUNDARY_YM)
@@ -307,6 +309,7 @@ contains
           j = 1
           if (walls(i,j).eq.0) then
             rho(:,i,j) = ym_vals(:,i)
+          end if
         end do
       end if
     case(BOUNDARY_YP)
@@ -315,6 +318,7 @@ contains
           j = dist%info%NY
           if (walls(i,j).eq.0) then
             rho(:,i,j) = yp_vals(:,i)
+          end if
         end do
       end if
     end select
