@@ -351,6 +351,7 @@ contains
           i = 1
           if (walls(i,j,k).eq.0) then
             rho(:,i,j,k) = xm_vals(:,j,k)
+          end if
         end do
         end do
       end if
@@ -361,6 +362,7 @@ contains
           i = dist%info%NX
           if (walls(i,j,k).eq.0) then
             rho(:,i,j,k) = xp_vals(:,j,k)
+          end if
         end do
         end do
       end if
@@ -371,6 +373,7 @@ contains
           j = 1
           if (walls(i,j,k).eq.0) then
             rho(:,i,j,k) = ym_vals(:,i,k)
+          end if
         end do
         end do
       end if
@@ -381,6 +384,7 @@ contains
           j = dist%info%NY
           if (walls(i,j,k).eq.0) then
             rho(:,i,j,k) = yp_vals(:,i,k)
+          end if   
         end do
         end do
       end if
@@ -391,6 +395,7 @@ contains
           k = 1
           if (walls(i,j,k).eq.0) then
             rho(:,i,j,k) = zm_vals(:,i,j)
+          end if
         end do
         end do
       end if
@@ -401,6 +406,7 @@ contains
           k = dist%info%NZ
           if (walls(i,j,k).eq.0) then
             rho(:,i,j,k) = zp_vals(:,i,j)
+          end if
         end do
         end do
       end if
