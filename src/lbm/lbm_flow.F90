@@ -1780,9 +1780,6 @@ contains
             xm_vals(1,X_DIRECTION,j) = flow%bc_data(1,BOUNDARY_XM)
           end do
         else if (dist%s.eq.2) then
-          print*, 'flux in 1:', flow%bc_data(1,BOUNDARY_XM)*flow%bc_data(2,BOUNDARY_XM)
-          print*, 'flux in 2:', flow%bc_data(1,BOUNDARY_XM)*(1.d0-flow%bc_data(2,BOUNDARY_XM))
-
           do j=dist%info%ys,dist%info%ye
             xm_vals(1,X_DIRECTION,j) = flow%bc_data(1,BOUNDARY_XM) &
                  * flow%bc_data(2,BOUNDARY_XM)
@@ -1969,11 +1966,6 @@ contains
 
     PetscInt lcv_side
 
-    ! Calculate rho, using the streamed values for internal, the rho
-    ! boundary condition for Dirichlet BCs, and f^* as the previous
-    ! timestep value.  Then calculate forces from that rho.
-    call FlowCalcRhoForces(flow, walls)
-
     ! some BCs are special cases and need preprocessing
     do lcv_side=1,flow%ndims*2
       if ((flow%bc_flags(lcv_side).eq.BC_PRESSURE_OUTLET).and. &
@@ -1990,6 +1982,11 @@ contains
     end do
     flow%bc_done(BC_FLUX_OUTLET) = PETSC_FALSE
     flow%bc_done(BC_PRESSURE_OUTLET) = PETSC_FALSE
+
+    ! Calculate rho, using the streamed values for internal, the rho
+    ! boundary condition for Dirichlet BCs, and f^* as the previous
+    ! timestep value.  Then calculate forces from that rho.
+    call FlowCalcRhoForces(flow, walls)
 
     ! apply boundary conditions, using the calculated forces
     call BCApply(flow%bc, flow%forces, walls%walls_a, flow%distribution)
@@ -2253,9 +2250,9 @@ contains
     else if (flow%ncomponents.eq.2) then
       if (rho1frac < eps) then
         rho(1) = 0.d0
-        rho(2) = pressure/3.d0
+        rho(2) = pressure*3.d0
       else if (rho1frac > 1-eps) then
-        rho(1) = pressure/3.d0
+        rho(1) = pressure*3.d0
         rho(2) = 0.d0
       else
         alpha = 1.d0/(1.d0/rho1frac - 1.d0)
