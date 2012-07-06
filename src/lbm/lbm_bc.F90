@@ -281,7 +281,7 @@ contains
     PetscScalar,dimension(bc%nbcs,dist%info%ys:dist%info%ye):: xm_vals, xp_vals
     PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe):: ym_vals, yp_vals
 
-    PetscInt i,j,m
+    PetscInt m,i,j
 
     ! note this requires m is fastest varying in nbcs
     select case(boundary)
@@ -290,7 +290,9 @@ contains
         do j=dist%info%ys,dist%info%ye
           i = 1
           if (walls(i,j).eq.0) then
-            rho(:,i,j) = xm_vals(:,j)
+            do m=1,dist%s
+              rho(m,i,j) = xm_vals(m,j)
+            end do
           end if
         end do
       end if
@@ -299,7 +301,9 @@ contains
         do j=dist%info%ys,dist%info%ye
           i = dist%info%NX
           if (walls(i,j).eq.0) then
-            rho(:,i,j) = xp_vals(:,j)
+            do m=1,dist%s
+              rho(m,i,j) = xp_vals(m,j)
+            end do
           end if
         end do
       end if
@@ -308,7 +312,9 @@ contains
         do i=dist%info%xs,dist%info%xe
           j = 1
           if (walls(i,j).eq.0) then
-            rho(:,i,j) = ym_vals(:,i)
+            do m=1,dist%s
+              rho(m,i,j) = ym_vals(m,i)
+            end do
           end if
         end do
       end if
@@ -317,7 +323,9 @@ contains
         do i=dist%info%xs,dist%info%xe
           j = dist%info%NY
           if (walls(i,j).eq.0) then
-            rho(:,i,j) = yp_vals(:,i)
+            do m=1,dist%s
+              rho(m,i,j) = yp_vals(m,i)
+            end do
           end if
         end do
       end if
@@ -341,7 +349,7 @@ contains
     PetscScalar,dimension(bc%nbcs,dist%info%xs:dist%info%xe, &
          dist%info%ys:dist%info%ye):: zm_vals, zp_vals
 
-    PetscInt i,j,k,m
+    PetscInt m,i,j,k
 
     select case(boundary)
     case(BOUNDARY_XM)
@@ -350,7 +358,9 @@ contains
         do j=dist%info%ys,dist%info%ye
           i = 1
           if (walls(i,j,k).eq.0) then
-            rho(:,i,j,k) = xm_vals(:,j,k)
+            do m=1,dist%s
+              rho(m,i,j,k) = xm_vals(m,j,k)
+            end do
           end if
         end do
         end do
@@ -361,7 +371,9 @@ contains
         do j=dist%info%ys,dist%info%ye
           i = dist%info%NX
           if (walls(i,j,k).eq.0) then
-            rho(:,i,j,k) = xp_vals(:,j,k)
+            do m=1,dist%s
+              rho(m,i,j,k) = xp_vals(m,j,k)
+            end do
           end if
         end do
         end do
@@ -372,7 +384,9 @@ contains
         do i=dist%info%xs,dist%info%xe
           j = 1
           if (walls(i,j,k).eq.0) then
-            rho(:,i,j,k) = ym_vals(:,i,k)
+            do m=1,dist%s
+              rho(m,i,j,k) = ym_vals(m,i,k)
+            end do
           end if
         end do
         end do
@@ -383,8 +397,10 @@ contains
         do i=dist%info%xs,dist%info%xe
           j = dist%info%NY
           if (walls(i,j,k).eq.0) then
-            rho(:,i,j,k) = yp_vals(:,i,k)
-          end if   
+            do m=1,dist%s
+              rho(m,i,j,k) = yp_vals(m,i,k)
+            end do
+          end if
         end do
         end do
       end if
@@ -394,7 +410,9 @@ contains
         do i=dist%info%xs,dist%info%xe
           k = 1
           if (walls(i,j,k).eq.0) then
-            rho(:,i,j,k) = zm_vals(:,i,j)
+            do m=1,dist%s
+              rho(m,i,j,k) = zm_vals(m,i,j)
+            end do
           end if
         end do
         end do
@@ -405,7 +423,9 @@ contains
         do i=dist%info%xs,dist%info%xe
           k = dist%info%NZ
           if (walls(i,j,k).eq.0) then
-            rho(:,i,j,k) = zp_vals(:,i,j)
+            do m=1,dist%s
+              rho(m,i,j,k) = zp_vals(m,i,j)
+            end do
           end if
         end do
         end do
