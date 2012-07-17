@@ -5,7 +5,7 @@
 -NY 128
 
 # numerical params
--flow_relaxation_mode 0 # MRT
+-flow_relaxation_mode 0 # SRT
 -discretization d2q9
 
 # component parameters
@@ -15,17 +15,11 @@
 -component1_name outer
 -mm_outer 1.0
 -tau_outer 1.0
--s1_outer 0.1
--s2_outer 0.2
--s3_outer 0.625
 
 ## component 2
 -component2_name inner
 -mm_inner 1.0
 -tau_inner 1.0
--s1_inner 1.8
--s2_inner 1.8
--s3_inner 1.55
 
 # forcing coefficients
 #-gvt 0.0,0.0
@@ -43,13 +37,8 @@
 -bc_periodic_y
 
 # timestepping
--npasses 1000
+-npasses 100
 -kwrite 100
--run_to_steadystate
--steadystate_field_rho
--steadystate_tolerance 1.e-1
--output_last
-
 
 # geometry
 -walls_type 2
