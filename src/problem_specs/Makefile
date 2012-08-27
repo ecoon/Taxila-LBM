@@ -27,6 +27,8 @@ else ifeq ($(COMP),pgf95)
   FFLAGS += -module $(LBM_MOD_DIR) -I$(LBM_MOD_DIR)
 else ifeq ($(COMP),pgfortran)
   FFLAGS += -module $(LBM_MOD_DIR) -I$(LBM_MOD_DIR)
+else ifeq ($(COMP),ifort) # intel compiler
+  FFLAGS += -module $(LBM_MOD_DIR)
 endif
 
 # optimization flags
@@ -39,6 +41,8 @@ ifndef LBM_OPT
     FFLAGS += -Mbounds
   else ifeq ($(COMP),pgfortran)
     FFLAGS += -Mbounds
+  else ifeq ($(COMP),ifort)
+    FFLAGS += -C # all checks, includes bounds
   endif
 else
   FFLAGS += -O3
