@@ -21,16 +21,18 @@ FFLAGS = -I$(LBM_INCLUDE_DIR)
 # module location
 FFLAGS += -I$(LBM_MOD_DIR)
 
-# optimization flags
+# optimization/debugging flags
 ifndef LBM_OPT
   ifeq ($(COMP),gfortran)
-    FFLAGS += -fbounds-check 
+    FFLAGS += -fbounds-check
   else ifeq ($(COMP),pgf90)
     FFLAGS += -Mbounds
   else ifeq ($(COMP),pgf95)
     FFLAGS += -Mbounds
   else ifeq ($(COMP),pgfortran)
     FFLAGS += -Mbounds
+  else ifeq ($(COMP),ifort)
+    FFLAGS += -C # all checks, includes bounds
   endif
 else
   FFLAGS += -O3
