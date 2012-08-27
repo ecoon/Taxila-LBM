@@ -20,14 +20,16 @@ LBM_LIB_NAME= lbm.a
 FFLAGS += -I$(LBM_INCLUDE_DIR) 
 
 # module location
-ifeq ($(COMP),gfortran)
+ifeq ($(COMP),gfortran)  # gnu compiler
   FFLAGS += -J$(LBM_MOD_DIR) -I$(LBM_MOD_DIR)
-else ifeq ($(COMP),pgf90)
+else ifeq ($(COMP),pgf90)  # pgi compiler
   FFLAGS += -module $(LBM_MOD_DIR) -I$(LBM_MOD_DIR)
-else ifeq ($(COMP),pgf95)
+else ifeq ($(COMP),pgf95)  # pgi compiler, fortran 95
   FFLAGS += -module $(LBM_MOD_DIR) -I$(LBM_MOD_DIR)
-else ifeq ($(COMP),pgfortran)
+else ifeq ($(COMP),pgfortran)  # pgi compiler, fortran 95
   FFLAGS += -module $(LBM_MOD_DIR) -I$(LBM_MOD_DIR)
+else ifeq ($(COMP),ifort) # intel compiler
+  FFLAGS += -module $(LBM_MOD_DIR)
 endif
 
 # optimization flags
@@ -40,6 +42,8 @@ ifndef LBM_OPT
     FFLAGS += -Mbounds
   else ifeq ($(COMP),pgfortran)
     FFLAGS += -Mbounds
+  else ifeq ($(COMP),ifort)
+    FFLAGS += -C # all checks, includes bounds
   endif
 else
   FFLAGS += -O3
