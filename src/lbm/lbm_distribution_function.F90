@@ -463,14 +463,44 @@ contains
     PetscScalar,dimension(dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: tmp
     PetscInt n
+    PetscInt xs,xe,ys,ye,zs,ze          ! destination indices
+    PetscInt sxs,sxe,sys,sye,szs,sze    ! source indices
     type(info_type),pointer:: info
     info => dist%info
 
     do n=0,dist%b
-       tmp(:,n,info%xs:info%xe,info%ys:info%ye,info%zs:info%ze) = fi(:,n, &
-            info%xs-dist%disc%ci(n,X_DIRECTION):info%xe-dist%disc%ci(n,X_DIRECTION), &
-            info%ys-dist%disc%ci(n,Y_DIRECTION):info%ye-dist%disc%ci(n,Y_DIRECTION), &
-            info%zs-dist%disc%ci(n,Z_DIRECTION):info%ze-dist%disc%ci(n,Z_DIRECTION))
+      xs = info%xs; sxs = info%xs
+      xe = info%xe; sxe = info%xe
+      ys = info%ys; sys = info%ys
+      ye = info%ye; sye = info%ye
+      zs = info%zs; szs = info%zs
+      ze = info%ze; sze = info%ze
+
+      if (dist%disc%ci(n,X_DIRECTION) < 0) then
+        xs = info%xs + dist%disc%ci(n,X_DIRECTION)
+        sxe = info%xe - dist%disc%ci(n,X_DIRECTION)
+      else if (dist%disc%ci(n,X_DIRECTION) > 0) then
+        xe = info%xe + dist%disc%ci(n,X_DIRECTION)
+        sxs = info%xs - dist%disc%ci(n,X_DIRECTION)
+      end if
+
+      if (dist%disc%ci(n,Y_DIRECTION) < 0) then
+        ys = info%ys + dist%disc%ci(n,Y_DIRECTION)
+        sye = info%ye - dist%disc%ci(n,Y_DIRECTION)
+      else if (dist%disc%ci(n,Y_DIRECTION) > 0) then
+        ye = info%ye + dist%disc%ci(n,Y_DIRECTION)
+        sys = info%ys - dist%disc%ci(n,Y_DIRECTION)
+      end if
+
+      if (dist%disc%ci(n,Z_DIRECTION) < 0) then
+        zs = info%zs + dist%disc%ci(n,Z_DIRECTION)
+        sze = info%ze - dist%disc%ci(n,Z_DIRECTION)
+      else if (dist%disc%ci(n,Z_DIRECTION) > 0) then
+        ze = info%ze + dist%disc%ci(n,Z_DIRECTION)
+        szs = info%zs - dist%disc%ci(n,Z_DIRECTION)
+      end if
+
+      tmp(:,n,xs:xe,ys:ye,zs:ze) = fi(:,n,sxs:sxe,sys:sye,szs:sze)
     end do
     fi = tmp
   end subroutine DistributionStreamD3
@@ -485,13 +515,34 @@ contains
     PetscScalar,dimension(dist%s, 0:dist%b, dist%info%gxs:dist%info%gxe, &
          dist%info%gys:dist%info%gye):: tmp
     PetscInt n
+    PetscInt xs,xe,ys,ye
+    PetscInt sxs,sxe,sys,sye
     type(info_type),pointer:: info
     info => dist%info
 
     do n=0,dist%b
-       tmp(:,n,info%xs:info%xe,info%ys:info%ye) = fi(:,n, &
-            info%xs-dist%disc%ci(n,X_DIRECTION):info%xe-dist%disc%ci(n,X_DIRECTION), &
-            info%ys-dist%disc%ci(n,Y_DIRECTION):info%ye-dist%disc%ci(n,Y_DIRECTION))
+      xs = info%xs; sxs = info%xs
+      xe = info%xe; sxe = info%xe
+      ys = info%ys; sys = info%ys
+      ye = info%ye; sye = info%ye
+
+      if (dist%disc%ci(n,X_DIRECTION) < 0) then
+        xs = info%xs + dist%disc%ci(n,X_DIRECTION)
+        sxe = info%xe - dist%disc%ci(n,X_DIRECTION)
+      else if (dist%disc%ci(n,X_DIRECTION) > 0) then
+        xe = info%xe + dist%disc%ci(n,X_DIRECTION)
+        sxs = info%xs - dist%disc%ci(n,X_DIRECTION)
+      end if
+
+      if (dist%disc%ci(n,Y_DIRECTION) < 0) then
+        ys = info%ys + dist%disc%ci(n,Y_DIRECTION)
+        sye = info%ye - dist%disc%ci(n,Y_DIRECTION)
+      else if (dist%disc%ci(n,Y_DIRECTION) > 0) then
+        ye = info%ye + dist%disc%ci(n,Y_DIRECTION)
+        sys = info%ys - dist%disc%ci(n,Y_DIRECTION)
+      end if
+
+      tmp(:,n,xs:xe,ys:ye) = fi(:,n,sxs:sxe,sys:sye)
     end do
     fi = tmp
   end subroutine DistributionStreamD2
@@ -506,7 +557,7 @@ contains
        call DistributionBouncebackD3(dist, dist%fi_a, walls)
     case(2)
        call DistributionBouncebackD2(dist, dist%fi_a, walls)
-    case DEFAULT 
+    case DEFAULT
        call LBMError(PETSC_COMM_SELF, 1, 'invalid discretization in LBM', ierr)
     end select
   end subroutine DistributionBounceback
@@ -523,22 +574,51 @@ contains
 
     PetscInt i,j,k,n
     PetscInt tmp(dist%s, 0:dist%b)
+    PetscInt ni,nj,nk,nn ! new, bounced back values
 
-    do k=dist%info%zs,dist%info%ze
-    do j=dist%info%ys,dist%info%ye
-    do i=dist%info%xs,dist%info%xe
+    ! loop over ghost cells, turning around and streaming back
+    do k=dist%info%gzs,dist%info%gze
+    do j=dist%info%gys,dist%info%gye
+    do i=dist%info%gxs,dist%info%gxe
       if (walls(i,j,k).eq.WALL_NORMAL_X) then
-        call DistributionBouncebackSite(dist, fi(:,:,i,j,k), &
-             dist%disc%reflect_x)
+        do n=0,dist%b
+          ni = i - dist%disc%ci(n,X_DIRECTION)
+          if (ni <= dist%info%xe .and. ni >= dist%info%xs) then
+            nj = j; nk = k
+            nn = dist%disc%reflect_x(n)
+            fi(:,nn,ni,nj,nk) = fi(:,n,i,j,k)
+          endif
+        enddo
       else if (walls(i,j,k).eq.WALL_NORMAL_Y) then
-        call DistributionBouncebackSite(dist, fi(:,:,i,j,k), &
-             dist%disc%reflect_y)
+        do n=0,dist%b
+          nj = j - dist%disc%ci(n,Y_DIRECTION)
+          if (nj <= dist%info%ye .and. nj >= dist%info%ys) then
+            ni = i; nk = k
+            nn = dist%disc%reflect_y(n)
+            fi(:,nn,ni,nj,nk) = fi(:,n,i,j,k)
+          endif
+        enddo
       else if (walls(i,j,k).eq.WALL_NORMAL_Z) then
-        call DistributionBouncebackSite(dist, fi(:,:,i,j,k), &
-             dist%disc%reflect_z)
+        do n=0,dist%b
+          nk = k - dist%disc%ci(n,Z_DIRECTION)
+          if (nk <= dist%info%ze .and. nk >= dist%info%zs) then
+            ni = i; nj = j
+            nn = dist%disc%reflect_z(n)
+            fi(:,nn,ni,nj,nk) = fi(:,n,i,j,k)
+          endif
+        enddo
       else if (walls(i,j,k) > 0) then
-       call DistributionBouncebackSite(dist, fi(:,:,i,j,k), &
-            dist%disc%opposites)
+        do n=0,dist%b
+          ni = i - dist%disc%ci(n,X_DIRECTION)
+          nj = j - dist%disc%ci(n,Y_DIRECTION)
+          nk = k - dist%disc%ci(n,Z_DIRECTION)
+          if ((ni <= dist%info%xe).and.(ni >= dist%info%xs).and. &
+               (nj <= dist%info%ye).and.(nj >= dist%info%ys).and. &
+               (nk <= dist%info%ze).and.(nk >= dist%info%zs)) then
+            nn = dist%disc%opposites(n)
+            fi(:,nn,ni,nj,nk) = fi(:,n,i,j,k)
+          end if
+        end do
       end if
     end do
     end do
@@ -555,35 +635,42 @@ contains
 
     PetscInt i,j,n
     PetscInt tmp(dist%s, 0:dist%b)
+    PetscInt ni,nj,nn ! new, bounced back values
 
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
-      if (walls(i,j).eq.WALL_NORMAL_X) then
-        call DistributionBouncebackSite(dist, fi(:,:,i,j), &
-             dist%disc%reflect_x)
+       if (walls(i,j).eq.WALL_NORMAL_X) then
+        do n=0,dist%b
+          ni = i - dist%disc%ci(n,X_DIRECTION)
+          if (ni <= dist%info%xe .and. ni >= dist%info%xs) then
+            nj = j
+            nn = dist%disc%reflect_x(n)
+            fi(:,nn,ni,nj) = fi(:,n,i,j)
+          endif
+        enddo
       else if (walls(i,j).eq.WALL_NORMAL_Y) then
-        call DistributionBouncebackSite(dist, fi(:,:,i,j), &
-             dist%disc%reflect_y)
+        do n=0,dist%b
+          nj = j - dist%disc%ci(n,Y_DIRECTION)
+          if (nj <= dist%info%ye .and. nj >= dist%info%ys) then
+            ni = i
+            nn = dist%disc%reflect_y(n)
+            fi(:,nn,ni,nj) = fi(:,n,i,j)
+          endif
+        enddo
       else if (walls(i,j) > 0) then
-        call DistributionBouncebackSite(dist, fi(:,:,i,j), &
-             dist%disc%opposites)
+        do n=0,dist%b
+          ni = i - dist%disc%ci(n,X_DIRECTION)
+          nj = j - dist%disc%ci(n,Y_DIRECTION)
+          if ((ni <= dist%info%xe).and.(ni >= dist%info%xs).and. &
+               (nj <= dist%info%ye).and.(nj >= dist%info%ys)) then
+            nn = dist%disc%opposites(n)
+            fi(:,nn,ni,nj) = fi(:,n,i,j)
+          end if
+        end do
       end if
     end do
     end do
   end subroutine DistributionBouncebackD2
-
-  subroutine DistributionBouncebackSite(dist, fi, remap)
-    type(distribution_type) dist
-    PetscScalar,dimension(dist%s,0:dist%b):: fi
-    PetscScalar,dimension(dist%s,0:dist%b):: tmp
-    PetscInt,dimension(0:dist%b):: remap
-    PetscInt n
-
-    do n=0,dist%b
-       tmp(:,n) = fi(:,remap(n))
-    end do
-    fi(:,:) = tmp
-  end subroutine DistributionBouncebackSite
 
   subroutine DistributionGatherValueToDirectionD3(distribution, val, out)
     type(distribution_type) distribution
