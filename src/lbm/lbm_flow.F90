@@ -924,18 +924,10 @@ contains
     type(flow_type) flow
     type(walls_type) walls
 
-    ! Note that the initialization process is calculated without walls.
-    ! This is because we must fake that a bounceback has occured in a
-    ! previous step.  Wall nodes, which should hold the to-be-bounced
-    ! back fi, will instead have zeros.
-    PetscScalar,dimension(1:flow%grid%info%rgxyzl):: tmp_no_walls
-    tmp_no_walls = 0.
-
     call DistributionCommunicateDensity(flow%distribution)
-    call FlowCalcForces(flow, walls) ! not sure if this is ok or not!
-                                     ! Does this need no-walls as well?
-    call FlowUpdateFeq(flow, tmp_no_walls)
-    call FlowFiBarInit(flow, tmp_no_walls)
+    call FlowCalcForces(flow, walls)
+    call FlowUpdateFeq(flow, walls%walls_a)
+    call FlowFiBarInit(flow, walls%walls_a)
   end subroutine FlowFiInit
 
   subroutine FlowCollision(flow, walls)
