@@ -589,6 +589,7 @@ contains
             fi(:,nn,ni,nj,nk) = fi(:,n,i,j,k)
           endif
         enddo
+        fi(:,:,i,j,k) = 0.d0
       else if (walls(i,j,k).eq.WALL_NORMAL_Y) then
         do n=0,dist%b
           nj = j - dist%disc%ci(n,Y_DIRECTION)
@@ -598,6 +599,7 @@ contains
             fi(:,nn,ni,nj,nk) = fi(:,n,i,j,k)
           endif
         enddo
+        fi(:,:,i,j,k) = 0.d0
       else if (walls(i,j,k).eq.WALL_NORMAL_Z) then
         do n=0,dist%b
           nk = k - dist%disc%ci(n,Z_DIRECTION)
@@ -607,6 +609,7 @@ contains
             fi(:,nn,ni,nj,nk) = fi(:,n,i,j,k)
           endif
         enddo
+        fi(:,:,i,j,k) = 0.d0
       else if (walls(i,j,k) > 0) then
         do n=0,dist%b
           ni = i - dist%disc%ci(n,X_DIRECTION)
@@ -619,6 +622,7 @@ contains
             fi(:,nn,ni,nj,nk) = fi(:,n,i,j,k)
           end if
         end do
+        fi(:,:,i,j,k) = 0.d0
       end if
     end do
     end do
@@ -637,8 +641,8 @@ contains
     PetscInt tmp(dist%s, 0:dist%b)
     PetscInt ni,nj,nn ! new, bounced back values
 
-    do j=dist%info%ys,dist%info%ye
-    do i=dist%info%xs,dist%info%xe
+    do j=dist%info%gys,dist%info%gye
+    do i=dist%info%gxs,dist%info%gxe
        if (walls(i,j).eq.WALL_NORMAL_X) then
         do n=0,dist%b
           ni = i - dist%disc%ci(n,X_DIRECTION)
@@ -648,6 +652,7 @@ contains
             fi(:,nn,ni,nj) = fi(:,n,i,j)
           endif
         enddo
+        fi(:,:,i,j) = 0.d0
       else if (walls(i,j).eq.WALL_NORMAL_Y) then
         do n=0,dist%b
           nj = j - dist%disc%ci(n,Y_DIRECTION)
@@ -657,6 +662,7 @@ contains
             fi(:,nn,ni,nj) = fi(:,n,i,j)
           endif
         enddo
+        fi(:,:,i,j) = 0.d0
       else if (walls(i,j) > 0) then
         do n=0,dist%b
           ni = i - dist%disc%ci(n,X_DIRECTION)
@@ -667,6 +673,7 @@ contains
             fi(:,nn,ni,nj) = fi(:,n,i,j)
           end if
         end do
+        fi(:,:,i,j) = 0.d0
       end if
     end do
     end do
