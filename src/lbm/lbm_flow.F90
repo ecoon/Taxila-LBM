@@ -448,7 +448,10 @@ contains
 
     call DistributionCalcDensity(flow%distribution, walls%walls_a)
     call BCApplyDirichletToRho(flow%bc, walls%walls_a, flow%distribution)
-    call DistributionCommunicateDensity(flow%distribution)
+    if (flow%fluidfluid_forces) then
+      ! begins a communication that ends in FlowCalcForces()
+      call DistributionCommunicateDensityBegin(flow%distribution)
+    endif
     call FlowCalcForces(flow, walls)
   end subroutine FlowCalcRhoForces
 
@@ -465,9 +468,9 @@ contains
     type(walls_type) walls
 
     call DistributionCalcDensity(flow%distribution, walls%walls_a)
+    ! begins a communication that ends in FlowCalcForces()
     call DistributionCommunicateDensityBegin(flow%distribution)
     call DistributionCalcFlux(flow%distribution, walls%walls_a)
-    call DistributionCommunicateDensityEnd(flow%distribution)
     call FlowCalcForces(flow, walls)
     call FlowUpdateUE(flow, walls%walls_a)
   end subroutine FlowUpdateMoments
@@ -775,8 +778,30 @@ contains
     PetscErrorCode ierr
     PetscInt m
 
+    ! initialize
     flow%forces = 0.
+
+    ! add fluid-solid interaction potential
+    if (flow%fluidsolid_forces) then
+      call PetscLogEventBegin(logger%event_forcing_fluidsolid,ierr)
+      call LBMAddFluidSolidForces(flow%distribution, flow%components, walls, &
+           flow%distribution%rho_a, flow%forces)
+      call PetscLogEventEnd(logger%event_forcing_fluidsolid,ierr)
+    end if
+
+    ! add body forces as direct shifts in forces
+    if (flow%body_forces) then
+      call PetscLogEventBegin(logger%event_forcing_body,ierr)
+      call LBMAddBodyForces(flow%distribution, flow%components, flow%gvt, &
+           flow%distribution%rho_a, walls%walls_a, flow%forces)
+      call PetscLogEventEnd(logger%event_forcing_body,ierr)
+    end if
+
+    ! add fluid-fluid interaction potential
     if (flow%fluidfluid_forces) then
+      ! ends a communication that began in FlowCalcRhoForces(),
+      ! FlowFiInit(), or FlowUpdateMoments()
+      call DistributionCommunicateDensityEnd(flow%distribution)
       call PetscLogEventBegin(logger%event_forcing_fluidfluid,ierr)
       if (flow%use_nonideal_eos) then
         do m=1,flow%ncomponents
@@ -790,20 +815,6 @@ contains
              flow%distribution%rho_a, walls%walls_a, flow%forces)
       end if
       call PetscLogEventEnd(logger%event_forcing_fluidfluid,ierr)
-    end if
-
-    if (flow%fluidsolid_forces) then
-      call PetscLogEventBegin(logger%event_forcing_fluidsolid,ierr)
-      call LBMAddFluidSolidForces(flow%distribution, flow%components, walls, &
-           flow%distribution%rho_a, flow%forces)
-      call PetscLogEventEnd(logger%event_forcing_fluidsolid,ierr)
-    end if
-
-    if (flow%body_forces) then
-      call PetscLogEventBegin(logger%event_forcing_body,ierr)
-      call LBMAddBodyForces(flow%distribution, flow%components, flow%gvt, &
-           flow%distribution%rho_a, walls%walls_a, flow%forces)
-      call PetscLogEventEnd(logger%event_forcing_body,ierr)
     end if
   end subroutine FlowCalcForces
 
@@ -924,7 +935,8 @@ contains
     type(flow_type) flow
     type(walls_type) walls
 
-    call DistributionCommunicateDensity(flow%distribution)
+    ! begins a communication that ends in FlowCalcForces()
+    call DistributionCommunicateDensityBegin(flow%distribution)
     call FlowCalcForces(flow, walls)
     call FlowUpdateFeq(flow, walls%walls_a)
     call FlowFiBarInit(flow, walls%walls_a)
