@@ -2,11 +2,13 @@ ifndef LBM_DIR
   LBM_DIR:=$(shell pwd)/..
 endif
 
-HOST:= $(shell hostname | cut -d"-" -f1)
-ifeq ($(HOST),jaguar)
-  COMP:=ftn
-else
-  COMP:= $(shell basename $(shell mpif90 -show | cut -d" " -f 1))
+ifndef COMP
+  HOST:= $(shell hostname | cut -d"-" -f1)
+  ifeq ($(HOST),jaguar)
+    COMP:=ftn
+  else
+    COMP:= $(shell basename $(shell mpif90 -show | cut -d" " -f 1))
+  endif
 endif
 
 LBM_INCLUDE_DIR= $(LBM_DIR)/include
