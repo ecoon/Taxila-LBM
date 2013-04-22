@@ -468,8 +468,10 @@ contains
     type(walls_type) walls
 
     call DistributionCalcDensity(flow%distribution, walls%walls_a)
-    ! begins a communication that ends in FlowCalcForces()
-    call DistributionCommunicateDensityBegin(flow%distribution)
+    if (flow%fluidfluid_forces) then
+      ! begins a communication that ends in FlowCalcForces()
+      call DistributionCommunicateDensityBegin(flow%distribution)
+    endif
     call DistributionCalcFlux(flow%distribution, walls%walls_a)
     call FlowCalcForces(flow, walls)
     call FlowUpdateUE(flow, walls%walls_a)
@@ -802,6 +804,7 @@ contains
       ! ends a communication that began in FlowCalcRhoForces(),
       ! FlowFiInit(), or FlowUpdateMoments()
       call DistributionCommunicateDensityEnd(flow%distribution)
+
       call PetscLogEventBegin(logger%event_forcing_fluidfluid,ierr)
       if (flow%use_nonideal_eos) then
         do m=1,flow%ncomponents
@@ -935,8 +938,10 @@ contains
     type(flow_type) flow
     type(walls_type) walls
 
-    ! begins a communication that ends in FlowCalcForces()
-    call DistributionCommunicateDensityBegin(flow%distribution)
+    if (flow%fluidfluid_forces) then
+      ! begins a communication that ends in FlowCalcForces()
+      call DistributionCommunicateDensityBegin(flow%distribution)
+    endif
     call FlowCalcForces(flow, walls)
     call FlowUpdateFeq(flow, walls%walls_a)
     call FlowFiBarInit(flow, walls%walls_a)
