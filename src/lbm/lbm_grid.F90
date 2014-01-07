@@ -289,7 +289,7 @@ contains
     Vec coords
     PetscErrorCode ierr
 
-    call DMDAGetCoordinates(grid%da(ONEDOF), coords, ierr)
+    call DMGetCoordinates(grid%da(ONEDOF), coords, ierr)
     call IOView(io, coords, 'coords')
   end subroutine GridViewCoordinates
 end module LBM_Grid_module
