@@ -142,11 +142,11 @@ contains
 
     PetscInt lcv
 
-    btype(:) = DMDA_BOUNDARY_GHOSTED
-    if (grid%info%periodic(X_DIRECTION)) btype(X_DIRECTION) = DMDA_BOUNDARY_PERIODIC
-    if (grid%info%periodic(Y_DIRECTION)) btype(Y_DIRECTION) = DMDA_BOUNDARY_PERIODIC
+    btype(:) = DM_BOUNDARY_GHOSTED
+    if (grid%info%periodic(X_DIRECTION)) btype(X_DIRECTION) = DM_BOUNDARY_PERIODIC
+    if (grid%info%periodic(Y_DIRECTION)) btype(Y_DIRECTION) = DM_BOUNDARY_PERIODIC
     if (grid%info%ndims > 2) then
-       if (grid%info%periodic(Z_DIRECTION)) btype(Z_DIRECTION) = DMDA_BOUNDARY_PERIODIC
+       if (grid%info%periodic(Z_DIRECTION)) btype(Z_DIRECTION) = DM_BOUNDARY_PERIODIC
     else
        btype(Z_DIRECTION) = PETSC_NULL_INTEGER
     end if
