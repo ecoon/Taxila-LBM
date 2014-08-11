@@ -191,13 +191,13 @@ contains
     type(distribution_type) distribution
     PetscErrorCode ierr
     call DistributionRestoreArrays(distribution, ierr)
-    call DMDALocalToLocalBegin(distribution%da_fi, distribution%fi, INSERT_VALUES, &
+    call DMLocalToLocalBegin(distribution%da_fi, distribution%fi, INSERT_VALUES, &
          distribution%fi, ierr)
-    call DMDALocalToLocalEnd(distribution%da_fi, distribution%fi, INSERT_VALUES, &
+    call DMLocalToLocalEnd(distribution%da_fi, distribution%fi, INSERT_VALUES, &
          distribution%fi, ierr)
-    call DMDALocalToLocalBegin(distribution%da_rho, distribution%rho, INSERT_VALUES, &
+    call DMLocalToLocalBegin(distribution%da_rho, distribution%rho, INSERT_VALUES, &
          distribution%rho, ierr)
-    call DMDALocalToLocalEnd(distribution%da_rho, distribution%rho, INSERT_VALUES, &
+    call DMLocalToLocalEnd(distribution%da_rho, distribution%rho, INSERT_VALUES, &
          distribution%rho, ierr)
     call DistributionGetArrays(distribution, ierr)
   end subroutine DistributionCommunicateAll
@@ -215,7 +215,7 @@ contains
 
     call DMDAVecRestoreArrayF90(distribution%da_fi, distribution%fi, &
          distribution%fi_a, ierr)
-    call DMDALocalToLocalBegin(distribution%da_fi, distribution%fi, INSERT_VALUES, &
+    call DMLocalToLocalBegin(distribution%da_fi, distribution%fi, INSERT_VALUES, &
          distribution%fi, ierr)
 
   end subroutine DistributionCommunicateFiBegin
@@ -224,7 +224,7 @@ contains
     type(distribution_type) distribution
     PetscErrorCode ierr
 
-    call DMDALocalToLocalEnd(distribution%da_fi, distribution%fi, INSERT_VALUES, &
+    call DMLocalToLocalEnd(distribution%da_fi, distribution%fi, INSERT_VALUES, &
          distribution%fi, ierr)
     call DMDAVecGetArrayF90(distribution%da_fi, distribution%fi, distribution%fi_a, ierr)
   end subroutine DistributionCommunicateFiEnd
@@ -240,14 +240,14 @@ contains
     PetscErrorCode ierr
     call DMDAVecRestoreArrayF90(distribution%da_rho, distribution%rho, &
          distribution%rho_a, ierr)
-    call DMDALocalToLocalBegin(distribution%da_rho, distribution%rho, INSERT_VALUES, &
+    call DMLocalToLocalBegin(distribution%da_rho, distribution%rho, INSERT_VALUES, &
          distribution%rho, ierr)
   end subroutine DistributionCommunicateDensityBegin
 
   subroutine DistributionCommunicateDensityEnd(distribution)
     type(distribution_type) distribution
     PetscErrorCode ierr
-    call DMDALocalToLocalEnd(distribution%da_rho, distribution%rho, INSERT_VALUES, &
+    call DMLocalToLocalEnd(distribution%da_rho, distribution%rho, INSERT_VALUES, &
          distribution%rho, ierr)
     call DMDAVecGetArrayF90(distribution%da_rho, distribution%rho, distribution%rho_a, ierr)
   end subroutine DistributionCommunicateDensityEnd

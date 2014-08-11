@@ -241,9 +241,9 @@ contains
     PetscErrorCode ierr
 
     call DMDAVecRestoreArrayF90(walls%grid%da(ONEDOF), walls%walls, walls%walls_a, ierr)
-    call DMDALocalToLocalBegin(walls%grid%da(ONEDOF), walls%walls, INSERT_VALUES, &
+    call DMLocalToLocalBegin(walls%grid%da(ONEDOF), walls%walls, INSERT_VALUES, &
          walls%walls, ierr)
-    call DMDALocalToLocalEnd(walls%grid%da(ONEDOF), walls%walls, INSERT_VALUES, &
+    call DMLocalToLocalEnd(walls%grid%da(ONEDOF), walls%walls, INSERT_VALUES, &
            walls%walls, ierr)
     call DMDAVecGetArrayF90(walls%grid%da(ONEDOF), walls%walls, walls%walls_a, ierr)
   end subroutine WallsCommunicate
