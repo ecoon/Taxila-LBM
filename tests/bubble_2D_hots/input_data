@@ -15,18 +15,20 @@
 ## component 1
 -component1_name outer
 -mm_outer 1.
--tau_outer 1.6
+-s_c_outer 1.0
 -s_e_outer 0.1
 -s_e2_outer 0.2
 -s_q_outer 0.625
+-s_nu_outer 1.0
 
 ## component 2
 -component2_name inner
 -mm_inner 1.0
--tau_inner 0.7204
+-s_c_inner 1.0
 -s_e_inner 1.8
 -s_e2_inner 1.8
 -s_q_inner 1.8
+-s_nu_inner 1.0
 
 # forcing coefficients
 -gvt 0.0,0.0
