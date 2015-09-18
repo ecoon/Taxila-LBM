@@ -13,8 +13,8 @@
 !!! ====================================================================
 
 #define PETSC_USE_FORTRAN_MODULES 1
-#include "finclude/petscsysdef.h"
-#include "finclude/petscvecdef.h"
+#include "petsc/finclude/petscsysdef.h"
+#include "petsc/finclude/petscvecdef.h"
 
 module LBM_Walls_module
   use petsc

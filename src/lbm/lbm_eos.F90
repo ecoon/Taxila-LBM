@@ -14,8 +14,8 @@
 
 
 #define PETSC_USE_FORTRAN_MODULES 1
-#include "finclude/petscsysdef.h"
-#include "finclude/petscbagdef.h"
+#include "petsc/finclude/petscsysdef.h"
+#include "petsc/finclude/petscbagdef.h"
 
 module LBM_EOS_module
   use petsc
@@ -89,7 +89,7 @@ contains
   end subroutine EOSSetID
 
   subroutine EOSSetFromOptions(eos, options, ierr)
-    use String_module
+    use string_module
     use LBM_Options_module
     type(eos_type) eos
     type(options_type) options

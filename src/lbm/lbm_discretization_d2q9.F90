@@ -12,7 +12,7 @@
 !!!
 !!!==================================================================
 #define PETSC_USE_FORTRAN_MODULES 1
-#include "finclude/petscsysdef.h"
+#include "petsc/finclude/petscsysdef.h"
 
 module LBM_Discretization_Directions_D2Q9_module
   implicit none

@@ -12,9 +12,9 @@
 !!!
 !!! ====================================================================
 #define PETSC_USE_FORTRAN_MODULES 1
-#include "finclude/petscsysdef.h"
-#include "finclude/petscvecdef.h"
-#include "finclude/petscdmdef.h"
+#include "petsc/finclude/petscsysdef.h"
+#include "petsc/finclude/petscvecdef.h"
+#include "petsc/finclude/petscdmdef.h"
   
   subroutine initialize_state(rho, u, walls, dist, components, options)
     use petsc
