@@ -23,6 +23,8 @@ FFLAGS += -I$(LBM_INCLUDE_DIR)
 # module location
 ifeq ($(COMP),gfortran)
   FFLAGS += -J$(LBM_MOD_DIR) -I$(LBM_MOD_DIR)
+else ifeq ($(COMP),f95)
+  FFLAGS += -J$(LBM_MOD_DIR) -I$(LBM_MOD_DIR)
 else ifeq ($(COMP),pgf90)
   FFLAGS += -module $(LBM_MOD_DIR) -I$(LBM_MOD_DIR)
 else ifeq ($(COMP),pgf95)
@@ -75,5 +77,6 @@ allclean:
 	rm -f $(LBM_LIB_DIR)/$(LBM_LIB_NAME)
 	rm -f $(LBM_MOD_DIR)/*.mod
 
-include ${PETSC_DIR}/conf/variables
-include ${PETSC_DIR}/conf/rules
+include ${PETSC_DIR}/lib/petsc/conf/variables
+include ${PETSC_DIR}/lib/petsc/conf/rules
+include ${PETSC_DIR}/lib/petsc/conf/test

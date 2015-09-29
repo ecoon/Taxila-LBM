@@ -13,7 +13,7 @@
 !!! ====================================================================
 
 #define PETSC_USE_FORTRAN_MODULES 1
-#include "finclude/petscsysdef.h"
+#include "petsc/finclude/petscsysdef.h"
 
 ! does nothing -- homogenous BCs are set on the command line
   subroutine initialize_bcs(bc_flags, xm_bcvals, xp_bcvals, ym_bcvals, &

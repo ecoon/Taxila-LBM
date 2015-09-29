@@ -12,7 +12,7 @@
 !!!  
 !!! ====================================================================
 #define PETSC_USE_FORTRAN_MODULES 1
-#include "finclude/petscsysdef.h"
+#include "petsc/finclude/petscsysdef.h"
 
 ! initializes the BCs from options to be a general constant flux/pressure bc
   subroutine initialize_bcs(bc_flags, xm_bcvals, xp_bcvals, ym_bcvals, & 

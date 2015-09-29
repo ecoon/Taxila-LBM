@@ -12,9 +12,9 @@
 !!!
 !!! ====================================================================
 #define PETSC_USE_FORTRAN_MODULES 1
-#include "finclude/petscsysdef.h"
-#include "finclude/petscvecdef.h"
-#include "finclude/petscdmdef.h"
+#include "petsc/finclude/petscsysdef.h"
+#include "petsc/finclude/petscvecdef.h"
+#include "petsc/finclude/petscdmdef.h"
   module LBM_Options_module
     use petsc
     use LBM_Error_module
@@ -161,7 +161,7 @@
     end subroutine OptionsSetPrefix
 
     subroutine OptionsSetUp(options)
-      use String_module
+      use string_module
 
       type(options_type) options
       PetscBool flag

@@ -12,7 +12,7 @@
 !!!  
 !!! ====================================================================
 #define PETSC_USE_FORTRAN_MODULES 1
-#include "finclude/petscsysdef.h"
+#include "petsc/finclude/petscsysdef.h"
 
 ! do nothing -- homogenous bcs are initialized by transport.
   subroutine initialize_bcs_transport(bc_flags, xm_bcvals, xp_bcvals, &

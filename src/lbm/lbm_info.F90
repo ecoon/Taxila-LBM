@@ -13,7 +13,7 @@
 !!! ====================================================================
 
 #define PETSC_USE_FORTRAN_MODULES 1
-#include "finclude/petscsysdef.h"
+#include "petsc/finclude/petscsysdef.h"
 
 module LBM_Info_module
   use petsc

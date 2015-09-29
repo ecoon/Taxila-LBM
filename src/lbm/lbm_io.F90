@@ -12,9 +12,9 @@
 !!!  
 !!! ====================================================================
 #define PETSC_USE_FORTRAN_MODULES 1
-#include "finclude/petscsysdef.h"
-#include "finclude/petscvecdef.h"
-#include "finclude/petscviewerdef.h"
+#include "petsc/finclude/petscsysdef.h"
+#include "petsc/finclude/petscvecdef.h"
+#include "petsc/finclude/petscviewerdef.h"
 
 module LBM_IO_module
   use petsc
@@ -84,7 +84,7 @@ contains
 
     call PetscViewerCreate(io%comm, viewer, ierr)
     call PetscViewerSetType(viewer, PETSCVIEWERBINARY, ierr)
-    if (io%mpiio) call PetscViewerBinarySetMPIIO(viewer, ierr)
+    if (io%mpiio) call PetscViewerBinarySetUseMPIIO(viewer, PETSC_TRUE, ierr)
     call PetscViewerFileSetMode(viewer, FILE_MODE_WRITE, ierr)
     call PetscViewerFileSetName(viewer, filename, ierr)
     call VecView(vec, viewer, ierr)
@@ -108,7 +108,7 @@ contains
 
     call PetscViewerCreate(io%comm, viewer, ierr)
     call PetscViewerSetType(viewer, PETSCVIEWERBINARY, ierr)
-    if (io%mpiio) call PetscViewerBinarySetMPIIO(viewer, ierr)
+    if (io%mpiio) call PetscViewerBinarySetUseMPIIO(viewer, PETSC_TRUE, ierr)
     call PetscViewerFileSetMode(viewer, FILE_MODE_READ, ierr)
     call PetscViewerFileSetName(viewer, filename, ierr)
     call VecLoad(vec, viewer, ierr)
@@ -125,7 +125,7 @@ contains
 
     call PetscViewerCreate(io%comm, viewer, ierr)
     call PetscViewerSetType(viewer, PETSCVIEWERBINARY, ierr)
-    if (io%mpiio) call PetscViewerBinarySetMPIIO(viewer, ierr)
+    if (io%mpiio) call PetscViewerBinarySetUseMPIIO(viewer, PETSC_TRUE, ierr)
     call PetscViewerFileSetMode(viewer, FILE_MODE_READ, ierr)
     call PetscViewerFileSetName(viewer, filename, ierr)
     call VecLoad(vec, viewer, ierr)

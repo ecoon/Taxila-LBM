@@ -7,7 +7,7 @@
 
 # numerical params
 -flow_relaxation_mode 0 # SRT
--discretization d2q9
+-discretization d3q19
 
 # component parameters
 -ncomponents 2
