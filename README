@@ -1,22 +1,16 @@
 ========================================================================
- UNKNOWN-file
-    author:              Ethan T. Coon
-    filename:            README
-    version:             
-    created:             12 July 2011
-      on:                12:11:17 MDT
-    last modified:   08 August 2011
-      at:            15:34:03 MDT
-    URL:                 http://www.ldeo.columbia.edu/~ecoon/
-    email:               ecoon _at_ lanl.gov
- 
+project:  Taxila LBM
+author:   Ethan T. Coon
+URL:      http://software.lanl.gov/taxila/
+URL:      http://github.com/ecoon/Taxila-LBM
+email:    ecoon _at_ lanl.gov	
 ========================================================================
 
-README for <NAME>
+README for Taxila LBM
 
-<NAME> is a parallel implementation of the Lattice Boltzmann Method for simulation of flow in porous and geometrically complex media.
+Taxila LBM is a parallel implementation of the Lattice Boltzmann Method for simulation of flow in porous and geometrically complex media.
 
-<NAME> uses the license seen in LICENSE
+Taxila LBM uses the LGPL license as seen in LICENSE
 
 The implementation:
 
@@ -31,7 +25,7 @@ The implementation:
     * is massively parallel, showing excellent strong and weak scaling to X cores (update with Jaguar numbers!)
     * is modular, "object-oriented" Fortran-90, enabling extension for new features.
     * leverages  PETSc, the Portable, Extensible Toolkit for Scientific Computation for data structures, communication, and (parallel) I/O.
-    * may be called from  PFloTran, a massively parallel solver for reactive transport in porous media. This allows for micro-scale solution of reactive transport, using <NAME> for flow. 
+    * may be called from  PFloTran, a massively parallel solver for reactive transport in porous media. This allows for micro-scale solution of reactive transport, using Taxila LBM for flow. 
 
     * currently only allows structured, regular meshes.
     * currently is not implemented on GPUs (coming soon?)
@@ -43,15 +37,15 @@ Authors:
     * Mark Porter (porterma _at_ lanl.gov)
     * Qinjun Kang (qkang _at_ lanl.gov) 
 
-Getting <NAME>:
-  Contact ecoon _at_ lanl.gov
+Getting Taxila LBM:
+  See http://github.com/ecoon/Taxila-LBM
 
-Installing <NAME>:
+Installing Taxila LBM:
   To install, see INSTALL (or the manual)
 
 Testing installation:
   $>  cd tests/{test_name}/
   $>  make test
 
-Using <NAME>: 
+Using Taxila LBM: 
   To use, see docs/README on how to make the manual and quickstart guide.
