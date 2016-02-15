@@ -273,11 +273,11 @@ contains
        call DMDASetUniformCoordinates(grid%da(ONEDOF), &
             grid%info%corners(X_DIRECTION,1), grid%info%corners(X_DIRECTION,2), &
             grid%info%corners(Y_DIRECTION,1), grid%info%corners(Y_DIRECTION,2), &
-            ZERO_S, ONE_S, ierr)
+            0, 1, ierr)
        call DMDASetUniformCoordinates(grid%da(NFLOWDOF), &
             grid%info%corners(X_DIRECTION,1), grid%info%corners(X_DIRECTION,2), &
             grid%info%corners(Y_DIRECTION,1), grid%info%corners(Y_DIRECTION,2), &
-            ZERO_S, ONE_S, ierr)
+            0, 1, ierr)
     end if
     CHKERRQ(ierr)
   end subroutine GridSetUp

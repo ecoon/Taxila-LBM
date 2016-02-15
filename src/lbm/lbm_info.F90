@@ -34,7 +34,8 @@ module LBM_Info_module
      PetscInt stencil_type
 
      ! dependent parameters
-     PetscInt xs,xe,xl,gxs,gxe,gxl,rgxs,rgxe,rgxl
+     ! each are: owned, ghosted, rho_ghosted (rho can have larger stencil)
+     PetscInt xs,xe,xl,gxs,gxe,gxl,rgxs,rgxe,rgxl 
      PetscInt ys,ye,yl,gys,gye,gyl,rgys,rgye,rgyl
      PetscInt zs,ze,zl,gzs,gze,gzl,rgzs,rgze,rgzl
      PetscInt xyzl,gxyzl,rgxyzl
@@ -162,8 +163,10 @@ contains
 
     ! -- grid corners
     if (info%periodic(X_DIRECTION)) then
+      info%corners(X_DIRECTION,1) = 0.
       info%corners(X_DIRECTION,2) = info%NX
     else
+      info%corners(X_DIRECTION,1) = 0.
       info%corners(X_DIRECTION,2) = info%NX-1
     end if
     call OptionsGetReal(options, "-x_start", "lower x coordinate", &

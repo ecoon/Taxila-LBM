@@ -170,13 +170,8 @@ contains
     else
       call DMDAVecGetArrayF90(walls%grid%da(ONEDOF), walls%walls, walls%walls_a, ierr)
       call initialize_walls(walls%walls_a, walls%grid%info, options)
-      call DMDAVecRestoreArrayF90(walls%grid%da(ONEDOF), walls%walls, &
-           walls%walls_a, ierr)
-      call DMLocalToGlobalBegin(walls%grid%da(ONEDOF), walls%walls, INSERT_VALUES, &
-           walls%walls_g, ierr)
-      call DMLocalToGlobalEnd(walls%grid%da(ONEDOF), walls%walls, INSERT_VALUES, &
-           walls%walls_g, ierr)
-      call DMDAVecGetArrayF90(walls%grid%da(ONEDOF), walls%walls, walls%walls_a, ierr)
+
+      call WallsLocalToGlobal(walls)
       call WallsSetGhostNodes(walls, walls%walls_a)
     end if
   end subroutine WallsSetValues
@@ -254,13 +249,55 @@ contains
     type(io_type) io
     PetscErrorCode ierr
 
-    call DMDAVecRestoreArrayF90(walls%grid%da(ONEDOF), walls%walls, &
-         walls%walls_a, ierr)
-    call DMLocalToGlobalBegin(walls%grid%da(ONEDOF), walls%walls, INSERT_VALUES, &
-         walls%walls_g, ierr)
-    call DMLocalToGlobalEnd(walls%grid%da(ONEDOF), walls%walls, INSERT_VALUES, &
-         walls%walls_g, ierr)
+    call WallsLocalToGlobal(walls)
     call IOView(io, walls%walls_g, 'walls')
-    call DMDAVecGetArrayF90(walls%grid%da(ONEDOF), walls%walls, walls%walls_a, ierr)
   end subroutine WallsOutputDiagnostics
+
+
+  subroutine WallsLocalToGlobal(walls)
+    type(walls_type) walls
+
+    PetscScalar,pointer:: walls_g_a(:)
+    PetscErrorCode ierr
+    call DMDAVecGetArrayF90(walls%grid%da(ONEDOF), walls%walls_g, walls_g_a, ierr)
+
+    select case(walls%ndims)
+    case(2)
+       call WallsLocalToGlobalD2(walls, walls%walls_a, walls_g_a)
+    case(3)
+       call WallsLocalToGlobalD3(walls, walls%walls_a, walls_g_a)
+    end select
+    call DMDAVecRestoreArrayF90(walls%grid%da(ONEDOF), walls%walls_g, walls_g_a, ierr)
+    CHKERRQ(ierr)
+  end subroutine WallsLocalToGlobal
+
+  subroutine WallsLocalToGlobalD3(walls, arr, arr_global)
+    type(walls_type) walls
+    PetscScalar,dimension(walls%grid%info%gxs:walls%grid%info%gxe, &
+         walls%grid%info%gys:walls%grid%info%gye, walls%grid%info%gzs:walls%grid%info%gze):: arr
+    PetscScalar,dimension(walls%grid%info%xs:walls%grid%info%xe, &
+         walls%grid%info%ys:walls%grid%info%ye, walls%grid%info%zs:walls%grid%info%ze):: arr_global
+
+    arr_global(:,:,:) = arr(walls%grid%info%xs:walls%grid%info%xe, &
+         walls%grid%info%ys:walls%grid%info%ye, walls%grid%info%zs:walls%grid%info%ze)
+  end subroutine WallsLocalToGlobalD3
+
+  subroutine WallsLocalToGlobalD2(walls, arr, arr_global)
+    type(walls_type) walls
+    PetscScalar,dimension(walls%grid%info%gxs:walls%grid%info%gxe, &
+         walls%grid%info%gys:walls%grid%info%gye):: arr
+    PetscScalar,dimension(walls%grid%info%xs:walls%grid%info%xe, &
+         walls%grid%info%ys:walls%grid%info%ye):: arr_global
+
+    arr_global(:,:) = arr(walls%grid%info%xs:walls%grid%info%xe, &
+         walls%grid%info%ys:walls%grid%info%ye)
+    ! PetscInt i,j,k
+    ! do j=walls%grid%info%ys,walls%grid%info%ye
+    ! do i=walls%grid%info%xs,walls%grid%info%xe
+    !   arr_global(i,j) = arr(i,j)
+    ! end do
+    ! enddo
+  end subroutine WallsLocalToGlobalD2
+
+
 end module LBM_Walls_module

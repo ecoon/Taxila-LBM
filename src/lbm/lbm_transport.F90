@@ -346,29 +346,11 @@ contains
     PetscErrorCode ierr
 
     if (transport%io_fi) then
-       call DMDAVecRestoreArrayF90(transport%grid%da(NSPECIEXBDOF), &
-            transport%distribution%fi, transport%distribution%fi_a, ierr)
-       call DMLocalToGlobalBegin(transport%grid%da(NSPECIEXBDOF), &
-            transport%distribution%fi, INSERT_VALUES, &
-            transport%distribution%fi_g, ierr)
-       call DMLocalToGlobalEnd(transport%grid%da(NSPECIEXBDOF), &
-            transport%distribution%fi, INSERT_VALUES, &
-            transport%distribution%fi_g, ierr)
-       call DMDAVecGetArrayF90(transport%grid%da(NSPECIEXBDOF), &
-            transport%distribution%fi, transport%distribution%fi_a, ierr)
+       call DistributionLocalToGlobal(transport%distribution)
        call IOView(io, transport%distribution%fi_g, 'gi')
     end if
     if (transport%io_rho) then
-       call DMDAVecRestoreArrayF90(transport%grid%da(NSPECIEDOF), &
-            transport%distribution%rho, transport%distribution%rho_a, ierr)
-       call DMLocalToGlobalBegin(transport%grid%da(NSPECIEDOF), &
-            transport%distribution%rho, INSERT_VALUES, &
-            transport%distribution%rho_g, ierr)
-       call DMLocalToGlobalEnd(transport%grid%da(NSPECIEDOF), &
-            transport%distribution%rho, INSERT_VALUES, &
-            transport%distribution%rho_g, ierr)
-       call DMDAVecGetArrayF90(transport%grid%da(NSPECIEDOF), &
-            transport%distribution%rho, transport%distribution%rho_a, ierr)
+       call DistributionRhoLocalToGlobal(transport%distribution)
        call IOView(io, transport%distribution%rho_g, 'psi')
     end if
   end subroutine TransportOutputDiagnostics

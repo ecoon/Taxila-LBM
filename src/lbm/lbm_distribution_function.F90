@@ -47,6 +47,8 @@ module LBM_Distribution_Function_module
        DistributionSetDAs, &
        DistributionSetTrackOld, &
        DistributionSetUp, &
+       DistributionLocalToGlobal, &
+       DistributionRhoLocalToGlobal, &
        DistributionGetArrays, &
        DistributionRestoreArrays, &
        DistributionCommunicateAll, &
@@ -173,6 +175,106 @@ contains
     call PetscObjectSetName(distribution%rho_g_old, trim(distribution%name)//'rho_old', ierr)
   end subroutine DistributionSetUp
 
+  subroutine DistributionLocalToGlobal(distribution)
+    type(distribution_type) distribution
+
+    PetscScalar,pointer:: fi_g_a(:)
+    PetscErrorCode ierr
+    call DMDAVecGetArrayF90(distribution%da_fi, distribution%fi_g, fi_g_a, ierr)
+
+    select case(distribution%info%ndims)
+    case(2)
+       call DistributionLocalToGlobalD2(distribution, distribution%fi_a, fi_g_a)
+    case(3)
+       call DistributionLocalToGlobalD3(distribution, distribution%fi_a, fi_g_a)
+    end select
+    call DMDAVecRestoreArrayF90(distribution%da_fi, distribution%fi_g, fi_g_a, ierr)
+    CHKERRQ(ierr)
+  end subroutine DistributionLocalToGlobal
+
+  subroutine DistributionLocalToGlobalD3(dist, arr, arr_global)
+    type(distribution_type) dist
+    PetscScalar,dimension(dist%b*dist%s, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: arr
+    PetscScalar,dimension(dist%b*dist%s, dist%info%xs:dist%info%xe, &
+         dist%info%ys:dist%info%ye, dist%info%zs:dist%info%ze):: arr_global
+
+    PetscInt i,j,k
+
+    do k=dist%info%zs,dist%info%ze
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+      arr_global(:,i,j,k) = arr(:,i,j,k)
+    end do
+    end do
+    enddo
+  end subroutine DistributionLocalToGlobalD3
+
+  subroutine DistributionLocalToGlobalD2(dist, arr, arr_global)
+    type(distribution_type) dist
+    PetscScalar,dimension(dist%b*dist%s, dist%info%gxs:dist%info%gxe, &
+         dist%info%gys:dist%info%gye):: arr
+    PetscScalar,dimension(dist%b*dist%s, dist%info%xs:dist%info%xe, &
+         dist%info%ys:dist%info%ye):: arr_global
+
+    PetscInt i,j,k
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+      arr_global(:,i,j) = arr(:,i,j)
+    end do
+    enddo
+  end subroutine DistributionLocalToGlobalD2
+
+  subroutine DistributionRhoLocalToGlobal(distribution)
+    type(distribution_type) distribution
+    
+    PetscScalar,pointer:: rho_g_a(:)
+    PetscErrorCode ierr
+    call DMDAVecGetArrayF90(distribution%da_rho, distribution%rho_g, rho_g_a, ierr)
+
+    select case(distribution%info%ndims)
+    case(2)
+       call DistributionRhoLocalToGlobalD2(distribution, distribution%rho_a, rho_g_a)
+    case(3)
+       call DistributionRhoLocalToGlobalD3(distribution, distribution%rho_a, rho_g_a)
+    end select
+
+    call DMDAVecRestoreArrayF90(distribution%da_rho, distribution%rho_g, rho_g_a, ierr)
+    CHKERRQ(ierr)
+  end subroutine DistributionRhoLocalToGlobal
+
+  subroutine DistributionRhoLocalToGlobalD3(dist, arr, arr_global)
+    type(distribution_type) dist
+    PetscScalar,dimension(dist%s, dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye, dist%info%rgzs:dist%info%rgze):: arr
+    PetscScalar,dimension(dist%s, dist%info%xs:dist%info%xe, &
+         dist%info%ys:dist%info%ye, dist%info%zs:dist%info%ze):: arr_global
+
+    PetscInt i,j,k
+    do k=dist%info%zs,dist%info%ze
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+      arr_global(:,i,j,k) = arr(:,i,j,k)
+    end do
+    end do
+    enddo
+  end subroutine DistributionRhoLocalToGlobalD3
+
+  subroutine DistributionRhoLocalToGlobalD2(dist, arr, arr_global)
+    type(distribution_type) dist
+    PetscScalar,dimension(dist%s, dist%info%rgxs:dist%info%rgxe, &
+         dist%info%rgys:dist%info%rgye):: arr
+    PetscScalar,dimension(dist%s, dist%info%xs:dist%info%xe, &
+         dist%info%ys:dist%info%ye):: arr_global
+
+    PetscInt i,j,k
+    do j=dist%info%ys,dist%info%ye
+    do i=dist%info%xs,dist%info%xe
+      arr_global(:,i,j) = arr(:,i,j)
+    end do
+    enddo
+  end subroutine DistributionRhoLocalToGlobalD2
+  
   subroutine DistributionGetArrays(distribution, ierr)
     type(distribution_type) distribution
     PetscErrorCode ierr
@@ -708,29 +810,23 @@ contains
     PetscErrorCode ierr
 
     PetscScalar denom
+    PetscScalar,pointer:: fi_g_a(:)
+    PetscScalar,pointer:: rho_g_a(:)
 
     norm =1.d99
-    call DistributionRestoreArrays(distribution, ierr)
     if (distribution%track_old_fi) then
-      call DMLocalToGlobalBegin(distribution%da_fi,distribution%fi, &
-           INSERT_VALUES, distribution%fi_g, ierr)
-      call DMLocalToGlobalEnd(distribution%da_fi,distribution%fi, &
-           INSERT_VALUES, distribution%fi_g, ierr)
+      call DistributionLocalToGlobal(distribution)
       call VecAXPY(distribution%fi_g_old, -1.d0, distribution%fi_g, ierr)
       call VecPointwiseDivide(distribution%fi_g_old, distribution%fi_g_old, distribution%fi_g, ierr)
       call VecNorm(distribution%fi_g_old, NORM_INFINITY, norm, ierr)
       call VecCopy(distribution%fi_g, distribution%fi_g_old, ierr)
     else if (distribution%track_old_rho) then
-      call DMLocalToGlobalBegin(distribution%da_rho,distribution%rho, &
-           INSERT_VALUES, distribution%rho_g, ierr)
-      call DMLocalToGlobalEnd(distribution%da_rho,distribution%rho, &
-           INSERT_VALUES, distribution%rho_g, ierr)
+      call DistributionRhoLocalToGlobal(distribution)
       call VecAXPY(distribution%rho_g_old, -1.d0, distribution%rho_g, ierr)
       call VecPointwiseDivide(distribution%rho_g_old, distribution%rho_g_old, distribution%rho_g, ierr)
       call VecNorm(distribution%rho_g_old, NORM_INFINITY, norm, ierr)
       call VecCopy(distribution%rho_g, distribution%rho_g_old, ierr)
     endif
-    call DistributionGetArrays(distribution, ierr)
     CHKERRQ(ierr)
   end subroutine DistributionCalcDeltaNorm
 
