@@ -99,7 +99,10 @@ if __name__ == '__main__':
                 ndofs = testdata.shape[-1]
                 for m in range(ndofs):
                     plt.subplot(ndofs,1,m)
-                    plt.imshow((testdata-truedata)[0,:,:,m],origin='lower')
+                    if test._dim == 2:
+                        plt.imshow((testdata-truedata)[:,:,m],origin='lower')
+                    else:
+                        plt.imshow((testdata-truedata)[:,:,testdata.shape[2]/2,m],origin='lower')
                     plt.colorbar()
                 plt.title(vecname+'%03d'%i)
                 plt.show()

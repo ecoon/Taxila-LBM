@@ -13,9 +13,6 @@
 ### ====================================================================
 
 import os,sys
-petscdir = '/nh/u/ecoon/applications/src/petsc-3.2/bin/pythonscripts'
-sys.path.append(petscdir)
-
 import numpy as np
 
 class SolutionReader(object):
