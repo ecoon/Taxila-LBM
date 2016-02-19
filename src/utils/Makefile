@@ -1,5 +1,5 @@
-ifndef LBM_DIR
-  LBM_DIR:=$(shell pwd)/../..
+ifndef TAXILA_DIR
+  TAXILA_DIR:=$(shell pwd)/../..
 endif
 
 ifndef COMP
@@ -11,10 +11,10 @@ ifndef COMP
   endif
 endif
 
-LBM_SRC_DIR= $(LBM_DIR)/src/lbm
-LBM_UTIL_DIR= $(LBM_DIR)/src/utils
-LBM_INCLUDE_DIR= $(LBM_DIR)/include
-LBM_LIB_DIR= $(LBM_DIR)/lib
+LBM_SRC_DIR= $(TAXILA_DIR)/src/lbm
+LBM_UTIL_DIR= $(TAXILA_DIR)/src/utils
+LBM_INCLUDE_DIR= $(TAXILA_DIR)/include
+LBM_LIB_DIR= $(TAXILA_DIR)/lib
 LBM_MOD_DIR= $(LBM_LIB_DIR)/modules
 LBM_LIB_NAME= lbm.a
 

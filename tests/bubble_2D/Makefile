@@ -1,5 +1,5 @@
-ifndef LBM_DIR
-  LBM_DIR:=$(shell pwd)/../..
+ifndef TAXILA_DIR
+  TAXILA_DIR:=$(shell pwd)/../..
 endif
 
 ifndef COMP
@@ -11,10 +11,10 @@ ifndef COMP
   endif
 endif
 
-LBM_SRC_DIR= $(LBM_DIR)/src/lbm
-LBM_PROBLEM_DIR= $(LBM_DIR)/src/problem_specs
-LBM_INCLUDE_DIR= $(LBM_DIR)/include
-LBM_LIB_DIR= $(LBM_DIR)/lib
+LBM_SRC_DIR= $(TAXILA_DIR)/src/lbm
+LBM_PROBLEM_DIR= $(TAXILA_DIR)/src/problem_specs
+LBM_INCLUDE_DIR= $(TAXILA_DIR)/include
+LBM_LIB_DIR= $(TAXILA_DIR)/lib
 LBM_MOD_DIR= $(LBM_LIB_DIR)/modules
 LBM_LIB_NAME= lbm.a
 
@@ -76,7 +76,7 @@ fortran: BEGIN source $(FORTRANOBJS) chkopts
 	-${FLINKER} -o runSimulation $(FORTRANOBJS) $(MAIN) $(LBM_LIB_DIR)/$(LBM_LIB_NAME) ${PETSC_DM_LIB} 
 
 BEGIN:
-	@echo "Building lbm simulation in $(LBM_DIR) with $(COMP)" 
+	@echo "Building lbm simulation in $(TAXILA_DIR) with $(COMP)" 
 	@echo ""
 
 allclean: 
@@ -96,7 +96,7 @@ test: fortran
 	@echo ""
 	@echo "Comparing simulation solution to reference solution"
 	@echo "---------------------------------------------------"
-	python $(LBM_DIR)/src/testing/check_solution.py input_data
+	python $(TAXILA_DIR)/src/testing/check_solution.py input_data
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

@@ -1,5 +1,5 @@
-ifndef LBM_DIR
-  LBM_DIR:=$(shell pwd)/..
+ifndef TAXILA_DIR
+  TAXILA_DIR:=$(shell pwd)/..
 endif
 
 ifndef COMP
@@ -11,12 +11,13 @@ ifndef COMP
   endif
 endif
 
-LBM_INCLUDE_DIR= $(LBM_DIR)/include
+LBM_INCLUDE_DIR= $(TAXILA_DIR)/include
 FFLAGS = -I$(LBM_INCLUDE_DIR) 
 
 geometry: CreateGeom3DPetsc.o CreateGeom2DPetsc.o
 	-${FLINKER} -o createGeom3DPetsc CreateGeom3DPetsc.o  ${PETSC_DM_LIB}
 	-${FLINKER} -o createGeom2DPetsc CreateGeom2DPetsc.o  ${PETSC_DM_LIB}
 
-include ${PETSC_DIR}/conf/variables
-include ${PETSC_DIR}/conf/rules
+include ${PETSC_DIR}/lib/petsc/conf/variables
+include ${PETSC_DIR}/lib/petsc/conf/rules
+include ${PETSC_DIR}/lib/petsc/conf/test
