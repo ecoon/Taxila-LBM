@@ -194,17 +194,19 @@ contains
 
   subroutine DistributionLocalToGlobalD3(dist, arr, arr_global)
     type(distribution_type) dist
-    PetscScalar,dimension(dist%b*dist%s, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye, dist%info%gzs:dist%info%gze):: arr
-    PetscScalar,dimension(dist%b*dist%s, dist%info%xs:dist%info%xe, &
-         dist%info%ys:dist%info%ye, dist%info%zs:dist%info%ze):: arr_global
+    PetscScalar,dimension(1:dist%s, 0:dist%b, &
+         dist%info%gxs:dist%info%gxe, dist%info%gys:dist%info%gye, &
+         dist%info%gzs:dist%info%gze):: arr
+    PetscScalar,dimension(1:dist%s, 0:dist%b, &
+         dist%info%xs:dist%info%xe, dist%info%ys:dist%info%ye, &
+         dist%info%zs:dist%info%ze):: arr_global
 
     PetscInt i,j,k
 
     do k=dist%info%zs,dist%info%ze
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
-      arr_global(:,i,j,k) = arr(:,i,j,k)
+      arr_global(:,:,i,j,k) = arr(:,:,i,j,k)
     end do
     end do
     enddo
@@ -212,15 +214,15 @@ contains
 
   subroutine DistributionLocalToGlobalD2(dist, arr, arr_global)
     type(distribution_type) dist
-    PetscScalar,dimension(dist%b*dist%s, dist%info%gxs:dist%info%gxe, &
-         dist%info%gys:dist%info%gye):: arr
-    PetscScalar,dimension(dist%b*dist%s, dist%info%xs:dist%info%xe, &
-         dist%info%ys:dist%info%ye):: arr_global
+    PetscScalar,dimension(1:dist%s, 0:dist%b, &
+         dist%info%gxs:dist%info%gxe, dist%info%gys:dist%info%gye) :: arr
+    PetscScalar,dimension(1:dist%s, 0:dist%b, &
+         dist%info%xs:dist%info%xe, dist%info%ys:dist%info%ye):: arr_global
 
     PetscInt i,j,k
     do j=dist%info%ys,dist%info%ye
     do i=dist%info%xs,dist%info%xe
-      arr_global(:,i,j) = arr(:,i,j)
+      arr_global(:,:,i,j) = arr(:,:,i,j)
     end do
     enddo
   end subroutine DistributionLocalToGlobalD2
