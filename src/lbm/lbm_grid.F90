@@ -141,6 +141,11 @@ contains
     PetscInt zs,gzs,rgzs
 
     PetscInt lcv
+    PetscReal zero
+    PetscReal one
+
+    zero = 0
+    one = 1
 
     btype(:) = DM_BOUNDARY_GHOSTED
     if (grid%info%periodic(X_DIRECTION)) btype(X_DIRECTION) = DM_BOUNDARY_PERIODIC
@@ -273,11 +278,11 @@ contains
        call DMDASetUniformCoordinates(grid%da(ONEDOF), &
             grid%info%corners(X_DIRECTION,1), grid%info%corners(X_DIRECTION,2), &
             grid%info%corners(Y_DIRECTION,1), grid%info%corners(Y_DIRECTION,2), &
-            0, 1, ierr)
+            zero, one, ierr)
        call DMDASetUniformCoordinates(grid%da(NFLOWDOF), &
             grid%info%corners(X_DIRECTION,1), grid%info%corners(X_DIRECTION,2), &
             grid%info%corners(Y_DIRECTION,1), grid%info%corners(Y_DIRECTION,2), &
-            0, 1, ierr)
+            zero, one, ierr)
     end if
     CHKERRQ(ierr)
   end subroutine GridSetUp
