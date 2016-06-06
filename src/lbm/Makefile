@@ -61,8 +61,6 @@ ifndef ARFLAGS
   ARFLAGS = csrv
 endif
 
-MAIN = main.o 
-
 UTILS = timing.o \
 	string.o
 
@@ -90,7 +88,7 @@ MODULES = lbm_logging.o \
 	lbm_transport.o \
 	lbm.o 
 
-fortran: BEGINLIB library $(MAIN)
+fortran: BEGINLIB library
 
 library: BEGINLIB utils $(foreach obj, $(MODULES), $(LBM_LIB_DIR)/$(LBM_LIB_NAME)($(obj)))
 BEGINLIB:
@@ -110,6 +108,7 @@ utils:
 tags:
 	rm -f TAGS
 	etags *.F90
+
 
 # these dependencies should likely be made explicit, but I'm not exactly sure what the
 # best way to do this without forcing the remake of .o files that already exist within 

@@ -23,6 +23,8 @@ FFLAGS = -I$(LBM_INCLUDE_DIR)
 # module location
 FFLAGS += -I$(LBM_MOD_DIR)
 
+MAIN = main.o
+
 # optimization/debugging flags
 ifndef LBM_OPT
   ifeq ($(COMP),gfortran)
@@ -39,8 +41,6 @@ ifndef LBM_OPT
 else
   FFLAGS += -O3
 endif
-
-MAIN = $(LBM_SRC_DIR)/main.o 
 
 
 ifeq ($(strip $(wildcard initialize_state.F90)),)
@@ -69,7 +69,7 @@ else
   FORTRANOBJS += initialize_state_transport.o
 endif
 
-fortran: BEGIN source $(FORTRANOBJS) chkopts
+fortran: BEGIN source $(FORTRANOBJS) chkopts main
 	@echo ""
 	@echo "Linking executable."
 	@echo "-------------------"
@@ -78,6 +78,9 @@ fortran: BEGIN source $(FORTRANOBJS) chkopts
 BEGIN:
 	@echo "Building lbm simulation in $(TAXILA_DIR) with $(COMP)" 
 	@echo ""
+
+main:
+	${PETSC_MAKE_STOP_ON_ERROR}${FC} -c ${FC_FLAGS} ${FFLAGS} -I$(PETSC_DIR)/include -o $(MAIN) $(LBM_SRC_DIR)/main.F90
 
 allclean: 
 	@cd $(LBM_SRC_DIR); make allclean
@@ -101,3 +104,4 @@ test: fortran
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 include ${PETSC_DIR}/lib/petsc/conf/test
+
