@@ -18,7 +18,6 @@
   subroutine initialize_bcs(bc_flags, xm_bcvals, xp_bcvals, ym_bcvals, & 
        yp_bcvals, zm_bcvals, zp_bcvals, bc_dim, dist, options)
     use petsc
-    use LBM_Error_module
     use LBM_Distribution_Function_type_module
     use LBM_Options_module
     implicit none
@@ -45,6 +44,7 @@
   subroutine initialize_bcs_d3(bc_flags, xm_bcvals, xp_bcvals, ym_bcvals, & 
        yp_bcvals, zm_bcvals, zp_bcvals, bc_dim, dist, options)
     use petsc
+    use LBM_Error_module
     use LBM_Distribution_Function_type_module
     use LBM_Options_module
     implicit none
@@ -503,6 +503,7 @@
   subroutine initialize_bcs_d2(bc_flags, xm_bcvals, xp_bcvals, ym_bcvals, & 
        yp_bcvals, zm_bcvals, zp_bcvals, bc_dim, dist, options)
     use petsc
+    use LBM_Error_module
     use LBM_Distribution_Function_type_module
     use LBM_Options_module
     implicit none
