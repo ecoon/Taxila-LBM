@@ -1,15 +1,9 @@
 Taxila LBM
 ========================================================================
 
-Ethan Coon
-ecoon _at_ ornl.gov
 
-Mark Porter
-
-Qinjun Kang
-qkang _at_ lanl.gov
-========================================================================
-
+About
+-------
 
 Taxila LBM is a parallel implementation of the Lattice Boltzmann Method for simulation of flow in porous and geometrically complex media.
 
@@ -32,6 +26,20 @@ The implementation:
     * currently only allows structured, regular meshes.
     * currently is not implemented on GPUs (coming soon?)
     * currently does not handle curved geometries or other non-bounceback style interior boundary conditions (but we're accepting contributions!) 
+
+Authors
+-------
+Ethan Coon
+ecoon _at_ ornl.gov
+
+Mark Porter
+
+Qinjun Kang
+qkang _at_ lanl.gov
+
+
+Quickstart
+----------
 
 Getting Taxila LBM:
   See http://github.com/ecoon/taxila-lbm
