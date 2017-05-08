@@ -1,19 +1,21 @@
-========================================================================
-project:  Taxila LBM
-author:   Ethan T. Coon
-URL:      http://software.lanl.gov/taxila/
-URL:      http://github.com/ecoon/Taxila-LBM
-email:    ecoon _at_ lanl.gov	
+Taxila LBM
 ========================================================================
 
-README for Taxila LBM
+Ethan Coon
+ecoon _at_ ornl.gov
+
+Mark Porter
+
+Qinjun Kang
+qkang _at_ lanl.gov
+========================================================================
+
 
 Taxila LBM is a parallel implementation of the Lattice Boltzmann Method for simulation of flow in porous and geometrically complex media.
 
 Taxila LBM uses the LGPL license as seen in LICENSE
 
 The implementation:
-
     * solves both single and multi-phase systems, with or without passive transport of multiple species.
     * is capable of solving D2Q9, D3Q19, and other mesh dependencies, on 2D or 3D grids. It is easily extended to other models of connectivity.
     * uses the Shan and Chen Lattice Boltzmann Method (ref:).
@@ -31,17 +33,11 @@ The implementation:
     * currently is not implemented on GPUs (coming soon?)
     * currently does not handle curved geometries or other non-bounceback style interior boundary conditions (but we're accepting contributions!) 
 
-Authors:
-
-    * Ethan Coon (ecoon _at_ lanl.gov) (Primary Contact)
-    * Mark Porter (porterma _at_ lanl.gov)
-    * Qinjun Kang (qkang _at_ lanl.gov) 
-
 Getting Taxila LBM:
-  See http://github.com/ecoon/Taxila-LBM
+  See http://github.com/ecoon/taxila-lbm
 
 Installing Taxila LBM:
-  To install, see INSTALL (or the manual)
+  To install, see INSTALL.md (or the manual)
 
 Testing installation:
   $>  cd tests/{test_name}/
