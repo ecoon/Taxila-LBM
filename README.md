@@ -39,18 +39,17 @@ Qinjun Kang
 qkang _at_ lanl.gov
 
 
-Quickstart
-----------
+Quick start links
+------------------
 
-Getting Taxila LBM:
-  See http://github.com/ecoon/taxila-lbm
+[Getting Taxila LBM](http://github.com/ecoon/taxila-lbm)
 
-Installing Taxila LBM:
-  To install, see INSTALL.md (or the manual)
+[Installing Taxila LBM](INSTALL.md)
 
 Testing installation:
-  $>  cd tests/{test_name}/
-  $>  make test
+
+    $>  cd tests/{test_name}/
+    $>  make test
 
 Using Taxila LBM: 
-  To use, see docs/README on how to make the manual and quickstart guide.
+  To use, see [the doc page](docs/README) on how to make the manual and quickstart guide.
