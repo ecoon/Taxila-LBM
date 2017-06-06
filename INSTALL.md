@@ -1,36 +1,55 @@
-========================================================================
-    author:              Ethan T. Coon
-    filename:            INSTALL
-    version:
-    created:             12 July 2011
-      on:                12:16:19 MDT
-    last modified:   08 August 2011
-      at:            15:34:23 MDT
-    URL:                 http://www.ldeo.columbia.edu/~ecoon/
-    email:               ecoon _at_ lanl.gov
+Installation instructions for Taxila LBM
+==================================================
 
-========================================================================
+Note that Taxila uses Make, and has no method for out-of-source
+builds.  If you use multiple configurations (most likely a Debug
+version and a Release version, as Release builds are much faster than
+Debug builds but result in little help if something goes wrong),
+simply download two copies of the source.
 
-INSTALL instructions for Taxila LBM
+Step 1: Install PETSc and MPI
+--------------------------------------------------
 
-1. Install some flavor of mpi and PETSc.  See
-http://www.mcs.anl.gov/petsc/petsc-as/developers/index.html
+Install some flavor of mpi and PETSc.  See [PETSc's
+website](http://www.mcs.anl.gov/petsc/) for downloads and installation
+information.
 
-The development version of PETSc is required.  Shared libraries are
-recommended for use with petsc4py, the preferred mode of loading
-output for plotting Taxila LBM output in matplotlib/python.  Note that
-PETSc can install MPICH2 for you automatically using the
---download-mpich option.
+Taxila attempts to stay current with the current release version of
+PETSc.  Sometimes this doesn't happen too quickly, and may use an
+older release.  The current version of PETSc that Taxila builds
+against is:
+
+**PETSc version 3.6**
+
+Shared libraries are recommended for use with petsc4py, the preferred
+mode of loading output for plotting Taxila LBM output in
+matplotlib/python.  Note that PETSc can install MPICH2 for you
+automatically using the --download-mpich option if you are building
+for a small workstation without it.
 
 Recommended (quick start) configure method for PETSc:
 
-./configure --with-shared-libararies=1 --download-mpich=1 --with-debugging=1
+./configure --with-fortran-interfaces --with-shared-libraries --with-debugging --download-mpich --download-petsc4py --download-hdf5
 
 
-2. Set the environmental variable LBM_DIR to directory containing the
-Taxila installation (likely the directory containing this file!)
+Ensure that PETSc is installed and working, then set an environment
+variable PETSC_DIR to point to your PETSc installation.
 
-3. Build the base objects by running ``make'' in the src/lbm directory.
 
-4. Run a test by by running ``make test'' in one of the test
-directories in $LBM_DIR/tests
+Step 2: Install Taxila LBM
+--------------------------------------------------
+
+Set the environmental variable TAXILA_DIR to the directory containing
+the Taxila installation (likely the directory containing this file!)
+Build the base library.
+
+    export TAXILA_DIR=/path/to/my/taxila-lbm
+    cd ${TAXILA_DIR}
+    make
+
+
+Step 3: Run a test
+--------------------------------------------------
+
+Run a test by by running ``make test'' in one of the test
+directories in ${TAXILA_DIR}/tests
