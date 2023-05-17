@@ -1,6 +1,8 @@
 Taxila LBM
 ========================================================================
 
+NOTE: This code is no longer supported, and has reached the end of its software lifecycle.  Any are welcome to use any or all of this code according to the license below, but it is provided as is.
+
 
 About
 -------
